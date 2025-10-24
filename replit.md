@@ -106,6 +106,33 @@ npm run preview
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 
 ## Recent Changes
+- **2025-10-24 (Session 6)**: Visual Enhancements & Custom Endpoint Fix
+  - ✅ **Custom Endpoint Provider Fix** - OpenAI-compatible endpoints fully supported
+    - Fixed model filtering to allow non-GPT models on custom endpoints
+    - Added `providerId` and `providerType` tracking to ProviderConfig
+    - Custom endpoints (LMstudio, Ollama, etc.) now properly show "configured" status
+    - All models from custom endpoints are available for PersonI assignment
+  - ✅ **Glow Idle Animation Improvements** - Smooth, glitch-free visuals
+    - Decoupled point light intensity from emissive glow to prevent conflicts
+    - Added smooth exponential interpolation (lerp) to prevent flickering
+    - Reduced pulse amplitude and timing for gentler breathing effect
+    - All transitions use smooth damping (0.05-0.2 lerp factors)
+  - ✅ **Audio-Reactive Animations** - Dynamic visual feedback
+    - **Listening Mode**: Green glow (#00ff00) when voice detected, intensity pulses with audio level
+    - **Speaking Mode**: Dynamic geometry animations driven by audio frequencies
+      - Twist: rotation based on mid-frequencies
+      - Shake: position jitter based on bass frequencies
+      - Scale pulse: 0-15% scaling based on amplitude
+      - Shader integration passes frequency data to vertex shader
+    - Smooth reset to neutral state when audio activity stops
+  - ✅ **ADAM Matrix Code Redesign** - Authentic cyberpunk aesthetic
+    - Digital rain with authentic Matrix characters (including Katakana: ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ)
+    - 15 vertical code streams with random speeds and positions
+    - Fade trail effect (brightness decreases down each stream)
+    - Character mutation (2% chance per frame for dynamic feel)
+    - Green gradient coloring (RGB 0-255 based on brightness)
+    - 512x512 canvas texture updated every frame as emissive map
+  
 - **2025-10-24 (Session 5)**: Local Whisper STT Integration
   - ✅ **Browser-Based Speech Recognition** - No server required, runs 100% locally
     - Integrated @xenova/transformers with Whisper models (tiny.en, base, small)
