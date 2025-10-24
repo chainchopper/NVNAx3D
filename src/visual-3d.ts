@@ -149,7 +149,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
   private updateMaterialForVisuals() {
     if (!this.visuals || !this.sphereMaterial) return;
-    const {textureName, shape} = this.visuals;
+    const {textureName, shape, idleAnimation} = this.visuals;
 
     // Reset material to base crystal state
     this.sphereMaterial.map = null;
@@ -166,6 +166,18 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.sphereMaterial.metalness = 0.1;
     this.sphereMaterial.color.set(0xffffff);
     this.sphereMaterial.transparent = true;
+
+    if (!textureName && idleAnimation === 'code') {
+      this.sphereMaterial.color.set(0x000000);
+      this.sphereMaterial.emissive.set(0x00ff00);
+      this.sphereMaterial.emissiveIntensity = 1.0;
+      this.sphereMaterial.transmission = 0;
+      this.sphereMaterial.transparent = false;
+      this.sphereMaterial.roughness = 0.9;
+      this.sphereMaterial.metalness = 0.0;
+      this.sphereMaterial.needsUpdate = true;
+      return;
+    }
 
     const texture = this.loadTexture(textureName);
 
@@ -510,8 +522,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private updateCodeScrawlAnimation(time: number) {
     if (!this.codeCanvas) {
       this.codeCanvas = document.createElement('canvas');
-      this.codeCanvas.width = 512;
-      this.codeCanvas.height = 512;
+      this.codeCanvas.width = 1024;
+      this.codeCanvas.height = 1024;
       this.codeContext = this.codeCanvas.getContext('2d')!;
       this.codeTexture = new THREE.CanvasTexture(this.codeCanvas);
       if (this.visuals.textureName !== 'bio_green') {
@@ -520,12 +532,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.sphereMaterial.needsUpdate = true;
       
       const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ';
-      for (let i = 0; i < 15; i++) {
+      for (let i = 0; i < 35; i++) {
         this.codeStreams.push({
-          x: Math.random() * 512,
-          y: Math.random() * -512,
-          speed: 2 + Math.random() * 4,
-          chars: Array.from({length: 20}, () => 
+          x: Math.random() * 1024,
+          y: Math.random() * -1024,
+          speed: 3 + Math.random() * 6,
+          chars: Array.from({length: 25}, () => 
             matrixChars[Math.floor(Math.random() * matrixChars.length)]
           )
         });
@@ -533,34 +545,44 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     }
     
     const ctx = this.codeContext!;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    ctx.fillRect(0, 0, 1024, 1024);
     
-    ctx.font = 'bold 16px monospace';
+    ctx.font = 'bold 24px monospace';
     const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ';
     
     this.codeStreams.forEach(stream => {
       stream.y += stream.speed;
-      if (stream.y > 600) {
-        stream.y = Math.random() * -200;
-        stream.x = Math.random() * 512;
+      if (stream.y > 1200) {
+        stream.y = Math.random() * -400;
+        stream.x = Math.random() * 1024;
       }
       
       stream.chars.forEach((char, idx) => {
-        const y = stream.y - idx * 18;
-        if (y > 0 && y < 512) {
+        const y = stream.y - idx * 28;
+        if (y > 0 && y < 1024) {
           const brightness = Math.max(0, 1 - idx / stream.chars.length);
           const green = Math.floor(255 * brightness);
-          ctx.fillStyle = `rgb(0, ${green}, 0)`;
+          
+          if (idx === 0) {
+            ctx.fillStyle = `rgb(200, 255, 200)`;
+            ctx.shadowColor = '#00ff00';
+            ctx.shadowBlur = 10;
+          } else {
+            ctx.fillStyle = `rgb(0, ${green}, 0)`;
+            ctx.shadowBlur = 0;
+          }
+          
           ctx.fillText(char, stream.x, y);
           
-          if (Math.random() > 0.98) {
+          if (Math.random() > 0.97) {
             stream.chars[idx] = matrixChars[Math.floor(Math.random() * matrixChars.length)];
           }
         }
       });
     });
     
+    ctx.shadowBlur = 0;
     this.codeTexture!.needsUpdate = true;
   }
   
