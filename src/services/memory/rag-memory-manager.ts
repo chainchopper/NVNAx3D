@@ -7,13 +7,61 @@ import { VectorMemoryManager } from './vector-memory-manager';
 import { EmbeddingGenerator } from './embedding-generator';
 import { Memory, MemoryType, MemorySearchOptions, MemorySearchResult } from '../../types/memory';
 
+export interface RAGConfig {
+  enabled: boolean;
+  similarityThreshold: number;
+  maxMemories: number;
+}
+
+const RAG_CONFIG_KEY = 'rag-config';
+const DEFAULT_RAG_CONFIG: RAGConfig = {
+  enabled: true,
+  similarityThreshold: 0.6,
+  maxMemories: 10,
+};
+
 export class RAGMemoryManager extends VectorMemoryManager {
   private embeddingGenerator: EmbeddingGenerator;
   private initialized = false;
+  private config: RAGConfig = { ...DEFAULT_RAG_CONFIG };
+  private configLoaded = false;
 
   constructor() {
     super();
     this.embeddingGenerator = new EmbeddingGenerator();
+    this.loadConfig();
+  }
+
+  private loadConfig(): void {
+    if (this.configLoaded) return;
+    
+    try {
+      const saved = localStorage.getItem(RAG_CONFIG_KEY);
+      if (saved) {
+        this.config = { ...DEFAULT_RAG_CONFIG, ...JSON.parse(saved) };
+        console.log('[RAGMemoryManager] Loaded config from localStorage:', this.config);
+      }
+    } catch (error) {
+      console.error('[RAGMemoryManager] Failed to load config from localStorage:', error);
+      this.config = { ...DEFAULT_RAG_CONFIG };
+    }
+    this.configLoaded = true;
+  }
+
+  configure(newConfig: Partial<RAGConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    
+    try {
+      localStorage.setItem(RAG_CONFIG_KEY, JSON.stringify(this.config));
+      console.log('[RAGMemoryManager] Configuration updated:', this.config);
+    } catch (error) {
+      console.error('[RAGMemoryManager] Failed to save config to localStorage:', error);
+    }
+  }
+
+  getConfig(): RAGConfig {
+    this.loadConfig();
+    return { ...this.config };
   }
 
   async initialize(): Promise<void> {
@@ -24,6 +72,8 @@ export class RAGMemoryManager extends VectorMemoryManager {
 
     console.log('[RAGMemoryManager] Initializing...');
     
+    this.loadConfig();
+    
     await this.embeddingGenerator.initialize();
     await this.initializeDatabase();
 
@@ -32,6 +82,7 @@ export class RAGMemoryManager extends VectorMemoryManager {
     const storageType = this.isUsingChroma() ? 'ChromaDB' : 'localStorage';
     const embeddingType = this.embeddingGenerator.isGeminiAvailable() ? 'Gemini' : 'fallback';
     console.log(`[RAGMemoryManager] Initialized with ${storageType} storage and ${embeddingType} embeddings`);
+    console.log(`[RAGMemoryManager] RAG enabled: ${this.config.enabled}, threshold: ${this.config.similarityThreshold}, max: ${this.config.maxMemories}`);
   }
 
   async addMemory(
@@ -100,24 +151,38 @@ export class RAGMemoryManager extends VectorMemoryManager {
       throw new Error('RAGMemoryManager not ready. Call initialize() first.');
     }
 
+    if (!this.config.enabled) {
+      console.log('[RAGMemoryManager] RAG is disabled, returning empty results');
+      return [];
+    }
+
     const {
-      limit = 10,
-      threshold = 0.7,
+      limit = this.config.maxMemories,
+      threshold = this.config.similarityThreshold,
       speaker = null,
       persona = null,
       memoryType = null,
     } = options;
 
-    console.log(`[RAGMemoryManager] Searching for memories matching: "${query.substring(0, 50)}..."`);
+    console.log(`[RAGMemoryManager] Searching for memories matching: "${query.substring(0, 50)}..." (limit: ${limit}, threshold: ${threshold})`);
     
     const queryEmbedding = await this.embeddingGenerator.generateEmbedding(query);
 
     let results: MemorySearchResult[];
 
+    const searchOptions = {
+      ...options,
+      limit,
+      threshold,
+      speaker,
+      persona,
+      memoryType,
+    };
+
     if (this.usingChroma && this.collection) {
-      results = await this.searchChroma(queryEmbedding, options);
+      results = await this.searchChroma(queryEmbedding, searchOptions);
     } else if (this.localFallback) {
-      results = this.localFallback.searchMemories(options, queryEmbedding);
+      results = this.localFallback.searchMemories(searchOptions, queryEmbedding);
     } else {
       throw new Error('No storage backend available');
     }

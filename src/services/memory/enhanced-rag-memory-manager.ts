@@ -15,7 +15,7 @@ import type {
 
 export class EnhancedRAGMemoryManager extends RAGMemoryManager {
   
-  private async getAllMemories(): Promise<Memory[]> {
+  async getAllMemories(): Promise<Memory[]> {
     if (!this.isReady()) {
       throw new Error('EnhancedRAGMemoryManager not ready. Call initialize() first.');
     }
@@ -54,6 +54,14 @@ export class EnhancedRAGMemoryManager extends RAGMemoryManager {
       console.error('[EnhancedRAGMemoryManager] Failed to get all memories from ChromaDB:', error);
       throw error;
     }
+  }
+
+  async getMemoriesByType(type: MemoryType): Promise<Memory[]> {
+    const memories = await this.getAllMemories();
+    return memories.filter(memory => memory.metadata.type === type)
+      .sort((a, b) => 
+        new Date(b.metadata.timestamp).getTime() - new Date(a.metadata.timestamp).getTime()
+      );
   }
 
   private normalizeSpeaker(speaker: string): string {
