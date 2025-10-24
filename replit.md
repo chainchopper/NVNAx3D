@@ -106,6 +106,31 @@ npm run preview
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 
 ## Recent Changes
+- **2025-10-24 (Session 8)**: RAG Memory System & Unique PersonI Backgrounds
+  - ✅ **RAG Memory System Foundation** - Complete vector-based memory with semantic search
+    - VectorMemoryManager with ChromaDB integration and localStorage fallback
+    - EmbeddingGenerator using Gemini text-embedding-004 with character-based fallback
+    - LocalMemoryFallback with cosine similarity search for offline operation
+    - RAGMemoryManager with add/retrieve/search operations and metadata filtering
+    - EnhancedRAGMemoryManager with speaker management, temporal queries, and memory type categorization
+    - Automatic conversation storage: user messages and AI responses saved as memories
+    - Context-aware responses: retrieves top 10 relevant memories before each AI response (0.6 similarity threshold)
+    - Memory types: conversations, notes, reminders, preferences, facts
+    - 5 new TypeScript files: `types/memory.ts`, `services/memory/*` (vector-memory-manager, local-memory-fallback, embedding-generator, rag-memory-manager, enhanced-rag-memory-manager)
+  - ✅ **Dynamic Background Gradients** - Smooth persona-specific backgrounds with 1.5s transitions
+    - 5 unique gradient themes matching each PersonI's personality
+    - WebGL renderer transparency (setClearColor alpha=0) to display gradients behind 3D canvas
+    - CSS-based implementation for performance
+  - ✅ **Unique Idle Backgrounds** - Each PersonI now has a signature animated background
+    - **NIRVANA**: 24-hour color cycle (24 unique gradients changing hourly, updates every minute)
+    - **ADAM**: Conway's Game of Life in Matrix green (toroidal grid, glider patterns, ~10 FPS)
+    - **ATHENA**: Constellation star map (120 twinkling stars, connecting lines, shooting stars, slow rotation)
+    - **THEO**: Code syntax flow (6 columns, multi-language, 7-color syntax highlighting, vertical scroll)
+    - **GHOST**: TV static noise (lavender-tinted, 60 FPS, 3x3 pixel blocks, 40% opacity)
+    - All backgrounds use canvas-based rendering with proper lifecycle management
+    - Conditionally rendered based on active PersonI
+    - 4 new components: `components/game-of-life-bg.ts`, `constellation-map-bg.ts`, `code-flow-bg.ts`, `static-noise-bg.ts`
+
 - **2025-10-24 (Session 7)**: ADAM Matrix Redesign & User Profile System
   - ✅ **ADAM Blank Screen Fixed** - Complete 3D scene redesign from scratch
     - Removed conflicting metallic_brushed texture that was blocking Matrix code
