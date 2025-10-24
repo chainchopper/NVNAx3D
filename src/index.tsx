@@ -31,6 +31,9 @@ import {
   DEFAULT_CAPABILITIES,
 } from './personas';
 import { providerManager } from './services/provider-manager';
+import { ProviderFactory } from './providers/provider-factory';
+import { BaseProvider } from './providers/base-provider';
+import { GoogleProvider } from './providers/google-provider';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -623,7 +626,7 @@ export class GdmLiveAudio extends LitElement {
 
   constructor() {
     super();
-    // Initialize client only if API key is available (will be replaced by provider system)
+    // Initialize legacy client as fallback (provider system is now primary)
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
     if (apiKey) {
       this.client = new GoogleGenAI({apiKey});
@@ -791,30 +794,76 @@ export class GdmLiveAudio extends LitElement {
     }));
   }
 
-  private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
-    if (!this.client) {
-      this.error = 'Please configure an AI provider in Settings → Models';
+  private getProviderForPersoni(personi: PersoniConfig): BaseProvider | null {
+    const modelId = personi.thinkingModel;
+    
+    const availableModels = providerManager.getAvailableModels();
+    const modelInfo = availableModels.find(m => m.id === modelId);
+    
+    if (!modelInfo) {
+      console.warn(`Model "${modelId}" not found in any configured provider`);
       return null;
     }
+    
+    return providerManager.getProviderInstance(modelInfo.providerId, modelId);
+  }
+
+  private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
+    if (!this.activePersoni) {
+      this.error = 'No active PersonI';
+      return null;
+    }
+
+    const provider = this.getProviderForPersoni(this.activePersoni);
     
     this.updateStatus('Transcribing...');
     try {
       const base64Audio = await blobToBase64(audioBlob);
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64Audio,
-                mimeType: audioBlob.type,
+      
+      if (provider instanceof GoogleProvider) {
+        const googleProvider = provider as any;
+        if (!googleProvider.client) {
+          await googleProvider.verify();
+        }
+        
+        const response = await googleProvider.client.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: base64Audio,
+                  mimeType: audioBlob.type,
+                },
               },
-            },
-            {text: 'Transcribe this audio.'},
-          ],
-        },
-      });
-      return response.text.trim();
+              {text: 'Transcribe this audio.'},
+            ],
+          },
+        });
+        return response.text.trim();
+      }
+      
+      if (this.client) {
+        console.warn('Using legacy Google client for transcription (provider is not Google)');
+        const response = await this.client.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: base64Audio,
+                  mimeType: audioBlob.type,
+                },
+              },
+              {text: 'Transcribe this audio.'},
+            ],
+          },
+        });
+        return response.text.trim();
+      }
+      
+      this.error = 'Audio transcription requires a Google Gemini provider. Please configure one in Settings → Models or set VITE_GEMINI_API_KEY';
+      return null;
     } catch (e) {
       this.updateError(`Transcription Error: ${e.message}`);
       return null;
@@ -824,17 +873,18 @@ export class GdmLiveAudio extends LitElement {
   private async processTranscript(transcript: string) {
     if (!this.activePersoni) return;
     
-    if (!this.client) {
-      this.error = 'Please configure an AI provider in Settings → Models';
+    const provider = this.getProviderForPersoni(this.activePersoni);
+    
+    if (!provider) {
+      this.error = `Please configure the provider for model "${this.activePersoni.thinkingModel}" in Settings → Models`;
       return;
     }
 
-    // Add user transcript to history right before processing.
     this.transcriptHistory = [
       ...this.transcriptHistory,
       {speaker: 'user', text: transcript},
     ];
-    this.currentTranscript = ''; // It's now in the history
+    this.currentTranscript = '';
 
     this.updateStatus('Thinking...');
 
@@ -854,22 +904,37 @@ export class GdmLiveAudio extends LitElement {
         }
       }
 
-      const response = await this.client.models.generateContent({
-        model: this.activePersoni.thinkingModel,
-        contents: transcript,
-        config: {
-          systemInstruction: this.activePersoni.systemInstruction,
-          tools: [{functionDeclarations: enabledDeclarations}],
-        },
-      });
+      if (provider instanceof GoogleProvider) {
+        const googleProvider = provider as any;
+        if (!googleProvider.client) {
+          await googleProvider.verify();
+        }
 
-      const functionCalls = response.functionCalls;
-      if (functionCalls && functionCalls.length > 0) {
-        for (const fc of functionCalls) {
-          await this.handleFunctionCall(fc);
+        const response = await googleProvider.client.models.generateContent({
+          model: this.activePersoni.thinkingModel,
+          contents: transcript,
+          config: {
+            systemInstruction: this.activePersoni.systemInstruction,
+            tools: [{functionDeclarations: enabledDeclarations}],
+          },
+        });
+
+        const functionCalls = response.functionCalls;
+        if (functionCalls && functionCalls.length > 0) {
+          for (const fc of functionCalls) {
+            await this.handleFunctionCall(fc);
+          }
+        } else {
+          const responseText = response.text;
+          await this.speakText(responseText);
         }
       } else {
-        const responseText = response.text;
+        const messages = [
+          { role: 'system' as const, content: this.activePersoni.systemInstruction },
+          { role: 'user' as const, content: transcript },
+        ];
+
+        const responseText = await provider.sendMessage(messages);
         await this.speakText(responseText);
       }
     } catch (e) {
@@ -968,10 +1033,9 @@ export class GdmLiveAudio extends LitElement {
     if (!this.activePersoni && speaker === 'ai') return;
     if (!text.trim()) return;
     
-    if (!this.client) {
-      this.error = 'Please configure an AI provider in Settings → Models';
-      return;
-    }
+    const provider = speaker === 'ai' && this.activePersoni 
+      ? this.getProviderForPersoni(this.activePersoni)
+      : null;
 
     this.transcriptHistory = [
       ...this.transcriptHistory,
@@ -987,35 +1051,53 @@ export class GdmLiveAudio extends LitElement {
     ];
 
     try {
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash-preview-tts',
-        contents: [{parts: [{text}]}],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName:
-                  speaker === 'ai'
-                    ? this.activePersoni!.voiceName
-                    : AVAILABLE_VOICES[0],
+      let client = null;
+      
+      if (provider instanceof GoogleProvider) {
+        const googleProvider = provider as any;
+        if (!googleProvider.client) {
+          await googleProvider.verify();
+        }
+        client = googleProvider.client;
+      } 
+      else if (this.client) {
+        console.warn('Using legacy Google client for TTS (provider is not Google)');
+        client = this.client;
+      }
+
+      if (client) {
+        const response = await client.models.generateContent({
+          model: 'gemini-2.5-flash-preview-tts',
+          contents: [{parts: [{text}]}],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: {
+                  voiceName:
+                    speaker === 'ai'
+                      ? this.activePersoni!.voiceName
+                      : AVAILABLE_VOICES[0],
+                },
               },
             },
           },
-        },
-      });
-      const audioData =
-        response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (audioData) {
-        await this.playAudio(audioData);
-        await new Promise((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (this.sources.size === 0) {
-              clearInterval(checkInterval);
-              resolve(null);
-            }
-          }, 100);
         });
+        const audioData =
+          response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (audioData) {
+          await this.playAudio(audioData);
+          await new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+              if (this.sources.size === 0) {
+                clearInterval(checkInterval);
+                resolve(null);
+              }
+            }, 100);
+          });
+        }
+      } else {
+        console.warn('TTS unavailable: requires Google Gemini provider or VITE_GEMINI_API_KEY');
       }
     } catch (e) {
       this.updateError(`TTS Error: ${e.message}`);

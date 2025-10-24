@@ -4,6 +4,8 @@
  */
 
 import { ModelProvider, STTProvider, TTSProvider, DEFAULT_PROVIDERS, ModelInfo } from '../types/providers';
+import { BaseProvider } from '../providers/base-provider';
+import { ProviderFactory } from '../providers/provider-factory';
 
 const PROVIDERS_KEY = 'nirvana-providers';
 const STT_CONFIG_KEY = 'nirvana-stt-config';
@@ -11,6 +13,7 @@ const TTS_CONFIG_KEY = 'nirvana-tts-config';
 
 export class ProviderManager {
   private providers: Map<string, ModelProvider> = new Map();
+  private providerInstances: Map<string, BaseProvider> = new Map();
   private sttConfig: STTProvider | null = null;
   private ttsConfig: TTSProvider | null = null;
 
@@ -97,6 +100,7 @@ export class ProviderManager {
     const provider = this.providers.get(id);
     if (provider) {
       this.providers.set(id, { ...provider, ...updates });
+      this.clearInstanceCache(id);
       this.saveToStorage();
     }
   }
@@ -110,6 +114,7 @@ export class ProviderManager {
 
   deleteProvider(id: string) {
     this.providers.delete(id);
+    this.clearInstanceCache(id);
     this.saveToStorage();
   }
 
@@ -152,6 +157,64 @@ export class ProviderManager {
       });
     
     return allModels;
+  }
+
+  getProviderInstance(providerId: string, modelId?: string): BaseProvider | null {
+    const provider = this.providers.get(providerId);
+    
+    if (!provider) {
+      console.warn(`Provider "${providerId}" not found`);
+      return null;
+    }
+    
+    if (!provider.enabled) {
+      console.warn(`Provider "${provider.name}" is disabled`);
+      return null;
+    }
+    
+    if (!provider.verified) {
+      console.warn(`Provider "${provider.name}" is not verified`);
+      return null;
+    }
+    
+    if (!provider.apiKey) {
+      console.warn(`Provider "${provider.name}" has no API key configured`);
+      return null;
+    }
+    
+    const cacheKey = `${providerId}-${modelId || 'default'}`;
+    
+    if (this.providerInstances.has(cacheKey)) {
+      return this.providerInstances.get(cacheKey)!;
+    }
+    
+    try {
+      const model = modelId || provider.models[0]?.id || '';
+      const instance = ProviderFactory.createProvider(
+        provider.type,
+        provider.apiKey,
+        model,
+        provider.endpoint
+      );
+      
+      this.providerInstances.set(cacheKey, instance);
+      return instance;
+    } catch (error) {
+      console.error(`Failed to create provider instance for ${provider.name}:`, error);
+      return null;
+    }
+  }
+
+  clearInstanceCache(providerId?: string) {
+    if (providerId) {
+      for (const key of this.providerInstances.keys()) {
+        if (key.startsWith(`${providerId}-`)) {
+          this.providerInstances.delete(key);
+        }
+      }
+    } else {
+      this.providerInstances.clear();
+    }
   }
 }
 
