@@ -34,9 +34,12 @@ import { providerManager } from './services/provider-manager';
 import { ProviderFactory } from './providers/provider-factory';
 import { BaseProvider } from './providers/base-provider';
 import { GoogleProvider } from './providers/google-provider';
+import { localWhisperService } from './services/local-whisper';
+import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
+const STT_PREFERENCES_KEY = 'stt-preferences';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
 const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
@@ -91,6 +94,7 @@ export class GdmLiveAudio extends LitElement {
   @state() currentTranscript = '';
   @state() providerStatus: 'configured' | 'missing' | 'unconfigured' = 'unconfigured';
   @state() showOnboarding = false;
+  @state() sttPreferences: SttPreferences = DEFAULT_STT_PREFERENCES;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
@@ -749,6 +753,12 @@ export class GdmLiveAudio extends LitElement {
     await this.startListening();
     this.checkProviderStatus();
     
+    if (this.sttPreferences.enabled) {
+      localWhisperService.loadModel(this.sttPreferences.modelSize).catch(err => {
+        console.error('Failed to load Whisper model on init:', err?.message || err?.toString() || err);
+      });
+    }
+    
     if (this.providerStatus === 'unconfigured') {
       this.showOnboarding = true;
       this.updateStatus('Welcome! Configure your AI providers in Settings → Models to get started');
@@ -837,6 +847,11 @@ export class GdmLiveAudio extends LitElement {
         return acc;
       }, {});
       this.saveConnectors();
+    }
+
+    const storedSttPreferences = localStorage.getItem(STT_PREFERENCES_KEY);
+    if (storedSttPreferences) {
+      this.sttPreferences = JSON.parse(storedSttPreferences);
     }
   }
 
@@ -928,68 +943,119 @@ export class GdmLiveAudio extends LitElement {
     return providerManager.getProviderInstance(modelInfo.providerId, modelId);
   }
 
+  private async convertBlobToFloat32Array(audioBlob: Blob): Promise<{ audio: Float32Array, sampleRate: number }> {
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    
+    try {
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const mono = audioBuffer.numberOfChannels === 1
+        ? audioBuffer.getChannelData(0)
+        : this.convertToMono(audioBuffer);
+      
+      return {
+        audio: mono,
+        sampleRate: audioBuffer.sampleRate,
+      };
+    } finally {
+      await audioContext.close();
+    }
+  }
+
+  private convertToMono(audioBuffer: AudioBuffer): Float32Array {
+    const length = audioBuffer.length;
+    const mono = new Float32Array(length);
+    const numChannels = audioBuffer.numberOfChannels;
+    
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = audioBuffer.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        mono[i] += channelData[i] / numChannels;
+      }
+    }
+    
+    return mono;
+  }
+
   private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
     if (!this.activePersoni) {
       this.updateError('Please select a PersonI to continue');
       return null;
     }
 
-    const provider = this.getProviderForPersoni(this.activePersoni);
-    
     this.updateStatus('Transcribing...');
+    
     try {
-      const base64Audio = await blobToBase64(audioBlob);
-      
-      if (provider instanceof GoogleProvider) {
-        const googleProvider = provider as any;
-        if (!googleProvider.client) {
-          this.updateStatus('Verifying provider...');
-          await googleProvider.verify();
+      if (this.sttPreferences.enabled) {
+        const { audio, sampleRate } = await this.convertBlobToFloat32Array(audioBlob);
+        const result = await localWhisperService.transcribe(audio, sampleRate);
+        
+        if (!result.text || result.text.trim().length === 0) {
+          this.updateError('No transcription received');
+          return null;
+        }
+
+        return result.text.trim();
+      } else {
+        const provider = this.getProviderForPersoni(this.activePersoni);
+        const base64Audio = await blobToBase64(audioBlob);
+        
+        if (provider instanceof GoogleProvider) {
+          const googleProvider = provider as any;
+          if (!googleProvider.client) {
+            this.updateStatus('Verifying provider...');
+            await googleProvider.verify();
+          }
+          
+          const response = await googleProvider.client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+              parts: [
+                {
+                  inlineData: {
+                    data: base64Audio,
+                    mimeType: audioBlob.type,
+                  },
+                },
+                {text: 'Transcribe this audio.'},
+              ],
+            },
+          });
+          return response.text.trim();
         }
         
-        const response = await googleProvider.client.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Audio,
-                  mimeType: audioBlob.type,
+        if (this.client) {
+          console.warn('Using legacy Google client for transcription (provider is not Google)');
+          const response = await this.client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: {
+              parts: [
+                {
+                  inlineData: {
+                    data: base64Audio,
+                    mimeType: audioBlob.type,
+                  },
                 },
-              },
-              {text: 'Transcribe this audio.'},
-            ],
-          },
-        });
-        return response.text.trim();
+                {text: 'Transcribe this audio.'},
+              ],
+            },
+          });
+          return response.text.trim();
+        }
+        
+        this.updateError('Configure a Google Gemini provider or enable Local Whisper in Settings → Models');
+        return null;
       }
-      
-      if (this.client) {
-        console.warn('Using legacy Google client for transcription (provider is not Google)');
-        const response = await this.client.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Audio,
-                  mimeType: audioBlob.type,
-                },
-              },
-              {text: 'Transcribe this audio.'},
-            ],
-          },
-        });
-        return response.text.trim();
-      }
-      
-      this.updateError('Configure a Google Gemini provider in Settings → Models to enable voice transcription');
-      return null;
     } catch (e) {
+      console.error('Transcription error:', e);
+      
       if (e.message?.includes('API key')) {
         this.updateError('Check your API key in Settings → Models');
       } else if (e.message?.includes('network') || e.message?.includes('fetch')) {
         this.updateError('Connection error - check your internet connection');
+      } else if (e.message?.includes('Model not loaded')) {
+        this.updateError('Whisper model not loaded - enable in Settings → Models');
       } else {
         this.updateError(`Unable to transcribe audio - ${e.message}`);
       }
@@ -2060,7 +2126,17 @@ export class GdmLiveAudio extends LitElement {
         ${this.renderPersonisPanel()} 
         ${this.renderConnectorsPanel()}
         ${this.activeSidePanel === 'models' ? html`
-          <models-panel @close=${this.closeSidePanel}></models-panel>
+          <models-panel 
+            @close=${this.closeSidePanel}
+            @stt-preferences-changed=${(e: CustomEvent) => {
+              this.sttPreferences = e.detail;
+              if (this.sttPreferences.enabled) {
+                localWhisperService.loadModel(this.sttPreferences.modelSize).catch(err => {
+                  console.error('Failed to load Whisper model:', err);
+                });
+              }
+            }}
+          ></models-panel>
         ` : ''}
 
         <div

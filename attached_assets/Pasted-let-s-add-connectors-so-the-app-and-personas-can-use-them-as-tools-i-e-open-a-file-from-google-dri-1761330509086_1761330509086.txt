@@ -1,0 +1,229 @@
+let's add connectors so the app and personas can use them as tools. i.e. open a file from google drive, or tell me about a youtube video: Google Drive
+Google Drive
+Access and manage your Google Drive files and folders.
+Active
+
+Asana
+Asana
+Read Asana tasks and project data from your workspace.
+
+Box
+Box
+Read and access your Box files and folders from your apps.
+
+Confluence
+Confluence
+Read users and groups, write content to Confluence spaces.
+
+Discord
+Discord
+Access Discord guild information and user profiles.
+
+Dropbox
+Dropbox
+Read Dropbox files, content, and metadata from your apps.
+
+GitHub
+GitHub
+Access GitHub repositories, users, and organizations from your apps.
+
+Google Calendar
+Google Calendar
+Read and write Google Calendar events and settings.
+
+Google Docs
+Google Docs
+Create, read, and edit Google Docs from your apps.
+
+Gmail
+Gmail
+Send, receive, and manage Gmail messages from your apps.
+
+Google Sheets
+Google Sheets
+Read and write to Google Sheets from your apps.
+
+HubSpot
+HubSpot
+Read HubSpot CRM objects, contacts, and deals from your apps.
+
+Jira
+Jira
+Read users and manage Jira work items and issues.
+
+Linear
+Linear
+Create and manage Linear issues, comments, and schedules.
+
+Notion
+Notion
+Read and write to your Notion workspace and pages.
+
+OneDrive
+OneDrive
+Access and manage your OneDrive files and folders.
+
+Outlook
+Outlook
+Send, receive emails and manage Outlook calendar events.
+
+Resend
+Resend
+Send transactional emails using Resend API from your apps.
+
+SendGrid
+SendGrid
+Send transactional emails using SendGrid API from your apps.
+
+SharePoint
+SharePoint
+Read, write, and manage SharePoint sites and documents.
+
+Spotify
+Spotify
+Access and manage Spotify playlists and library from your apps.
+
+Twilio
+Twilio
+Send SMS messages and make voice calls using Twilio API.
+
+YouTube
+YouTube
+Upload, manage YouTube videos, channels, and access analytics.
+
+MCP Servers Agent
+Provide external context and tools to Nirvanat by connecting to external MCP servers.
+Name Description Connection Status
+Gemini 2.5 Pro Ran for 25s
+Thought for 25 seconds
+chevron_right
+
+This is an excellent evolution for the application. By integrating connectors, you're transforming the Personis from conversationalists into capable agents that can interact with other services and perform tasks. I have implemented this "Connectors" system for you.
+
+Here’s a breakdown of the new features and how they work:
+
+    New "Connectors" Panel: I've added a new "Connectors" option to the settings menu. This opens a dedicated panel where you can manage all available third-party integrations (like YouTube, Google Drive, GitHub, etc.). From here, you can activate or deactivate each service. For this implementation, the connection is simulated with a simple toggle, but it lays the groundwork for future OAuth or API key integration.
+
+    Personi-Specific Capabilities: The "Edit Personi" panel has been upgraded. The static "Capabilities" section is now a dynamic list of all your active connectors. You can now grant each Personi specific permissions, deciding exactly which tools they are allowed to use. For example, you could create a "Developer" Personi that has access to GitHub but not Google Drive.
+
+    Intelligent Tool Usage: The core of this update is integrating these connectors with the AI model.
+
+        When you speak to a Personi, the application now tells the Gemini model which tools that specific Personi is allowed to use.
+
+        If your request requires one of these tools (e.g., "Tell me about this YouTube video"), the model will recognize this and, instead of answering directly, will return a FunctionCall asking the application to execute the relevant tool.
+
+        The application then handles this request, simulates the tool's action (e.g., "Fetching YouTube transcript..."), and provides a spoken response based on the result.
+
+    Updated Persona Templates: To get you started, I've updated the default persona templates with some logical default capabilities. For instance, ADAM, the programmer, now comes with GitHub enabled by default.
+
+This update makes the entire system vastly more powerful and customizable. Your Personis are no longer just what they say, but what they can do.
+
+Here is the updated code:
+Updated files:
+index.tsx
+
+Added a "Connectors" management panel where users can enable/disable integrations. The Personi editing panel has been updated to allow assigning these active connectors as specific capabilities. The core AI interaction logic in processTranscript now dynamically provides the enabled connectors as tools to the Gemini API, and the handleFunctionCall method has been expanded to simulate the execution of these tools (e.g., fetching a YouTube transcript) and provide a spoken response.
+personas.ts
+
+Introduced a new Connector interface and a list of AVAILABLE_CONNECTORS (like YouTube, Google Drive, GitHub), each with a corresponding FunctionDeclaration for the Gemini API. The PersoniConfig has been updated to replace the static capabilities with a dynamic enabledConnectors array, allowing each Personi to have a unique set of tools.
+memory.ts
+
+Fixed a critical bug in the createEmbedding method. The Gemini API call was using an incorrect request structure (contents instead of content) and parsing the response incorrectly (embeddings instead of embedding). This has been corrected to align with the embedContent API, ensuring that the memory system can function correctly.
+User
+
+let's add connectors so the app and personas can use them as tools. i.e. open a file from google drive, or tell me about a youtube video: Google Drive
+Google Drive
+Access and manage your Google Drive files and folders.
+Active
+
+Asana
+Asana
+Read Asana tasks and project data from your workspace.
+
+Box
+Box
+Read and access your Box files and folders from your apps.
+
+Confluence
+Confluence
+Read users and groups, write content to Confluence spaces.
+
+Discord
+Discord
+Access Discord guild information and user profiles.
+
+Dropbox
+Dropbox
+Read Dropbox files, content, and metadata from your apps.
+
+GitHub
+GitHub
+Access GitHub repositories, users, and organizations from your apps.
+
+Google Calendar
+Google Calendar
+Read and write Google Calendar events and settings.
+
+Google Docs
+Google Docs
+Create, read, and edit Google Docs from your apps.
+
+Gmail
+Gmail
+Send, receive, and manage Gmail messages from your apps.
+
+Google Sheets
+Google Sheets
+Read and write to Google Sheets from your apps.
+
+HubSpot
+HubSpot
+Read HubSpot CRM objects, contacts, and deals from your apps.
+
+Jira
+Jira
+Read users and manage Jira work items and issues.
+
+Linear
+Linear
+Create and manage Linear issues, comments, and schedules.
+
+Notion
+Notion
+Read and write to your Notion workspace and pages.
+
+OneDrive
+OneDrive
+Access and manage your OneDrive files and folders.
+
+Outlook
+Outlook
+Send, receive emails and manage Outlook calendar events.
+
+Resend
+Resend
+Send transactional emails using Resend API from your apps.
+
+SendGrid
+SendGrid
+Send transactional emails using SendGrid API from your apps.
+
+SharePoint
+SharePoint
+Read, write, and manage SharePoint sites and documents.
+
+Spotify
+Spotify
+Access and manage Spotify playlists and library from your apps.
+
+Twilio
+Twilio
+Send SMS messages and make voice calls using Twilio API.
+
+YouTube
+YouTube
+Upload, manage YouTube videos, channels, and access analytics.
+
+MCP Servers Agent
+Provide external context and tools to Nirvanat by connecting to external MCP servers.
+Name Description Connection Status
