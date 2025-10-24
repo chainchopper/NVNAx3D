@@ -833,55 +833,6 @@ export class GdmLiveAudio extends LitElement {
       line-height: 1.4;
     }
 
-    .user-profile-badge {
-      position: absolute;
-      top: 24px;
-      left: 24px;
-      z-index: 100;
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(25, 22, 30, 0.8);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 24px;
-      padding: 8px 16px 8px 8px;
-      cursor: pointer;
-      font-family: sans-serif;
-      color: white;
-    }
-
-    .user-profile-badge.visible {
-      opacity: 1;
-    }
-
-    .user-profile-badge:hover {
-      background: rgba(25, 22, 30, 0.95);
-      border-color: rgba(255, 255, 255, 0.4);
-    }
-
-    .user-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: bold;
-      color: white;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      flex-shrink: 0;
-    }
-
-    .user-name {
-      font-size: 14px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
   `;
 
   constructor() {
@@ -2535,15 +2486,6 @@ export class GdmLiveAudio extends LitElement {
     const showControls =
       this.settingsButtonVisible || this.isAiSpeaking || this.isSpeaking;
 
-    const getUserInitials = () => {
-      const name = this.userProfile?.name || 'U';
-      const parts = name.trim().split(' ');
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      }
-      return name.substring(0, 2).toUpperCase();
-    };
-
     return html`
       <div>
         ${this.activePersoni?.name === 'ADAM'
@@ -2555,13 +2497,6 @@ export class GdmLiveAudio extends LitElement {
           : this.activePersoni?.name === 'GHOST'
           ? html`<static-noise-bg></static-noise-bg>`
           : html`<div class="background-gradient ${this.getBackgroundGradientClass()}"></div>`}
-        <div
-          class="user-profile-badge ${this.settingsButtonVisible ? 'visible' : ''}"
-          @click=${() => this.openSidePanel('userProfile')}
-          title="User Profile">
-          <div class="user-avatar">${getUserInitials()}</div>
-          <div class="user-name">${this.userProfile?.name || 'User'}</div>
-        </div>
 
         <div class="transcription-log-container">
           ${this.transcriptHistory.map(

@@ -68,6 +68,9 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   
   private listeningGlowColor = new THREE.Color(0x00ff00);
   private originalEmissiveColor = new THREE.Color(0xffffff);
+  
+  private idleAnimationPhase = 0;
+  private baseOpacity = 0.7;
 
   @property({type: Boolean}) isSwitchingPersona = false;
   @property({type: Boolean}) isListening = false;
@@ -167,6 +170,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.sphereMaterial.metalness = 0.1;
     this.sphereMaterial.color.set(0xffffff);
     this.sphereMaterial.transparent = true;
+    this.sphereMaterial.opacity = this.baseOpacity;
+    this.sphereMaterial.depthWrite = false;
 
     if (!textureName && idleAnimation === 'code') {
       this.sphereMaterial.color.set(0x000000);
@@ -196,7 +201,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
       this.sphereMaterial.map = texture;
       this.sphereMaterial.transmission = 0; // Opaque for textures
-      this.sphereMaterial.transparent = false;
+      this.sphereMaterial.transparent = true;
+      this.sphereMaterial.opacity = 0.85;
       this.sphereMaterial.roughness = 0.7;
       this.sphereMaterial.metalness = 0.2;
     }
@@ -341,6 +347,9 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       thickness: 0.5,
       emissive: 0xffffff,
       emissiveIntensity: 0.1,
+      transparent: true,
+      opacity: this.baseOpacity,
+      depthWrite: false,
     });
 
     new EXRLoader().load(
@@ -494,32 +503,80 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     if (!this.particleSystem) {
       const geo = new THREE.BufferGeometry();
       const vertices = [];
-      for (let i = 0; i < 200; i++) {
+      const sizes = [];
+      const colors = [];
+      const particleCount = 500;
+      
+      for (let i = 0; i < particleCount; i++) {
         vertices.push(
-          Math.random() * 4 - 2,
-          Math.random() * 4 - 2,
-          Math.random() * 4 - 2,
+          (Math.random() - 0.5) * 5,
+          (Math.random() - 0.5) * 5,
+          (Math.random() - 0.5) * 5,
         );
+        sizes.push(Math.random() * 0.08 + 0.02);
+        
+        const colorVariation = Math.random() * 0.3;
+        const color = this.accentColor.clone();
+        color.offsetHSL(colorVariation - 0.15, 0, Math.random() * 0.2 - 0.1);
+        colors.push(color.r, color.g, color.b);
       }
-      geo.setAttribute(
-        'position',
-        new THREE.Float32BufferAttribute(vertices, 3),
-      );
+      
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      geo.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      
       const mat = new THREE.PointsMaterial({
-        color: this.accentColor,
         size: 0.05,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.6,
         blending: THREE.AdditiveBlending,
+        vertexColors: true,
+        sizeAttenuation: true,
+        depthWrite: false,
       });
+      
       this.particleSystem = new THREE.Points(geo, mat);
       this.scene.add(this.particleSystem);
     }
-    (this.particleSystem.material as THREE.PointsMaterial).color.set(
-      this.accentColor,
-    );
-    this.particleSystem.rotation.y += dt * 0.01;
-    this.particleSystem.rotation.x += dt * 0.005;
+    
+    const positions = this.particleSystem.geometry.attributes.position.array as Float32Array;
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i + 1] += Math.sin(this.idleAnimationPhase + i) * 0.001;
+    }
+    this.particleSystem.geometry.attributes.position.needsUpdate = true;
+    
+    this.particleSystem.rotation.y += dt * 0.008;
+    this.particleSystem.rotation.x += dt * 0.004;
+  }
+
+  private updateDramaticIdleAnimations(time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    this.idleAnimationPhase += dt * 0.001;
+    
+    const breathScale = 1.0 + Math.sin(this.idleAnimationPhase * 0.5) * 0.05;
+    this.centralObject.scale.set(breathScale, breathScale, breathScale);
+    
+    this.centralObject.rotation.y += 0.002 * dt;
+    this.centralObject.rotation.x += 0.001 * dt;
+    
+    const floatY = Math.sin(this.idleAnimationPhase * 0.3) * 0.15;
+    this.centralObject.position.y = floatY;
+    
+    const baseIntensity = this.visuals?.textureName === 'lava' ? 0.5 : 0.1;
+    const energyPulse = Math.sin(this.idleAnimationPhase * 0.8) * 0.15;
+    this.targetEmissiveIntensity = baseIntensity + 0.2 + energyPulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.08;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    const opacityPulse = Math.sin(this.idleAnimationPhase * 0.4) * 0.1;
+    if (this.sphereMaterial.transmission > 0.5) {
+      this.sphereMaterial.opacity = this.baseOpacity + opacityPulse;
+    } else {
+      this.sphereMaterial.opacity = 0.85 + opacityPulse * 0.5;
+    }
   }
 
   private updateCodeScrawlAnimation(time: number) {
@@ -726,8 +783,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
         this.activeIdleAnimation = 'none';
       }
     } else if (this.isIdle) {
+      this.updateDramaticIdleAnimations(time, dt);
       this.updateIdleAnimation(dt, t);
-      this.resetGeometryTransforms();
       this.sphereMaterial.emissive.lerp(this.originalEmissiveColor, 0.05);
     } else {
       if (this.activeIdleAnimation !== 'none') {
