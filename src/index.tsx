@@ -22,6 +22,9 @@ import './visual-3d';
 import './components/models-panel';
 import './components/user-profile-panel';
 import './components/game-of-life-bg';
+import './components/constellation-map-bg';
+import './components/code-flow-bg';
+import './components/static-noise-bg';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -2497,6 +2500,12 @@ export class GdmLiveAudio extends LitElement {
       <div>
         ${this.activePersoni?.name === 'ADAM'
           ? html`<game-of-life-bg></game-of-life-bg>`
+          : this.activePersoni?.name === 'ATHENA'
+          ? html`<constellation-map-bg></constellation-map-bg>`
+          : this.activePersoni?.name === 'THEO'
+          ? html`<code-flow-bg></code-flow-bg>`
+          : this.activePersoni?.name === 'GHOST'
+          ? html`<static-noise-bg></static-noise-bg>`
           : html`<div class="background-gradient ${this.getBackgroundGradientClass()}"></div>`}
         <div
           class="user-profile-badge ${this.settingsButtonVisible ? 'visible' : ''}"
