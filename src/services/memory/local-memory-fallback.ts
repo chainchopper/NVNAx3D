@@ -105,4 +105,33 @@ export class LocalMemoryFallback {
     this.save();
     console.log('[LocalMemoryFallback] Cleared all memories');
   }
+
+  getMemoryById(id: string): Memory | null {
+    const memory = this.memories.find(m => m.id === id);
+    return memory || null;
+  }
+
+  deleteMemory(id: string): boolean {
+    const index = this.memories.findIndex(m => m.id === id);
+    if (index === -1) {
+      console.warn(`[LocalMemoryFallback] Memory ${id} not found for deletion`);
+      return false;
+    }
+    this.memories.splice(index, 1);
+    this.save();
+    console.log(`[LocalMemoryFallback] Deleted memory ${id}, total: ${this.memories.length}`);
+    return true;
+  }
+
+  updateMemory(id: string, updatedMemory: Memory): boolean {
+    const index = this.memories.findIndex(m => m.id === id);
+    if (index === -1) {
+      console.warn(`[LocalMemoryFallback] Memory ${id} not found for update`);
+      return false;
+    }
+    this.memories[index] = updatedMemory;
+    this.save();
+    console.log(`[LocalMemoryFallback] Updated memory ${id}`);
+    return true;
+  }
 }

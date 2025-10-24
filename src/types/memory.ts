@@ -2,7 +2,7 @@
  * Memory system types and interfaces
  */
 
-export type MemoryType = 'conversation' | 'note' | 'reminder' | 'preference' | 'fact';
+export type MemoryType = 'conversation' | 'note' | 'reminder' | 'preference' | 'fact' | 'task';
 
 export interface Memory {
   id: string;
@@ -44,4 +44,36 @@ export interface EnhancedSearchOptions extends MemorySearchOptions {
   tags?: string[];
   timeBoost?: boolean;
   importanceThreshold?: number;
+}
+
+export interface NoteSummary {
+  id: string;
+  title: string;
+  tags: string[];
+  timestamp: string;
+  createdByPersona: string;
+  importance: number;
+}
+
+export interface NoteDetail extends NoteSummary {
+  content: string;
+}
+
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface TaskSummary {
+  id: string;
+  title: string;
+  status: TaskStatus;
+  priority: number;
+  dueDate: string | null;
+  assignee: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+  isOverdue: boolean;
+}
+
+export interface TaskDetail extends TaskSummary {
+  description: string;
 }

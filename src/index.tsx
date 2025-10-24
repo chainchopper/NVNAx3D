@@ -21,6 +21,8 @@ import {
 import './visual-3d';
 import './components/models-panel';
 import './components/user-profile-panel';
+import './components/notes-panel';
+import './components/tasks-panel';
 import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
@@ -97,7 +99,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile';
+type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -492,6 +494,10 @@ export class GdmLiveAudio extends LitElement {
     .settings-menu.open .menu-item:nth-child(4) {
       transform: translate(50px, -90px);
       transition-delay: 0.4s;
+    }
+    .settings-menu.open .menu-item:nth-child(5) {
+      transform: translate(90px, -50px);
+      transition-delay: 0.5s;
     }
 
     .side-panel {
@@ -2699,6 +2705,43 @@ export class GdmLiveAudio extends LitElement {
               <path d="M2 12l10 5 10-5"></path>
             </svg>
           </div>
+          <div
+            class="menu-item"
+            title="Notes"
+            @click=${() => this.openSidePanel('notes')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </div>
+          <div
+            class="menu-item"
+            title="Tasks"
+            @click=${() => this.openSidePanel('tasks')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
         </div>
 
         ${this.renderPersonisPanel()} 
@@ -2723,6 +2766,16 @@ export class GdmLiveAudio extends LitElement {
               this.userProfile = e.detail;
             }}
           ></user-profile-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'notes' ? html`
+          <notes-panel
+            @close=${this.closeSidePanel}
+          ></notes-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'tasks' ? html`
+          <tasks-panel
+            @close=${this.closeSidePanel}
+          ></tasks-panel>
         ` : ''}
 
         <div
