@@ -463,20 +463,53 @@ export class GdmLiveAudio extends LitElement {
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: rgba(25, 22, 30, 0.7);
+      background: rgba(25, 22, 30, 0.85);
+      backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       cursor: pointer;
-      transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+      transition: transform 0.3s ease-out, opacity 0.3s ease-out, 
+                  background 0.2s ease, border-color 0.2s ease, 
+                  box-shadow 0.2s ease;
       opacity: 0;
       transform: translate(0, 0);
+      outline: none;
     }
 
     .settings-menu.open .menu-item {
       opacity: 1;
+    }
+
+    .settings-menu .menu-item:hover {
+      background: rgba(135, 206, 250, 0.2);
+      border-color: rgba(135, 206, 250, 0.6);
+      box-shadow: 0 0 15px rgba(135, 206, 250, 0.3);
+      transform: scale(1.1);
+    }
+
+    .settings-menu .menu-item:focus {
+      background: rgba(135, 206, 250, 0.25);
+      border-color: rgba(135, 206, 250, 0.8);
+      box-shadow: 0 0 20px rgba(135, 206, 250, 0.5);
+    }
+
+    .settings-menu .menu-item:active {
+      transform: scale(0.95);
+    }
+
+    .settings-menu .menu-item.group-user {
+      border-color: rgba(135, 206, 250, 0.3);
+    }
+
+    .settings-menu .menu-item.group-ai {
+      border-color: rgba(156, 39, 176, 0.3);
+    }
+
+    .settings-menu .menu-item.group-productivity {
+      border-color: rgba(76, 175, 80, 0.3);
     }
 
     /* Arc positions */
@@ -2645,9 +2678,18 @@ export class GdmLiveAudio extends LitElement {
 
         <div class="settings-menu ${this.settingsMenuVisible ? 'open' : ''}">
           <div
-            class="menu-item"
-            title="User Profile"
-            @click=${() => this.openSidePanel('userProfile')}>
+            class="menu-item group-user"
+            title="User Profile - Manage your personal information and preferences"
+            aria-label="User Profile Settings"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('userProfile')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('userProfile');
+              }
+            }}>
             <svg
               width="24"
               height="24"
@@ -2656,16 +2698,26 @@ export class GdmLiveAudio extends LitElement {
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              aria-hidden="true">
               <circle cx="12" cy="12" r="10"></circle>
               <circle cx="12" cy="10" r="3"></circle>
               <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path>
             </svg>
           </div>
           <div
-            class="menu-item"
-            title="Personis"
-            @click=${() => this.openSidePanel('personis')}>
+            class="menu-item group-ai"
+            title="Models - Configure AI providers and speech-to-text"
+            aria-label="Models Configuration"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('models')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('models');
+              }
+            }}>
             <svg
               width="24"
               height="24"
@@ -2674,50 +2726,26 @@ export class GdmLiveAudio extends LitElement {
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <div
-            class="menu-item"
-            title="Connectors"
-            @click=${() => this.openSidePanel('connectors')}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
-            </svg>
-          </div>
-          <div
-            class="menu-item"
-            title="Models"
-            @click=${() => this.openSidePanel('models')}>
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              aria-hidden="true">
               <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
               <path d="M2 17l10 5 10-5"></path>
               <path d="M2 12l10 5 10-5"></path>
             </svg>
           </div>
           <div
-            class="menu-item"
-            title="Notes"
-            @click=${() => this.openSidePanel('notes')}>
+            class="menu-item group-ai"
+            title="PersonI - Manage AI personas and their personalities"
+            aria-label="PersonI Management"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('personis')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('personis');
+              }
+            }}>
             <svg
               width="24"
               height="24"
@@ -2726,7 +2754,62 @@ export class GdmLiveAudio extends LitElement {
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div
+            class="menu-item group-ai"
+            title="Connectors - Enable external service integrations"
+            aria-label="Connectors Configuration"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('connectors')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('connectors');
+              }
+            }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
+            </svg>
+          </div>
+          <div
+            class="menu-item group-productivity"
+            title="Notes - Create and manage your notes"
+            aria-label="Notes Manager"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('notes')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('notes');
+              }
+            }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
               <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
               <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -2735,9 +2818,18 @@ export class GdmLiveAudio extends LitElement {
             </svg>
           </div>
           <div
-            class="menu-item"
-            title="Tasks"
-            @click=${() => this.openSidePanel('tasks')}>
+            class="menu-item group-productivity"
+            title="Tasks - Track and manage your tasks"
+            aria-label="Tasks Manager"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('tasks')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('tasks');
+              }
+            }}>
             <svg
               width="24"
               height="24"
@@ -2746,15 +2838,25 @@ export class GdmLiveAudio extends LitElement {
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              aria-hidden="true">
               <path d="M9 11l3 3L22 4"></path>
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
             </svg>
           </div>
           <div
-            class="menu-item"
-            title="Memory"
-            @click=${() => this.openSidePanel('memory')}>
+            class="menu-item group-productivity"
+            title="Memory - View and manage conversation memory"
+            aria-label="Memory Manager"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('memory')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('memory');
+              }
+            }}>
             <svg
               width="24"
               height="24"
@@ -2763,7 +2865,8 @@ export class GdmLiveAudio extends LitElement {
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              aria-hidden="true">
               <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z"></path>
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
