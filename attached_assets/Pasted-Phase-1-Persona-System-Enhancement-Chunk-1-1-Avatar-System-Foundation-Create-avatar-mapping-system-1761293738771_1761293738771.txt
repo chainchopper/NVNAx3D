@@ -1,0 +1,95 @@
+Phase 1: Persona System Enhancement
+Chunk 1.1: Avatar System Foundation
+Create avatar mapping system linking personas to unique images
+
+Design/implement 4 distinct avatar styles maintaining liquid animation theme
+
+Add avatar configuration to persona definitions with fallback to default blob
+
+Chunk 1.2: Persona Voice & Personality Definitions
+Define unique voice profiles for each persona (NIRVANA, VISION, ADAM, THEO)
+
+Implement personality traits and response styles
+
+Create persona capability matrix mapping strengths to tasks
+
+Chunk 1.3: Dual Persona Loading System
+Modify persona carousel to support multi-selection
+
+Implement persona collaboration protocol
+
+Update UI to display active personas with their avatars
+
+Phase 2: Memory System Overhaul
+Chunk 2.1: Vector Database Foundation
+Set up ChromaDB integration with local storage fallback
+
+Implement Gemini embedding model (text-embedding-004) integration
+
+Create database initialization and management system
+
+Chunk 2.2: RAG Memory Operations
+Implement embedContent method for text embedding generation
+
+Create memory storage with metadata (speaker, timestamp, type)
+
+Build similarity search and retrieval system
+
+Chunk 2.3: Enhanced Memory Queries
+Add daily memory grouping functionality
+
+Implement speaker tag updating for voice profiling
+
+Create memory relevance scoring system
+
+Phase 3: UI/UX Enhancements
+Chunk 3.1: Interface Cleanup
+Remove "reset session" icon and associated code
+
+Verify no functionality loss from removal
+
+Clean up any orphaned event handlers
+
+Chunk 3.2: Time & Context Awareness
+Implement time announcement system
+
+Create meeting/reminder detection from context
+
+Add proactive notification system
+
+Chunk 3.3: Notes Feature Integration
+Design Notes as a memory type
+
+Implement note creation, storage, and retrieval
+
+Add note-specific UI components
+
+Phase 4: Integration & Testing
+Chunk 4.1: System Integration
+Wire persona system with memory enhancements
+
+Connect time awareness to memory retrieval
+
+Integrate Notes with RAG system
+
+Chunk 4.2: Testing & Optimization
+Test persona collaboration scenarios
+
+Validate memory retrieval accuracy
+
+Performance optimization for dual persona loading
+
+Implementation Order Recommendation:
+Start with Chunk 1.1 + 1.2 - Persona avatars and definitions (visual impact, foundation)
+
+Then Chunk 2.1 + 2.2 - Memory system core (critical infrastructure)
+
+Follow with Chunk 3.1 - UI cleanup (quick win)
+
+Proceed with Chunk 1.3 - Dual personas (user-facing feature)
+
+Implement Chunk 2.3 + 3.3 - Enhanced queries + Notes (memory features)
+
+Finish with Chunk 3.2 + 4.1 + 4.2 - Time awareness & integration (polish)
+
+Each chunk is designed to be independently testable while building toward the complete system. The persona enhancements and memory overhaul can be developed in parallel once their foundations are laid.
