@@ -1,0 +1,8 @@
+{
+  "name": "NIRVANA",
+  "description": "Real Intelligence",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "prompt": ""
+}
