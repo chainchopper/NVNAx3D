@@ -29,6 +29,7 @@ import {
   switchPersonaDeclaration,
   TextureName,
 } from './personas';
+import { providerManager } from './services/provider-manager';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -773,6 +774,15 @@ export class GdmLiveAudio extends LitElement {
     this.resetIdlePromptTimer();
   }
 
+  private getAvailableModelsForDropdown(): Array<{ id: string; name: string }> {
+    const models = providerManager.getAvailableModels();
+    
+    return models.map(m => ({
+      id: m.id,
+      name: `${m.name} ${m.capabilities?.vision ? '👁️' : ''}${m.capabilities?.functionCalling ? '🔧' : ''}`.trim(),
+    }));
+  }
+
   private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
     if (!this.client) {
       this.error = 'Please configure an AI provider in Settings → Models';
@@ -1437,9 +1447,11 @@ export class GdmLiveAudio extends LitElement {
             (this.editingPersoni!.thinkingModel = (
               e.target as HTMLSelectElement
             ).value)}>
-          ${AVAILABLE_MODELS.map(
-            (m) => html`<option .value=${m}>${m}</option>`,
-          )}
+          ${this.getAvailableModelsForDropdown().length > 0
+            ? this.getAvailableModelsForDropdown().map(
+                (m) => html`<option .value=${m.id}>${m.name}</option>`,
+              )
+            : html`<option disabled>No providers configured - Go to Settings → Models</option>`}
         </select>
       </div>
       <div class="form-group">
