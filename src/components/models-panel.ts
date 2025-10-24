@@ -7,12 +7,19 @@ import { customElement, state } from 'lit/decorators.js';
 import { providerManager } from '../services/provider-manager';
 import { ModelProvider, ProviderType } from '../types/providers';
 import { ProviderFactory } from '../providers/provider-factory';
+import { localWhisperService, LoadingState } from '../services/local-whisper';
+import { SttPreferences, WHISPER_MODELS, DEFAULT_STT_PREFERENCES, WhisperModelSize } from '../types/stt-preferences';
+
+const STT_PREFERENCES_KEY = 'stt-preferences';
 
 @customElement('models-panel')
 export class ModelsPanel extends LitElement {
   @state() providers: ModelProvider[] = [];
   @state() editingProvider: ModelProvider | null = null;
   @state() showAddCustom = false;
+  @state() sttPreferences: SttPreferences = DEFAULT_STT_PREFERENCES;
+  @state() whisperLoadingState: LoadingState = 'idle';
+  @state() whisperLoadingProgress = 0;
 
   static styles = css`
     :host {
@@ -219,15 +226,190 @@ export class ModelsPanel extends LitElement {
       background: rgba(33, 150, 243, 0.3);
       border-color: rgba(33, 150, 243, 0.7);
     }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: '';
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #2196f3;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      color: white;
+      font-size: 14px;
+      box-sizing: border-box;
+      cursor: pointer;
+    }
+
+    .input-group select:focus {
+      outline: none;
+      border-color: #2196f3;
+    }
+
+    .input-group select option {
+      background: #1a1a24;
+      color: white;
+    }
+
+    .loading-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .loading-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2196f3, #64b5f6);
+      transition: width 0.3s ease;
+    }
+
+    .stt-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .stt-control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .model-size-info {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-top: 4px;
+    }
   `;
 
   connectedCallback() {
     super.connectedCallback();
     this.loadProviders();
+    this.loadSttPreferences();
+    this.setupWhisperListeners();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    localWhisperService.removeEventListener('loading', this.handleWhisperLoading);
+    localWhisperService.removeEventListener('progress', this.handleWhisperProgress);
+    localWhisperService.removeEventListener('ready', this.handleWhisperReady);
+    localWhisperService.removeEventListener('error', this.handleWhisperError);
   }
 
   loadProviders() {
     this.providers = providerManager.getAllProviders();
+  }
+
+  loadSttPreferences() {
+    const saved = localStorage.getItem(STT_PREFERENCES_KEY);
+    if (saved) {
+      this.sttPreferences = JSON.parse(saved);
+    }
+    this.whisperLoadingState = localWhisperService.getLoadingState();
+  }
+
+  saveSttPreferences() {
+    localStorage.setItem(STT_PREFERENCES_KEY, JSON.stringify(this.sttPreferences));
+    this.dispatchEvent(new CustomEvent('stt-preferences-changed', { 
+      detail: this.sttPreferences 
+    }));
+  }
+
+  setupWhisperListeners = () => {
+    localWhisperService.addEventListener('loading', this.handleWhisperLoading as EventListener);
+    localWhisperService.addEventListener('progress', this.handleWhisperProgress as EventListener);
+    localWhisperService.addEventListener('ready', this.handleWhisperReady as EventListener);
+    localWhisperService.addEventListener('error', this.handleWhisperError as EventListener);
+  };
+
+  handleWhisperLoading = (event: CustomEvent) => {
+    this.whisperLoadingState = 'loading';
+    this.whisperLoadingProgress = 0;
+  };
+
+  handleWhisperProgress = (event: CustomEvent) => {
+    const { progress } = event.detail;
+    this.whisperLoadingProgress = progress || 0;
+  };
+
+  handleWhisperReady = (event: CustomEvent) => {
+    this.whisperLoadingState = 'ready';
+    this.whisperLoadingProgress = 100;
+  };
+
+  handleWhisperError = (event: CustomEvent) => {
+    this.whisperLoadingState = 'error';
+    console.error('Whisper error:', event.detail.error);
+  };
+
+  handleToggleStt(enabled: boolean) {
+    this.sttPreferences = { ...this.sttPreferences, enabled };
+    this.saveSttPreferences();
+
+    if (enabled) {
+      localWhisperService.loadModel(this.sttPreferences.modelSize).catch(err => {
+        console.error('Failed to load Whisper model:', err);
+      });
+    }
+  }
+
+  handleModelSizeChange(modelSize: WhisperModelSize) {
+    this.sttPreferences = { ...this.sttPreferences, modelSize };
+    this.saveSttPreferences();
+
+    if (this.sttPreferences.enabled) {
+      localWhisperService.loadModel(modelSize).catch(err => {
+        console.error('Failed to load Whisper model:', err);
+      });
+    }
   }
 
   handleClose() {
@@ -363,10 +545,61 @@ export class ModelsPanel extends LitElement {
         <div class="section">
           <div class="section-title">Speech-to-Text</div>
           <div class="provider-card">
-            <div class="provider-name">Local Whisper (On-Device)</div>
-            <div style="font-size: 13px; opacity: 0.7; margin-top: 8px;">
-              Default - Uses browser-based Whisper for privacy
+            <div class="provider-header">
+              <div class="provider-name">Local Whisper (On-Device)</div>
+              <label class="toggle-switch">
+                <input 
+                  type="checkbox" 
+                  .checked=${this.sttPreferences.enabled}
+                  @change=${(e: Event) => this.handleToggleStt((e.target as HTMLInputElement).checked)}
+                />
+                <span class="toggle-slider"></span>
+              </label>
             </div>
+
+            ${this.sttPreferences.enabled ? html`
+              <div class="stt-controls">
+                <div class="input-group">
+                  <label>Model Size</label>
+                  <select 
+                    .value=${this.sttPreferences.modelSize}
+                    @change=${(e: Event) => this.handleModelSizeChange((e.target as HTMLSelectElement).value as WhisperModelSize)}
+                  >
+                    ${WHISPER_MODELS.map(model => html`
+                      <option value=${model.id}>
+                        ${model.name} - ${model.size}
+                      </option>
+                    `)}
+                  </select>
+                  <div class="model-size-info">
+                    ${WHISPER_MODELS.find(m => m.id === this.sttPreferences.modelSize)?.description || ''}
+                  </div>
+                </div>
+
+                ${this.whisperLoadingState === 'loading' ? html`
+                  <div>
+                    <div style="font-size: 13px; margin-bottom: 8px;">
+                      Downloading model... ${Math.round(this.whisperLoadingProgress * 100)}%
+                    </div>
+                    <div class="loading-bar">
+                      <div class="loading-bar-fill" style="width: ${this.whisperLoadingProgress * 100}%"></div>
+                    </div>
+                  </div>
+                ` : this.whisperLoadingState === 'ready' ? html`
+                  <div style="font-size: 13px; color: #4caf50;">
+                    ✓ Model loaded and ready
+                  </div>
+                ` : this.whisperLoadingState === 'error' ? html`
+                  <div style="font-size: 13px; color: #f44336;">
+                    ✗ Failed to load model
+                  </div>
+                ` : ''}
+              </div>
+            ` : html`
+              <div style="font-size: 13px; opacity: 0.7; margin-top: 8px;">
+                Enable to use browser-based speech recognition for privacy
+              </div>
+            `}
           </div>
         </div>
 
