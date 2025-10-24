@@ -30,3 +30,18 @@ export interface MemorySearchResult {
   memory: Memory;
   score: number;
 }
+
+export interface SpeakerStats {
+  speaker: string;
+  messageCount: number;
+  firstSeen: Date;
+  lastSeen: Date;
+  averageImportance: number;
+}
+
+export interface EnhancedSearchOptions extends MemorySearchOptions {
+  dateRange?: { start: Date; end: Date };
+  tags?: string[];
+  timeBoost?: boolean;
+  importanceThreshold?: number;
+}
