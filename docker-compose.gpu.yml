@@ -1,0 +1,56 @@
+version: '3.8'
+
+# =============================================================================
+# NIRVANA Phase 0 - GPU Override Configuration
+# =============================================================================
+# This file provides GPU-specific overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # MILVUS - GPU-enabled configuration
+  # ---------------------------------------------------------------------------
+  milvus:
+    image: milvusdb/milvus:v2.3.3-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['${GPU_DEVICE_IDS:-0}']
+              capabilities: [gpu, compute, utility]
+    environment:
+      # Enable GPU for index building and search
+      - KNOWHERE_GPU_MEM_POOL_SIZE=2048
+      - CUDA_VISIBLE_DEVICES=${GPU_DEVICE_IDS:-0}
+    runtime: nvidia
+
+  # ---------------------------------------------------------------------------
+  # QDRANT - GPU-enabled configuration (if needed for future ONNX models)
+  # ---------------------------------------------------------------------------
+  # qdrant:
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             device_ids: ['${GPU_DEVICE_IDS:-0}']
+  #             capabilities: [gpu]
+  #   runtime: nvidia
+
+  # ---------------------------------------------------------------------------
+  # JUPYTER - GPU-enabled for ML/AI development
+  # ---------------------------------------------------------------------------
+  jupyter:
+    image: jupyter/tensorflow-notebook:latest
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['${GPU_DEVICE_IDS:-0}']
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=${GPU_DEVICE_IDS:-0}
+    runtime: nvidia
