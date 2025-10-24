@@ -601,9 +601,14 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private updateSpeakingVisuals(audioData: Uint8Array, time: number, dt: number) {
     if (!this.centralObject) return;
     
-    const bassFreq = audioData[0] / 255;
-    const midFreq = audioData[Math.floor(audioData.length / 2)] / 255;
-    const highFreq = audioData[audioData.length - 1] / 255;
+    // Extract frequency ranges with averaging for better analysis
+    const bassRange = audioData.slice(0, Math.min(10, audioData.length));
+    const midRange = audioData.slice(10, Math.min(50, audioData.length));
+    const highRange = audioData.slice(50, audioData.length);
+    
+    const bassFreq = (bassRange.reduce((a, b) => a + b, 0) / bassRange.length) / 255;
+    const midFreq = (midRange.length > 0 ? midRange.reduce((a, b) => a + b, 0) / midRange.length : 0) / 255;
+    const highFreq = (highRange.length > 0 ? highRange.reduce((a, b) => a + b, 0) / highRange.length : 0) / 255;
     const avgAmp = audioData.reduce((a, b) => a + b) / (audioData.length * 255);
     
     const rotationIntensity = midFreq * 0.02 * dt;
