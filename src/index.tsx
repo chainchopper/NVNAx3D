@@ -39,6 +39,7 @@ import { localWhisperService } from './services/local-whisper';
 import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences';
 import { userProfileManager } from './services/user-profile-manager';
 import { UserProfile } from './types/user-profile';
+import { ragMemoryManager } from './services/memory/rag-memory-manager';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -99,6 +100,8 @@ export class GdmLiveAudio extends LitElement {
   @state() showOnboarding = false;
   @state() sttPreferences: SttPreferences = DEFAULT_STT_PREFERENCES;
   @state() userProfile: UserProfile;
+  @state() ragEnabled = true;
+  @state() ragInitialized = false;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
@@ -848,6 +851,18 @@ export class GdmLiveAudio extends LitElement {
     this.outputNode.connect(this.outputAudioContext.destination);
     this.loadConfiguration();
     
+    try {
+      console.log('[RAG] Initializing memory system...');
+      await ragMemoryManager.initialize();
+      this.ragInitialized = true;
+      const storageInfo = ragMemoryManager.getStorageInfo();
+      console.log(`[RAG] ✅ Initialized with ${storageInfo.type} storage and ${storageInfo.embeddingType} embeddings`);
+    } catch (error) {
+      console.error('[RAG] ❌ Failed to initialize:', error);
+      this.ragInitialized = false;
+      this.ragEnabled = false;
+    }
+    
     // Check browser STT support
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     this.browserSttSupported = !!SpeechRecognition;
@@ -1317,6 +1332,21 @@ export class GdmLiveAudio extends LitElement {
     ];
     this.currentTranscript = '';
 
+    if (this.ragEnabled && this.ragInitialized) {
+      try {
+        console.log('[RAG] 💾 Storing user message as memory');
+        await ragMemoryManager.addMemory(
+          transcript,
+          'user',
+          'conversation',
+          this.activePersoni.name,
+          5
+        );
+      } catch (error) {
+        console.error('[RAG] Failed to store user message:', error);
+      }
+    }
+
     if (isBrowserOnlyMode) {
       this.updateStatus('Processing (browser-only mode)...');
       const fallbackResponse = this.generateBrowserOnlyResponse(transcript);
@@ -1342,6 +1372,31 @@ export class GdmLiveAudio extends LitElement {
         }
       }
 
+      let memoryContext = '';
+      if (this.ragEnabled && this.ragInitialized) {
+        try {
+          console.log('[RAG] 🔍 Retrieving relevant memories...');
+          const relevantMemories = await ragMemoryManager.retrieveRelevantMemories(
+            transcript,
+            {
+              limit: 10,
+              threshold: 0.6,
+              persona: this.activePersoni.name,
+              memoryType: null
+            }
+          );
+          
+          if (relevantMemories.length > 0) {
+            memoryContext = ragMemoryManager.formatMemoriesForContext(relevantMemories);
+            console.log(`[RAG] 🧠 Found ${relevantMemories.length} relevant memories`);
+          } else {
+            console.log('[RAG] No relevant memories found');
+          }
+        } catch (error) {
+          console.error('[RAG] Failed to retrieve memories:', error);
+        }
+      }
+
       if (provider instanceof GoogleProvider) {
         const googleProvider = provider as any;
         if (!googleProvider.client) {
@@ -1349,9 +1404,13 @@ export class GdmLiveAudio extends LitElement {
         }
 
         const userContext = userProfileManager.getSystemPromptContext();
-        const systemInstruction = userContext 
+        let systemInstruction = userContext 
           ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
           : this.activePersoni.systemInstruction;
+        
+        if (memoryContext) {
+          systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
+        }
 
         const response = await googleProvider.client.models.generateContent({
           model: this.activePersoni.thinkingModel,
@@ -1373,9 +1432,13 @@ export class GdmLiveAudio extends LitElement {
         }
       } else {
         const userContext = userProfileManager.getSystemPromptContext();
-        const systemInstruction = userContext 
+        let systemInstruction = userContext 
           ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
           : this.activePersoni.systemInstruction;
+        
+        if (memoryContext) {
+          systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
+        }
           
         const messages = [
           { role: 'system' as const, content: systemInstruction },
@@ -1553,6 +1616,21 @@ export class GdmLiveAudio extends LitElement {
       } else {
         // Fallback to Web Speech API (browser TTS)
         await this.speakWithBrowserTTS(text, speaker);
+      }
+
+      if (speaker === 'ai' && this.ragEnabled && this.ragInitialized && this.activePersoni) {
+        try {
+          console.log('[RAG] 💾 Storing AI response as memory');
+          await ragMemoryManager.addMemory(
+            text,
+            this.activePersoni.name,
+            'conversation',
+            this.activePersoni.name,
+            5
+          );
+        } catch (error) {
+          console.error('[RAG] Failed to store AI response:', error);
+        }
       }
     } catch (e) {
       if (e.message?.includes('API key')) {
