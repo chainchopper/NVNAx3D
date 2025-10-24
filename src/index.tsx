@@ -47,6 +47,7 @@ import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences
 import { userProfileManager } from './services/user-profile-manager';
 import { UserProfile } from './types/user-profile';
 import { ragMemoryManager } from './services/memory/rag-memory-manager';
+import { IdleSpeechManager } from './services/idle-speech-manager';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -140,6 +141,7 @@ export class GdmLiveAudio extends LitElement {
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
   private nirvanaGradientInterval: number | undefined;
+  private idleSpeechManager = new IdleSpeechManager();
   
   private browserSttSupported = false;
   private useBrowserStt = false;
@@ -1012,10 +1014,19 @@ export class GdmLiveAudio extends LitElement {
         this.isSpeaking = true;
         this.status = 'Listening (browser microphone)...';
         clearTimeout(this.idlePromptTimeout);
+        this.idleSpeechManager.pause();
       };
       
       this.recognition.onspeechend = () => {
         this.isSpeaking = false;
+        if (this.activePersoni && !this.isMuted) {
+          const provider = this.getProviderForPersoni(this.activePersoni);
+          if (provider) {
+            this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
+              this.handleIdleSpeech(text);
+            });
+          }
+        }
       };
     }
     
@@ -1224,6 +1235,13 @@ export class GdmLiveAudio extends LitElement {
     this.checkProviderStatus();
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
     this.resetIdlePromptTimer();
+
+    const provider = this.getProviderForPersoni(this.activePersoni);
+    if (provider && !this.isMuted) {
+      this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
+        this.handleIdleSpeech(text);
+      });
+    }
   }
 
   private getAvailableModelsForDropdown(): Array<{ id: string; name: string }> {
@@ -1532,6 +1550,15 @@ export class GdmLiveAudio extends LitElement {
       if (!this.isAiSpeaking) {
         this.updateStatus('Idle');
         this.resetIdlePromptTimer();
+        
+        if (this.activePersoni && !this.isMuted) {
+          const provider = this.getProviderForPersoni(this.activePersoni);
+          if (provider) {
+            this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
+              this.handleIdleSpeech(text);
+            });
+          }
+        }
       }
     }
   }
@@ -1816,6 +1843,7 @@ export class GdmLiveAudio extends LitElement {
       if (this.useBrowserStt) return;
       
       clearTimeout(this.idlePromptTimeout);
+      this.idleSpeechManager.pause();
       this.isSpeaking = true;
       this.status = 'Listening...';
       this.audioRecorder?.start();
@@ -1906,6 +1934,7 @@ export class GdmLiveAudio extends LitElement {
       this.vad.reset();
       this.isSpeaking = false;
       clearTimeout(this.idlePromptTimeout);
+      this.idleSpeechManager.stop();
       this.updateStatus('Muted');
     } else {
       // Restart browser STT if using it
@@ -1914,6 +1943,15 @@ export class GdmLiveAudio extends LitElement {
       }
       this.updateStatus('Idle');
       this.resetIdlePromptTimer();
+      
+      if (this.activePersoni) {
+        const provider = this.getProviderForPersoni(this.activePersoni);
+        if (provider) {
+          this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
+            this.handleIdleSpeech(text);
+          });
+        }
+      }
     }
   }
 
@@ -1970,6 +2008,48 @@ export class GdmLiveAudio extends LitElement {
         Math.floor(Math.random() * template.idlePrompts.length)
       ];
     await this.speakText(prompt);
+  }
+
+  private async handleIdleSpeech(text: string) {
+    if (this.isSpeaking || this.isAiSpeaking || this.isMuted) {
+      console.log('[Idle Speech] Skipping - currently speaking or muted');
+      return;
+    }
+
+    if (!this.activePersoni) {
+      console.log('[Idle Speech] Skipping - no active persona');
+      return;
+    }
+
+    console.log(`[Idle Speech] ${this.activePersoni.name}: "${text}"`);
+
+    this.transcriptHistory = [
+      ...this.transcriptHistory,
+      {
+        speaker: 'ai',
+        text,
+        personiName: this.activePersoni.name,
+        personiColor: this.activePersoni.visuals.accentColor,
+      },
+    ];
+
+    if (this.ragEnabled && this.ragInitialized) {
+      try {
+        await ragMemoryManager.addMemory(
+          text,
+          this.activePersoni.name,
+          'conversation',
+          this.activePersoni.name,
+          4,
+          { idle: true }
+        );
+        console.log('[Idle Speech] Stored in RAG memory');
+      } catch (error) {
+        console.error('[Idle Speech] Failed to store in RAG:', error);
+      }
+    }
+
+    await this.speakText(text);
   }
 
   // Side Panel Logic
