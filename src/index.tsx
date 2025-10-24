@@ -133,6 +133,39 @@ export class GdmLiveAudio extends LitElement {
       height: 100%;
     }
 
+    .background-gradient {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      transition: background 1.5s ease-in-out;
+    }
+
+    .background-gradient.nirvana {
+      background: linear-gradient(135deg, #87ceeb 0%, #1e3a8a 100%);
+    }
+
+    .background-gradient.athena {
+      background: linear-gradient(135deg, #9932cc 0%, #ffd700 100%);
+    }
+
+    .background-gradient.adam {
+      background: linear-gradient(135deg, #000000 0%, #004d00 100%);
+    }
+
+    .background-gradient.theo {
+      background: linear-gradient(135deg, #ff4500 0%, #8b0000 100%);
+    }
+
+    .background-gradient.ghost {
+      background: linear-gradient(135deg, #2c2c2c 0%, #e6e6fa 100%);
+    }
+
+    .background-gradient.default {
+      background: linear-gradient(135deg, #100c14 0%, #1a1520 100%);
+    }
+
     #status {
       position: absolute;
       bottom: 5vh;
@@ -2292,6 +2325,13 @@ export class GdmLiveAudio extends LitElement {
     `;
   }
 
+  private getBackgroundGradientClass(): string {
+    if (!this.activePersoni) {
+      return 'default';
+    }
+    return this.activePersoni.name.toLowerCase();
+  }
+
   render() {
     const showControls =
       this.settingsButtonVisible || this.isAiSpeaking || this.isSpeaking;
@@ -2307,6 +2347,7 @@ export class GdmLiveAudio extends LitElement {
 
     return html`
       <div>
+        <div class="background-gradient ${this.getBackgroundGradientClass()}"></div>
         <div
           class="user-profile-badge ${this.settingsButtonVisible ? 'visible' : ''}"
           @click=${() => this.openSidePanel('userProfile')}
