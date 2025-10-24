@@ -20,6 +20,7 @@ import {
 } from './utils';
 import './visual-3d';
 import './components/models-panel';
+import './components/user-profile-panel';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -36,6 +37,8 @@ import { BaseProvider } from './providers/base-provider';
 import { GoogleProvider } from './providers/google-provider';
 import { localWhisperService } from './services/local-whisper';
 import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences';
+import { userProfileManager } from './services/user-profile-manager';
+import { UserProfile } from './types/user-profile';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -62,7 +65,7 @@ const AVAILABLE_IDLE_ANIMATIONS: IdleAnimation[] = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models';
+type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -95,6 +98,7 @@ export class GdmLiveAudio extends LitElement {
   @state() providerStatus: 'configured' | 'missing' | 'unconfigured' = 'unconfigured';
   @state() showOnboarding = false;
   @state() sttPreferences: SttPreferences = DEFAULT_STT_PREFERENCES;
+  @state() userProfile: UserProfile;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
@@ -405,16 +409,20 @@ export class GdmLiveAudio extends LitElement {
 
     /* Arc positions */
     .settings-menu.open .menu-item:nth-child(1) {
-      transform: translate(-80px, 0px);
+      transform: translate(-90px, -10px);
       transition-delay: 0.1s;
     }
     .settings-menu.open .menu-item:nth-child(2) {
-      transform: translate(-56px, -56px);
+      transform: translate(-70px, -70px);
       transition-delay: 0.2s;
     }
     .settings-menu.open .menu-item:nth-child(3) {
-      transform: translate(0px, -80px);
+      transform: translate(-10px, -90px);
       transition-delay: 0.3s;
+    }
+    .settings-menu.open .menu-item:nth-child(4) {
+      transform: translate(50px, -90px);
+      transition-delay: 0.4s;
     }
 
     .side-panel {
@@ -707,6 +715,56 @@ export class GdmLiveAudio extends LitElement {
       font-size: 16px;
       line-height: 1.4;
     }
+
+    .user-profile-badge {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(25, 22, 30, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 8px 16px 8px 8px;
+      cursor: pointer;
+      font-family: sans-serif;
+      color: white;
+    }
+
+    .user-profile-badge.visible {
+      opacity: 1;
+    }
+
+    .user-profile-badge:hover {
+      background: rgba(25, 22, 30, 0.95);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      flex-shrink: 0;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
   `;
 
   constructor() {
@@ -716,6 +774,7 @@ export class GdmLiveAudio extends LitElement {
     if (apiKey) {
       this.client = new GoogleGenAI({apiKey});
     }
+    this.userProfile = userProfileManager.getProfile();
     this.vad = new VoiceActivityDetector();
     this.handleUserActivity = this.handleUserActivity.bind(this);
     this.setupVadListeners();
@@ -1256,11 +1315,16 @@ export class GdmLiveAudio extends LitElement {
           await googleProvider.verify();
         }
 
+        const userContext = userProfileManager.getSystemPromptContext();
+        const systemInstruction = userContext 
+          ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
+          : this.activePersoni.systemInstruction;
+
         const response = await googleProvider.client.models.generateContent({
           model: this.activePersoni.thinkingModel,
           contents: transcript,
           config: {
-            systemInstruction: this.activePersoni.systemInstruction,
+            systemInstruction,
             tools: [{functionDeclarations: enabledDeclarations}],
           },
         });
@@ -1275,8 +1339,13 @@ export class GdmLiveAudio extends LitElement {
           await this.speakText(responseText);
         }
       } else {
+        const userContext = userProfileManager.getSystemPromptContext();
+        const systemInstruction = userContext 
+          ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
+          : this.activePersoni.systemInstruction;
+          
         const messages = [
-          { role: 'system' as const, content: this.activePersoni.systemInstruction },
+          { role: 'system' as const, content: systemInstruction },
           { role: 'user' as const, content: transcript },
         ];
 
@@ -2227,8 +2296,25 @@ export class GdmLiveAudio extends LitElement {
     const showControls =
       this.settingsButtonVisible || this.isAiSpeaking || this.isSpeaking;
 
+    const getUserInitials = () => {
+      const name = this.userProfile?.name || 'U';
+      const parts = name.trim().split(' ');
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    };
+
     return html`
       <div>
+        <div
+          class="user-profile-badge ${this.settingsButtonVisible ? 'visible' : ''}"
+          @click=${() => this.openSidePanel('userProfile')}
+          title="User Profile">
+          <div class="user-avatar">${getUserInitials()}</div>
+          <div class="user-name">${this.userProfile?.name || 'User'}</div>
+        </div>
+
         <div class="transcription-log-container">
           ${this.transcriptHistory.map(
             (entry) => html`
@@ -2345,6 +2431,24 @@ export class GdmLiveAudio extends LitElement {
         <div class="settings-menu ${this.settingsMenuVisible ? 'open' : ''}">
           <div
             class="menu-item"
+            title="User Profile"
+            @click=${() => this.openSidePanel('userProfile')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="10" r="3"></circle>
+              <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"></path>
+            </svg>
+          </div>
+          <div
+            class="menu-item"
             title="Personis"
             @click=${() => this.openSidePanel('personis')}>
             <svg
@@ -2411,6 +2515,14 @@ export class GdmLiveAudio extends LitElement {
               }
             }}
           ></models-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'userProfile' ? html`
+          <user-profile-panel
+            @close=${this.closeSidePanel}
+            @profile-saved=${(e: CustomEvent) => {
+              this.userProfile = e.detail;
+            }}
+          ></user-profile-panel>
         ` : ''}
 
         <div

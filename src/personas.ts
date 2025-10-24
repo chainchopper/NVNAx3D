@@ -216,8 +216,7 @@ export const personaTemplates: PersonaTemplate[] = [
     avatarUrl: '/avatars/adam.png',
     visuals: {
       shape: 'Box',
-      accentColor: '#32cd32', // Lime Green
-      textureName: 'metallic_brushed',
+      accentColor: '#00ff00',
       idleAnimation: 'code',
     },
   },
