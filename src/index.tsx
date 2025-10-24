@@ -89,6 +89,8 @@ export class GdmLiveAudio extends LitElement {
   @state() isSwitchingPersona = false;
   @state() transcriptHistory: TranscriptEntry[] = [];
   @state() currentTranscript = '';
+  @state() providerStatus: 'configured' | 'missing' | 'unconfigured' = 'unconfigured';
+  @state() showOnboarding = false;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
@@ -250,9 +252,70 @@ export class GdmLiveAudio extends LitElement {
       z-index: 100;
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
     }
 
     .settings-fab.visible {
+      opacity: 1;
+    }
+
+    .provider-status-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(25, 22, 30, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .provider-status-indicator.configured {
+      background: rgba(34, 139, 34, 0.2);
+      border-color: rgba(34, 139, 34, 0.5);
+    }
+
+    .provider-status-indicator.missing {
+      background: rgba(255, 165, 0, 0.2);
+      border-color: rgba(255, 165, 0, 0.5);
+      animation: pulse-warning 2s infinite;
+    }
+
+    @keyframes pulse-warning {
+      0% {
+        box-shadow: 0 0 0 0 rgba(255, 165, 0, 0.4);
+      }
+      70% {
+        box-shadow: 0 0 5px 10px rgba(255, 165, 0, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 165, 0, 0);
+      }
+    }
+
+    .provider-status-tooltip {
+      position: absolute;
+      bottom: 100%;
+      right: 0;
+      margin-bottom: 8px;
+      background: rgba(25, 22, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 8px 12px;
+      white-space: nowrap;
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .provider-status-indicator:hover .provider-status-tooltip {
       opacity: 1;
     }
 
@@ -671,8 +734,46 @@ export class GdmLiveAudio extends LitElement {
     this.outputNode.connect(this.outputAudioContext.destination);
     this.loadConfiguration();
     await this.startListening();
-    this.updateStatus('Idle');
-    this.resetIdlePromptTimer();
+    this.checkProviderStatus();
+    
+    if (this.providerStatus === 'unconfigured') {
+      this.showOnboarding = true;
+      this.updateStatus('Welcome! Configure your AI providers in Settings → Models to get started');
+    } else if (this.providerStatus === 'missing') {
+      this.updateStatus('Current provider not configured - go to Settings → Models');
+    } else {
+      this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
+    }
+  }
+
+  private checkProviderStatus() {
+    const availableModels = providerManager.getAvailableModels();
+    
+    if (availableModels.length === 0) {
+      this.providerStatus = 'unconfigured';
+      return;
+    }
+
+    if (this.activePersoni) {
+      const provider = this.getProviderForPersoni(this.activePersoni);
+      this.providerStatus = provider ? 'configured' : 'missing';
+    } else {
+      this.providerStatus = availableModels.length > 0 ? 'configured' : 'unconfigured';
+    }
+  }
+
+  private getProviderStatusTooltip(): string {
+    switch (this.providerStatus) {
+      case 'configured':
+        return 'Provider configured and ready';
+      case 'missing':
+        return `Provider for ${this.activePersoni?.thinkingModel || 'current model'} not configured`;
+      case 'unconfigured':
+        return 'No providers configured - click to configure';
+      default:
+        return 'Unknown status';
+    }
   }
 
   private loadConfiguration() {
@@ -781,6 +882,7 @@ export class GdmLiveAudio extends LitElement {
     }
 
     this.isSwitchingPersona = false;
+    this.checkProviderStatus();
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
     this.resetIdlePromptTimer();
   }
@@ -810,7 +912,7 @@ export class GdmLiveAudio extends LitElement {
 
   private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
     if (!this.activePersoni) {
-      this.error = 'No active PersonI';
+      this.updateError('Please select a PersonI to continue');
       return null;
     }
 
@@ -823,6 +925,7 @@ export class GdmLiveAudio extends LitElement {
       if (provider instanceof GoogleProvider) {
         const googleProvider = provider as any;
         if (!googleProvider.client) {
+          this.updateStatus('Verifying provider...');
           await googleProvider.verify();
         }
         
@@ -862,10 +965,16 @@ export class GdmLiveAudio extends LitElement {
         return response.text.trim();
       }
       
-      this.error = 'Audio transcription requires a Google Gemini provider. Please configure one in Settings → Models or set VITE_GEMINI_API_KEY';
+      this.updateError('Configure a Google Gemini provider in Settings → Models to enable voice transcription');
       return null;
     } catch (e) {
-      this.updateError(`Transcription Error: ${e.message}`);
+      if (e.message?.includes('API key')) {
+        this.updateError('Check your API key in Settings → Models');
+      } else if (e.message?.includes('network') || e.message?.includes('fetch')) {
+        this.updateError('Connection error - check your internet connection');
+      } else {
+        this.updateError(`Unable to transcribe audio - ${e.message}`);
+      }
       return null;
     }
   }
@@ -876,7 +985,7 @@ export class GdmLiveAudio extends LitElement {
     const provider = this.getProviderForPersoni(this.activePersoni);
     
     if (!provider) {
-      this.error = `Please configure the provider for model "${this.activePersoni.thinkingModel}" in Settings → Models`;
+      this.updateError(`Configure ${this.activePersoni.thinkingModel} provider in Settings → Models`);
       return;
     }
 
@@ -938,7 +1047,13 @@ export class GdmLiveAudio extends LitElement {
         await this.speakText(responseText);
       }
     } catch (e) {
-      this.updateError(`AI Error: ${e.message}`);
+      if (e.message?.includes('API key')) {
+        this.updateError('Check your API key in Settings → Models');
+      } else if (e.message?.includes('network') || e.message?.includes('fetch')) {
+        this.updateError('Connection error - check your internet connection');
+      } else {
+        this.updateError(`Unable to process request - ${e.message}`);
+      }
     } finally {
       if (!this.isAiSpeaking) {
         this.updateStatus('Idle');
@@ -1100,7 +1215,13 @@ export class GdmLiveAudio extends LitElement {
         console.warn('TTS unavailable: requires Google Gemini provider or VITE_GEMINI_API_KEY');
       }
     } catch (e) {
-      this.updateError(`TTS Error: ${e.message}`);
+      if (e.message?.includes('API key')) {
+        this.updateError('Check your API key in Settings → Models');
+      } else if (e.message?.includes('network') || e.message?.includes('fetch')) {
+        this.updateError('Connection error - check your internet connection');
+      } else {
+        console.warn('TTS Error:', e.message);
+      }
     }
   }
 
@@ -1187,7 +1308,7 @@ export class GdmLiveAudio extends LitElement {
       mutedGain.connect(this.inputAudioContext.destination);
     } catch (err) {
       console.error('Error starting listening:', err);
-      this.updateError(`Microphone Error: ${err.message}`);
+      this.updateError('Please allow microphone access to use voice features');
     }
   }
 
@@ -1271,6 +1392,13 @@ export class GdmLiveAudio extends LitElement {
   private closeSidePanel() {
     this.activeSidePanel = 'none';
     this.editingPersoni = null;
+    this.checkProviderStatus();
+    
+    if (this.showOnboarding && this.providerStatus !== 'unconfigured') {
+      this.showOnboarding = false;
+      this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
+    }
   }
 
   private startCreatePersoniFlow() {
@@ -1320,6 +1448,7 @@ export class GdmLiveAudio extends LitElement {
     // If the active personi was edited, update it
     if (this.activePersoni?.id === this.editingPersoni.id) {
       this.activePersoni = this.editingPersoni;
+      this.checkProviderStatus();
     }
 
     this.configPanelMode = 'list';
@@ -1825,6 +1954,15 @@ export class GdmLiveAudio extends LitElement {
 
         <div
           class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''}">
+          <div
+            class="provider-status-indicator ${this.providerStatus}"
+            @click=${() => this.openSidePanel('models')}
+            title="Provider Status">
+            ${this.providerStatus === 'configured' ? '✓' : '⚠️'}
+            <div class="provider-status-tooltip">
+              ${this.getProviderStatusTooltip()}
+            </div>
+          </div>
           <button
             @click=${this.toggleSettingsMenu}
             class=${this.settingsMenuVisible ? 'active' : ''}
