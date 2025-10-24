@@ -21,6 +21,7 @@ import {
 import './visual-3d';
 import './components/models-panel';
 import './components/user-profile-panel';
+import './components/game-of-life-bg';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -65,6 +66,33 @@ const AVAILABLE_IDLE_ANIMATIONS: IdleAnimation[] = [
   'code',
 ];
 
+const NIRVANA_HOURLY_COLORS = [
+  '#0a0e27', // 00:00 - midnight blue
+  '#0d1135', // 01:00 - deep night
+  '#101442', // 02:00 - darkest before dawn
+  '#1a1d4e', // 03:00 - pre-dawn
+  '#2a2d5e', // 04:00 - early dawn
+  '#3d4370', // 05:00 - dawn breaks
+  '#ff6b4a', // 06:00 - sunrise red
+  '#ff8c5a', // 07:00 - sunrise orange
+  '#ffb347', // 08:00 - morning gold
+  '#87ceeb', // 09:00 - morning sky blue
+  '#7ec8e3', // 10:00 - bright morning
+  '#6fb8d0', // 11:00 - late morning
+  '#5dade2', // 12:00 - midday sky
+  '#52a8d8', // 13:00 - afternoon
+  '#48a3cf', // 14:00 - bright afternoon
+  '#3d9ec5', // 15:00 - late afternoon
+  '#ff9966', // 16:00 - pre-sunset
+  '#ff7f50', // 17:00 - coral sunset
+  '#ff6347', // 18:00 - tomato dusk
+  '#dc143c', // 19:00 - crimson dusk
+  '#9932cc', // 20:00 - dark orchid
+  '#6a0dad', // 21:00 - purple night
+  '#4b0082', // 22:00 - indigo
+  '#2e0854', // 23:00 - late night
+];
+
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
 type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile';
 
@@ -105,6 +133,7 @@ export class GdmLiveAudio extends LitElement {
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
+  private nirvanaGradientInterval: number | undefined;
   
   private browserSttSupported = false;
   private useBrowserStt = false;
@@ -146,7 +175,8 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .background-gradient.nirvana {
-      background: linear-gradient(135deg, #87ceeb 0%, #1e3a8a 100%);
+      background: linear-gradient(135deg, var(--nirvana-hour-color-1, #87ceeb), var(--nirvana-hour-color-2, #1e3a8a));
+      transition: background 60s ease-in-out;
     }
 
     .background-gradient.athena {
@@ -830,6 +860,7 @@ export class GdmLiveAudio extends LitElement {
     window.removeEventListener('touchstart', this.handleUserActivity);
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
     if (this.idlePromptTimeout) clearTimeout(this.idlePromptTimeout);
+    this.stopNirvanaGradientUpdates();
   }
 
   protected updated(
@@ -892,6 +923,10 @@ export class GdmLiveAudio extends LitElement {
     } else {
       this.updateStatus('Idle');
       this.resetIdlePromptTimer();
+    }
+
+    if (this.activePersoni?.name === 'NIRVANA') {
+      this.startNirvanaGradientUpdates();
     }
   }
   
@@ -1108,6 +1143,35 @@ export class GdmLiveAudio extends LitElement {
     }, 4000);
   }
 
+  private updateNirvanaGradient() {
+    const hour = new Date().getHours();
+    const currentColor = NIRVANA_HOURLY_COLORS[hour];
+    const nextColor = NIRVANA_HOURLY_COLORS[(hour + 1) % 24];
+    
+    const root = document.documentElement;
+    root.style.setProperty('--nirvana-hour-color-1', currentColor);
+    root.style.setProperty('--nirvana-hour-color-2', nextColor);
+  }
+
+  private startNirvanaGradientUpdates() {
+    this.updateNirvanaGradient();
+    
+    if (this.nirvanaGradientInterval) {
+      clearInterval(this.nirvanaGradientInterval);
+    }
+    
+    this.nirvanaGradientInterval = window.setInterval(() => {
+      this.updateNirvanaGradient();
+    }, 60000);
+  }
+
+  private stopNirvanaGradientUpdates() {
+    if (this.nirvanaGradientInterval) {
+      clearInterval(this.nirvanaGradientInterval);
+      this.nirvanaGradientInterval = undefined;
+    }
+  }
+
   private toggleSettingsMenu() {
     this.settingsMenuVisible = !this.settingsMenuVisible;
   }
@@ -1134,8 +1198,14 @@ export class GdmLiveAudio extends LitElement {
 
     await new Promise((resolve) => setTimeout(resolve, 4000));
 
+    this.stopNirvanaGradientUpdates();
+
     this.activePersoni = personi;
     this.updateStatus(`${personi.name} is now active.`);
+
+    if (personi.name === 'NIRVANA') {
+      this.startNirvanaGradientUpdates();
+    }
 
     const template = personaTemplates.find(
       (t) => t.name === this.activePersoni?.templateName,
@@ -2425,7 +2495,9 @@ export class GdmLiveAudio extends LitElement {
 
     return html`
       <div>
-        <div class="background-gradient ${this.getBackgroundGradientClass()}"></div>
+        ${this.activePersoni?.name === 'ADAM'
+          ? html`<game-of-life-bg></game-of-life-bg>`
+          : html`<div class="background-gradient ${this.getBackgroundGradientClass()}"></div>`}
         <div
           class="user-profile-badge ${this.settingsButtonVisible ? 'visible' : ''}"
           @click=${() => this.openSidePanel('userProfile')}
