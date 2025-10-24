@@ -9,6 +9,7 @@ export type TextureName =
   | 'none'
   | 'lava'
   | 'water'
+  | 'slime'
   | 'stone_orchid'
   | 'bio_green'
   | 'rock_gray'
