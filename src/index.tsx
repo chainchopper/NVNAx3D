@@ -621,7 +621,11 @@ export class GdmLiveAudio extends LitElement {
 
   constructor() {
     super();
-    this.client = new GoogleGenAI({apiKey: process.env.API_KEY});
+    // Initialize client only if API key is available (will be replaced by provider system)
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY;
+    if (apiKey) {
+      this.client = new GoogleGenAI({apiKey});
+    }
     this.vad = new VoiceActivityDetector();
     this.handleUserActivity = this.handleUserActivity.bind(this);
     this.setupVadListeners();
@@ -770,6 +774,11 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private async transcribeAudio(audioBlob: Blob): Promise<string | null> {
+    if (!this.client) {
+      this.error = 'Please configure an AI provider in Settings → Models';
+      return null;
+    }
+    
     this.updateStatus('Transcribing...');
     try {
       const base64Audio = await blobToBase64(audioBlob);
@@ -796,6 +805,11 @@ export class GdmLiveAudio extends LitElement {
 
   private async processTranscript(transcript: string) {
     if (!this.activePersoni) return;
+    
+    if (!this.client) {
+      this.error = 'Please configure an AI provider in Settings → Models';
+      return;
+    }
 
     // Add user transcript to history right before processing.
     this.transcriptHistory = [
@@ -935,6 +949,11 @@ export class GdmLiveAudio extends LitElement {
   private async speakText(text: string, speaker: 'ai' | 'system' = 'ai') {
     if (!this.activePersoni && speaker === 'ai') return;
     if (!text.trim()) return;
+    
+    if (!this.client) {
+      this.error = 'Please configure an AI provider in Settings → Models';
+      return;
+    }
 
     this.transcriptHistory = [
       ...this.transcriptHistory,
