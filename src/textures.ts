@@ -21,12 +21,20 @@ const organicGlowTextureBase64 =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAEAAQDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAfEAABAwMFAAAAAAAAAAAAAAABAAIDBAUREgYhMVH/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AlEe71tZStjp5mRAA5DWkgha19cXSHI9z3uJySSe5ERFP/2Q==';
 
 export const TEXTURES = {
-  lava: lavaTextureBase64,
-  water: waterTextureBase64,
+  lava: '/lava_liquid.jpg',
+  water: '/water_caustics.jpg',
+  slime: '/slime_bubbles.png',
+  // Keep existing base64 textures for compatibility
   stone_orchid: stoneOrchidTextureBase64,
   bio_green: bioGreenTextureBase64,
   rock_gray: rockGrayTextureBase64,
   metallic_brushed: metallicBrushedTextureBase64,
   crystal_blue: crystalBlueTextureBase64,
   organic_glow: organicGlowTextureBase64,
+};
+
+// New: PBR texture maps
+export const TEXTURE_MAPS = {
+  lava_glossiness: '/lava_glossiness.jpg',
+  lava_specular: '/lava_specular.jpg',
 };

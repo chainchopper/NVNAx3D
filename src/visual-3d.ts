@@ -25,7 +25,7 @@ import {
 } from 'postprocessing';
 import {vs as sphereVS} from './sphere-shader';
 import {IdleAnimation, PersoniConfig, TextureName} from './personas';
-import {TEXTURES} from './textures';
+import {TEXTURES, TEXTURE_MAPS} from './textures';
 
 const IDLE_ACTIVATION_TIME_FRAMES = 120; // Approx 2 seconds
 
@@ -131,6 +131,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     return texture;
   }
 
+  private loadPBRMaps(baseName: string) {
+    const glossMap = this.textureLoader.load(`/${baseName}_glossiness.jpg`);
+    const specularMap = this.textureLoader.load(`/${baseName}_specular.jpg`);
+    return { glossMap, specularMap };
+  }
+
   private updateMaterialForVisuals() {
     if (!this.visuals || !this.sphereMaterial) return;
     const {textureName, shape} = this.visuals;
@@ -138,9 +144,13 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     // Reset material to base crystal state
     this.sphereMaterial.map = null;
     this.sphereMaterial.emissiveMap = null;
+    this.sphereMaterial.roughnessMap = null;
+    this.sphereMaterial.metalnessMap = null;
+    this.sphereMaterial.normalMap = null;
+    this.sphereMaterial.alphaMap = null;
     this.sphereMaterial.emissive.set(0xffffff);
     this.sphereMaterial.emissiveIntensity = 0.1;
-    this.sphereMaterial.transmission = 1.0;
+    this.sphereMaterial.transmission = 0.3;
     this.sphereMaterial.thickness = 0.5;
     this.sphereMaterial.roughness = 0.05;
     this.sphereMaterial.metalness = 0.1;
@@ -173,14 +183,21 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.sphereMaterial.emissiveMap = texture;
       this.sphereMaterial.emissive.set(0xffffff);
       this.sphereMaterial.emissiveIntensity = 0.5;
+      
+      // Load PBR maps for realistic lava
+      const maps = this.loadPBRMaps('lava');
+      this.sphereMaterial.roughnessMap = maps.glossMap;
+      this.sphereMaterial.metalnessMap = maps.specularMap;
+      this.sphereMaterial.metalness = 0.3;
+      this.sphereMaterial.roughness = 0.7;
     } else if (textureName === 'bio_green' || textureName === 'organic_glow') {
       this.sphereMaterial.emissiveMap = texture;
       this.sphereMaterial.emissive.set(0xffffff);
       this.sphereMaterial.emissiveIntensity = 0.2;
       this.sphereMaterial.roughness = 0.8;
     } else if (textureName === 'metallic_brushed') {
-      this.sphereMaterial.roughness = 0.2;
-      this.sphereMaterial.metalness = 0.9;
+      this.sphereMaterial.roughness = 0.4;
+      this.sphereMaterial.metalness = 0.6;
     } else if (textureName === 'crystal_blue') {
       this.sphereMaterial.roughness = 0.1;
       this.sphereMaterial.transmission = 0.9;
@@ -188,6 +205,27 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.sphereMaterial.transparent = true;
       this.sphereMaterial.emissive.set(this.accentColor);
       this.sphereMaterial.emissiveIntensity = 0.2;
+    } else if (textureName === 'water') {
+      this.sphereMaterial.transmission = 0.9;
+      this.sphereMaterial.thickness = 1.5;
+      this.sphereMaterial.roughness = 0.05;
+      this.sphereMaterial.metalness = 0;
+      this.sphereMaterial.transparent = true;
+      this.sphereMaterial.color.set(0x88ccff);
+      if (texture) {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(2, 2);
+      }
+    } else if (textureName === 'slime') {
+      this.sphereMaterial.transmission = 0.7;
+      this.sphereMaterial.thickness = 0.8;
+      this.sphereMaterial.roughness = 0.3;
+      this.sphereMaterial.metalness = 0;
+      this.sphereMaterial.transparent = true;
+      this.sphereMaterial.color.set(0x88ff88);
+      this.sphereMaterial.emissiveMap = texture;
+      this.sphereMaterial.emissive.set(0x00ff00);
+      this.sphereMaterial.emissiveIntensity = 0.1;
     }
 
     this.sphereMaterial.needsUpdate = true;
@@ -321,12 +359,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
     this.godRaysEffect = new GodRaysEffect(this.camera, this.centralObject, {
       resolutionScale: 0.75,
-      density: 0.9,
+      density: 0.6,
       decay: 0.92,
-      weight: 0.3,
+      weight: 0.2,
       exposure: 0.5,
       clampMax: 1.0,
-      samples: 60,
+      samples: 30,
     });
 
     const bloomEffect = new BloomEffect({
@@ -337,14 +375,14 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
     const ssaoEffect = new SSAOEffect(this.camera, normalPass.texture, {
       blendFunction: 21,
-      samples: 20,
+      samples: 12,
       rings: 4,
       distanceThreshold: 0.02,
       distanceFalloff: 0.0002,
       rangeThreshold: 0.005,
       rangeFalloff: 0.001,
       luminanceInfluence: 0.6,
-      radius: 0.05,
+      radius: 0.08,
       resolutionScale: 0.5,
       bias: 0.01,
     });
@@ -520,19 +558,19 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.lightGroup.rotation.x += 0.002 * dt;
     const time = t * 0.001;
     this.pointLights[0].position.set(
-      Math.sin(time * 0.7) * 4,
-      Math.cos(time * 0.5) * 4,
-      Math.cos(time * 0.3) * 4,
+      Math.sin(time * 0.35) * 4,
+      Math.cos(time * 0.25) * 4,
+      Math.cos(time * 0.15) * 4,
     );
     this.pointLights[1].position.set(
-      Math.cos(time * 0.3) * 4,
-      Math.sin(time * 0.5) * 4,
-      Math.sin(time * 0.7) * 4,
+      Math.cos(time * 0.15) * 4,
+      Math.sin(time * 0.25) * 4,
+      Math.sin(time * 0.35) * 4,
     );
     this.pointLights[2].position.set(
-      Math.sin(time * 0.7) * 4,
-      Math.cos(time * 0.3) * 4,
-      Math.sin(time * 0.5) * 4,
+      Math.sin(time * 0.35) * 4,
+      Math.cos(time * 0.15) * 4,
+      Math.sin(time * 0.25) * 4,
     );
 
     const outputIntensity =
@@ -541,7 +579,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
     this.pointLights.forEach((light) => {
       light.color.copy(this.accentColor);
-      light.intensity = outputIntensity * 4 + 0.2;
+      light.intensity = outputIntensity * 2 + 0.3;
     });
 
     const isCurrentlySpeaking = outputIntensity > 0.05;
