@@ -106,6 +106,27 @@ npm run preview
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 
 ## Recent Changes
+- **2025-10-24 (Session 7)**: ADAM Matrix Redesign & User Profile System
+  - ✅ **ADAM Blank Screen Fixed** - Complete 3D scene redesign from scratch
+    - Removed conflicting metallic_brushed texture that was blocking Matrix code
+    - Added special code-only material mode: black base + bright green emissive
+    - Enhanced Matrix animation: 1024x1024 canvas, 35 streams, 24px font, faster speeds
+    - Added white glow to leading character with shadow blur for authenticity
+    - ADAM now displays as pure black box with bright green Matrix code rain
+  - ✅ **User Profile System** - Give PersonI context about who they're speaking to
+    - Created UserProfile interface (name, pronouns, timezone, customContext, preferences)
+    - Built UserProfileManager service with localStorage persistence
+    - Added user-profile-panel component with comprehensive form UI
+    - Profile badge in header showing user initials and name
+    - "User Profile" menu item in settings (first item in arc menu)
+    - User context automatically injected into PersonI system prompts
+  - ✅ **Persona Visual Settings Verified** - All PersonI have unique configurations
+    - NIRVANA: Icosahedron + water + glow (sky blue)
+    - ATHENA: TorusKnot + stone_orchid + particles (dark orchid)
+    - ADAM: Box + NO texture + code idle (pure Matrix green)
+    - THEO: Icosahedron + lava + glow (orange red)
+    - GHOST: TorusKnot + crystal_blue + particles (lavender)
+  
 - **2025-10-24 (Session 6)**: Visual Enhancements & Custom Endpoint Fix
   - ✅ **Custom Endpoint Provider Fix** - OpenAI-compatible endpoints fully supported
     - Fixed model filtering to allow non-GPT models on custom endpoints
@@ -125,7 +146,7 @@ npm run preview
       - Scale pulse: 0-15% scaling based on amplitude
       - Shader integration passes frequency data to vertex shader
     - Smooth reset to neutral state when audio activity stops
-  - ✅ **ADAM Matrix Code Redesign** - Authentic cyberpunk aesthetic
+  - ✅ **Initial Matrix Code Animation** - First attempt at ADAM's visuals
     - Digital rain with authentic Matrix characters (including Katakana: ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ)
     - 15 vertical code streams with random speeds and positions
     - Fade trail effect (brightness decreases down each stream)
