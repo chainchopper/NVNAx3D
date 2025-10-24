@@ -55,6 +55,7 @@ export interface PersoniConfig {
   thinkingModel: string;
   enabledConnectors: string[]; // List of connector IDs
   capabilities?: PersoniCapabilities;
+  avatarUrl?: string;
   visuals: {
     shape: 'Icosahedron' | 'TorusKnot' | 'Box';
     accentColor: string; // hex string e.g., '#87ceeb'
@@ -155,6 +156,7 @@ export const personaTemplates: PersonaTemplate[] = [
     thinkingModel: 'gemini-2.5-flash',
     templateName: 'NIRVANA',
     enabledConnectors: [],
+    avatarUrl: '/avatars/nirvana.png',
     visuals: {
       shape: 'Icosahedron',
       accentColor: '#87ceeb', // Sky Blue
@@ -182,6 +184,7 @@ export const personaTemplates: PersonaTemplate[] = [
     thinkingModel: 'gemini-2.5-flash',
     templateName: 'ATHENA',
     enabledConnectors: ['youtube'],
+    avatarUrl: '/avatars/athena.png',
     visuals: {
       shape: 'TorusKnot',
       accentColor: '#9932cc', // Dark Orchid
@@ -209,6 +212,7 @@ export const personaTemplates: PersonaTemplate[] = [
     thinkingModel: 'gemini-2.5-pro',
     templateName: 'ADAM',
     enabledConnectors: ['github'],
+    avatarUrl: '/avatars/adam.png',
     visuals: {
       shape: 'Box',
       accentColor: '#32cd32', // Lime Green
@@ -236,6 +240,7 @@ export const personaTemplates: PersonaTemplate[] = [
     thinkingModel: 'gemini-2.5-pro',
     templateName: 'THEO',
     enabledConnectors: [],
+    avatarUrl: '/avatars/theo.png',
     visuals: {
       shape: 'Icosahedron',
       accentColor: '#ff4500', // Orange Red
@@ -263,6 +268,7 @@ export const personaTemplates: PersonaTemplate[] = [
     thinkingModel: 'gemini-2.5-flash',
     templateName: 'GHOST',
     enabledConnectors: [],
+    avatarUrl: '/avatars/ghost.png',
     visuals: {
       shape: 'TorusKnot',
       accentColor: '#e6e6fa', // Lavender

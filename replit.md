@@ -106,6 +106,20 @@ npm run preview
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 
 ## Recent Changes
+- **2025-10-24 (Session 4)**: Provider Runtime Integration & Visual Polish
+  - ✅ **MAJOR**: PersonI now actually use their assigned providers for inference
+    - Added provider instance caching with proper invalidation on config changes
+    - Google providers use full STT/LLM/TTS pipeline
+    - OpenAI/custom providers use text generation with graceful STT/TTS fallback
+    - Provider instances reused efficiently, no expensive re-initialization
+  - ✅ Visual improvements and user guidance
+    - Onboarding message: "Welcome! Configure your AI providers..."
+    - Provider status indicator (⚠️ warning / ✓ configured) near settings
+    - User-friendly error messages with actionable guidance
+    - Loading states throughout the app
+  - ✅ Fixed Vite configuration for Replit's dynamic hostnames
+  - ✅ Production-ready provider system with architect approval
+  
 - **2025-10-24 (Session 3)**: Phase 1 Complete - Provider System & Capabilities
   - ✅ Completed full provider management system with real API verification
   - ✅ PersonI can now use models from any verified provider
