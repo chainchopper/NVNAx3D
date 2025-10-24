@@ -17,6 +17,12 @@ export class GameOfLifeBg extends LitElement {
   private animationFrame: number | null = null;
   private lastUpdateTime = 0;
   private updateInterval = 100;
+  private resizeHandler: () => void;
+
+  constructor() {
+    super();
+    this.resizeHandler = this.handleResize.bind(this);
+  }
 
   static styles = css`
     :host {
@@ -48,6 +54,7 @@ export class GameOfLifeBg extends LitElement {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    window.removeEventListener('resize', this.resizeHandler);
   }
 
   private setupCanvas() {
@@ -62,7 +69,7 @@ export class GameOfLifeBg extends LitElement {
       this.resizeCanvas();
       this.initializeGrid();
 
-      window.addEventListener('resize', () => this.handleResize());
+      window.addEventListener('resize', this.resizeHandler);
     });
   }
 

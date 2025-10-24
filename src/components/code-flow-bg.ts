@@ -32,6 +32,12 @@ export class CodeFlowBg extends LitElement {
   private lineHeight = 24;
   private fontSize = 14;
   private columnWidth = 0;
+  private resizeHandler: () => void;
+
+  constructor() {
+    super();
+    this.resizeHandler = this.handleResize.bind(this);
+  }
 
   static styles = css`
     :host {
@@ -426,6 +432,7 @@ export class CodeFlowBg extends LitElement {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    window.removeEventListener('resize', this.resizeHandler);
   }
 
   private setupCanvas() {
@@ -440,7 +447,7 @@ export class CodeFlowBg extends LitElement {
       this.resizeCanvas();
       this.initializeColumns();
 
-      window.addEventListener('resize', () => this.handleResize());
+      window.addEventListener('resize', this.resizeHandler);
     });
   }
 

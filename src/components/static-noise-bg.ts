@@ -13,6 +13,12 @@ export class StaticNoiseBg extends LitElement {
   private imageData!: ImageData;
   private animationFrame: number | null = null;
   private blockSize = 3; // 3x3 pixel blocks for performance
+  private resizeHandler: () => void;
+
+  constructor() {
+    super();
+    this.resizeHandler = this.handleResize.bind(this);
+  }
 
   static styles = css`
     :host {
@@ -46,6 +52,7 @@ export class StaticNoiseBg extends LitElement {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    window.removeEventListener('resize', this.resizeHandler);
   }
 
   private setupCanvas() {
@@ -59,7 +66,7 @@ export class StaticNoiseBg extends LitElement {
 
       this.resizeCanvas();
 
-      window.addEventListener('resize', () => this.handleResize());
+      window.addEventListener('resize', this.resizeHandler);
     });
   }
 

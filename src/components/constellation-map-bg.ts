@@ -40,6 +40,12 @@ export class ConstellationMapBg extends LitElement {
   private animationFrame: number | null = null;
   private frameCount = 0;
   private rotationAngle = 0;
+  private resizeHandler: () => void;
+
+  constructor() {
+    super();
+    this.resizeHandler = this.handleResize.bind(this);
+  }
 
   static styles = css`
     :host {
@@ -71,6 +77,7 @@ export class ConstellationMapBg extends LitElement {
       cancelAnimationFrame(this.animationFrame);
       this.animationFrame = null;
     }
+    window.removeEventListener('resize', this.resizeHandler);
   }
 
   private setupCanvas() {
@@ -86,7 +93,7 @@ export class ConstellationMapBg extends LitElement {
       this.generateStars();
       this.generateConstellations();
 
-      window.addEventListener('resize', () => this.handleResize());
+      window.addEventListener('resize', this.resizeHandler);
     });
   }
 
