@@ -98,6 +98,11 @@ export class GdmLiveAudio extends LitElement {
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
+  
+  private browserSttSupported = false;
+  private useBrowserStt = false;
+  private recognition: any = null;
+  private recognitionActive = false;
 
   private client: GoogleGenAI;
   private inputAudioContext = new (window.AudioContext ||
@@ -750,6 +755,14 @@ export class GdmLiveAudio extends LitElement {
   private async init() {
     this.outputNode.connect(this.outputAudioContext.destination);
     this.loadConfiguration();
+    
+    // Check browser STT support
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    this.browserSttSupported = !!SpeechRecognition;
+    
+    // Determine STT mode
+    this.determineSttMode();
+    
     await this.startListening();
     this.checkProviderStatus();
     
@@ -760,13 +773,127 @@ export class GdmLiveAudio extends LitElement {
     }
     
     if (this.providerStatus === 'unconfigured') {
-      this.showOnboarding = true;
-      this.updateStatus('Welcome! Configure your AI providers in Settings → Models to get started');
+      if (this.useBrowserStt) {
+        this.showOnboarding = true;
+        this.updateStatus('Browser-only mode (limited functionality) - Configure providers in Settings → Models for full AI');
+      } else {
+        this.showOnboarding = true;
+        this.updateStatus('Welcome! Configure your AI providers in Settings → Models to get started');
+      }
     } else if (this.providerStatus === 'missing') {
       this.updateStatus('Current provider not configured - go to Settings → Models');
     } else {
       this.updateStatus('Idle');
       this.resetIdlePromptTimer();
+    }
+  }
+  
+  private determineSttMode() {
+    const hasProviders = this.activePersoni ? !!this.getProviderForPersoni(this.activePersoni) : false;
+    const hasLocalWhisper = this.sttPreferences.enabled;
+    this.useBrowserStt = !hasProviders && !hasLocalWhisper && this.browserSttSupported;
+    
+    if (this.useBrowserStt) {
+      console.log('Using browser STT (real-time SpeechRecognition)');
+    } else if (hasLocalWhisper) {
+      console.log('Using local Whisper STT');
+    } else if (hasProviders) {
+      console.log('Using provider STT');
+    }
+  }
+  
+  private startBrowserSttRecognition() {
+    if (!this.browserSttSupported || this.recognitionActive) {
+      return;
+    }
+    
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    
+    if (!this.recognition) {
+      this.recognition = new SpeechRecognition();
+      this.recognition.lang = 'en-US';
+      this.recognition.continuous = true;
+      this.recognition.interimResults = false;
+      this.recognition.maxAlternatives = 1;
+      
+      this.recognition.onstart = () => {
+        this.recognitionActive = true;
+        console.log('Browser STT recognition started');
+      };
+      
+      this.recognition.onresult = async (event: any) => {
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript.trim();
+        
+        if (transcript && transcript.length > 0) {
+          console.log('Browser STT transcript:', transcript);
+          this.isSpeaking = false;
+          this.currentTranscript = transcript;
+          await this.processTranscript(transcript);
+        }
+      };
+      
+      this.recognition.onerror = (event: any) => {
+        console.error('Browser STT error:', event.error);
+        this.recognitionActive = false;
+        
+        if (event.error === 'no-speech') {
+          // Normal timeout, just restart
+          this.updateStatus('No speech detected');
+          setTimeout(() => {
+            if (this.useBrowserStt && !this.isMuted) {
+              this.startBrowserSttRecognition();
+            }
+          }, 1000);
+        } else if (event.error === 'not-allowed') {
+          this.updateError('Microphone access denied. Please allow microphone access.');
+        } else {
+          this.updateError(`Speech recognition error: ${event.error}`);
+        }
+      };
+      
+      this.recognition.onend = () => {
+        this.recognitionActive = false;
+        console.log('Browser STT recognition ended');
+        
+        // Auto-restart if still in browser STT mode and not muted
+        if (this.useBrowserStt && !this.isMuted && !this.isAiSpeaking) {
+          setTimeout(() => {
+            this.startBrowserSttRecognition();
+          }, 100);
+        }
+      };
+      
+      this.recognition.onspeechstart = () => {
+        this.isSpeaking = true;
+        this.status = 'Listening (browser microphone)...';
+        clearTimeout(this.idlePromptTimeout);
+      };
+      
+      this.recognition.onspeechend = () => {
+        this.isSpeaking = false;
+      };
+    }
+    
+    try {
+      this.recognition.start();
+    } catch (e) {
+      if (e.message?.includes('already started')) {
+        console.warn('Recognition already started');
+      } else {
+        console.error('Error starting recognition:', e);
+      }
+    }
+  }
+  
+  private stopBrowserSttRecognition() {
+    if (this.recognition && this.recognitionActive) {
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        console.warn('Error stopping recognition:', e);
+      }
+      this.recognitionActive = false;
     }
   }
 
@@ -1044,7 +1171,8 @@ export class GdmLiveAudio extends LitElement {
           return response.text.trim();
         }
         
-        this.updateError('Configure a Google Gemini provider or enable Local Whisper in Settings → Models');
+        // No fallback available - browser STT should be real-time only
+        this.updateError('No transcription method available. Configure a provider or enable Local Whisper.');
         return null;
       }
     } catch (e) {
@@ -1057,27 +1185,52 @@ export class GdmLiveAudio extends LitElement {
       } else if (e.message?.includes('Model not loaded')) {
         this.updateError('Whisper model not loaded - enable in Settings → Models');
       } else {
-        this.updateError(`Unable to transcribe audio - ${e.message}`);
+        console.warn('Transcription error, trying browser STT fallback:', e.message);
+        // Try browser STT as final fallback
+        return await this.transcribeWithBrowserSTT(audioBlob);
       }
       return null;
     }
+  }
+
+  private generateBrowserOnlyResponse(transcript: string): string {
+    const lower = transcript.toLowerCase();
+    const personiName = this.activePersoni?.name || 'NIRVANA';
+    
+    if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
+      return `Hello! I'm ${personiName}. I'm running in browser-only mode. To unlock my full AI capabilities, please configure a provider in Settings → Models.`;
+    }
+    
+    if (lower.includes('settings') || lower.includes('configure') || lower.includes('provider') || lower.includes('setup')) {
+      return "Great! Click the gear icon in the bottom right corner to configure your AI providers. I support Google Gemini, OpenAI, Anthropic, and custom endpoints.";
+    }
+    
+    if (lower.includes('help') || lower.includes('how') || lower.includes('what can you')) {
+      return "I can hear you and speak, but I need an AI provider configured to respond intelligently. Please go to Settings → Models to configure Google Gemini, OpenAI, or another provider for full capabilities.";
+    }
+    
+    return `I heard you, but I need an AI provider to respond intelligently. Please configure Google Gemini, OpenAI, or another provider in Settings → Models for full functionality.`;
   }
 
   private async processTranscript(transcript: string) {
     if (!this.activePersoni) return;
     
     const provider = this.getProviderForPersoni(this.activePersoni);
+    const isProviderMode = !!provider;
+    const isBrowserOnlyMode = !isProviderMode;
     
-    if (!provider) {
-      this.updateError(`Configure ${this.activePersoni.thinkingModel} provider in Settings → Models`);
-      return;
-    }
-
     this.transcriptHistory = [
       ...this.transcriptHistory,
       {speaker: 'user', text: transcript},
     ];
     this.currentTranscript = '';
+
+    if (isBrowserOnlyMode) {
+      this.updateStatus('Processing (browser-only mode)...');
+      const fallbackResponse = this.generateBrowserOnlyResponse(transcript);
+      await this.speakText(fallbackResponse, 'system');
+      return;
+    }
 
     this.updateStatus('Thinking...');
 
@@ -1296,7 +1449,8 @@ export class GdmLiveAudio extends LitElement {
           });
         }
       } else {
-        console.warn('TTS unavailable: requires Google Gemini provider or VITE_GEMINI_API_KEY');
+        // Fallback to Web Speech API (browser TTS)
+        await this.speakWithBrowserTTS(text, speaker);
       }
     } catch (e) {
       if (e.message?.includes('API key')) {
@@ -1304,9 +1458,89 @@ export class GdmLiveAudio extends LitElement {
       } else if (e.message?.includes('network') || e.message?.includes('fetch')) {
         this.updateError('Connection error - check your internet connection');
       } else {
-        console.warn('TTS Error:', e.message);
+        console.warn('TTS Error, falling back to browser voice:', e.message);
+        await this.speakWithBrowserTTS(text, speaker);
       }
     }
+  }
+
+  private async transcribeWithBrowserSTT(audioBlob: Blob): Promise<string | null> {
+    // This method should NOT be called anymore - browser STT is now real-time only
+    // If we reach here, it means something went wrong with the STT mode detection
+    console.error('transcribeWithBrowserSTT called but browser STT should be real-time only');
+    this.updateError('Speech recognition error. Please configure a provider or enable Local Whisper.');
+    return null;
+  }
+
+  private async speakWithBrowserTTS(text: string, speaker: 'ai' | 'system' = 'ai'): Promise<void> {
+    // Check if Web Speech API is supported
+    if (!('speechSynthesis' in window)) {
+      console.error('Browser does not support Web Speech API');
+      return;
+    }
+
+    return new Promise((resolve) => {
+      this.isAiSpeaking = true;
+      this.updateStatus('Speaking (browser voice)...');
+      clearTimeout(this.idlePromptTimeout);
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Try to select an appropriate voice based on PersonI preferences
+      if (speaker === 'ai' && this.activePersoni) {
+        const voices = window.speechSynthesis.getVoices();
+        
+        // Map PersonI voice names to browser voice preferences
+        const voicePreferences: { [key: string]: string[] } = {
+          'Zephyr': ['female', 'woman', 'samantha', 'zira'],
+          'Kore': ['female', 'woman', 'karen', 'heera'],
+          'Puck': ['male', 'man', 'daniel', 'rishi'],
+          'Charon': ['male', 'man', 'tom', 'james'],
+          'Fenrir': ['male', 'man', 'george', 'david'],
+        };
+
+        const preferredTerms = voicePreferences[this.activePersoni.voiceName] || ['female'];
+        
+        // Find a voice that matches any of the preferred terms
+        const matchedVoice = voices.find(voice => 
+          preferredTerms.some(term => 
+            voice.name.toLowerCase().includes(term) || 
+            (voice.lang.startsWith('en') && voice.name.toLowerCase().includes(term))
+          )
+        );
+
+        if (matchedVoice) {
+          utterance.voice = matchedVoice;
+        } else {
+          // Fallback to any English voice
+          const englishVoice = voices.find(v => v.lang.startsWith('en'));
+          if (englishVoice) {
+            utterance.voice = englishVoice;
+          }
+        }
+      }
+
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      utterance.onend = () => {
+        this.isAiSpeaking = false;
+        this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
+        resolve();
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Speech synthesis error:', event);
+        this.isAiSpeaking = false;
+        this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
+        resolve();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    });
   }
 
   private updateStatus(msg: string) {
@@ -1326,6 +1560,9 @@ export class GdmLiveAudio extends LitElement {
 
   private setupVadListeners() {
     this.vad.addEventListener('speech_start', () => {
+      // Only use VAD for blob-based STT (provider/Whisper)
+      if (this.useBrowserStt) return;
+      
       clearTimeout(this.idlePromptTimeout);
       this.isSpeaking = true;
       this.status = 'Listening...';
@@ -1333,6 +1570,9 @@ export class GdmLiveAudio extends LitElement {
     });
 
     this.vad.addEventListener('speech_end', async () => {
+      // Only use VAD for blob-based STT (provider/Whisper)
+      if (this.useBrowserStt) return;
+      
       this.isSpeaking = false;
       const audioBlob = await this.audioRecorder?.stop();
 
@@ -1359,6 +1599,14 @@ export class GdmLiveAudio extends LitElement {
     if (this.mediaStream) return;
 
     try {
+      // If using browser STT, just start the recognition
+      if (this.useBrowserStt) {
+        console.log('Starting browser STT recognition mode');
+        this.startBrowserSttRecognition();
+        return;
+      }
+      
+      // Otherwise, use blob-based recording with VAD
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
@@ -1379,7 +1627,7 @@ export class GdmLiveAudio extends LitElement {
       );
 
       this.scriptProcessorNode.onaudioprocess = (audioProcessingEvent) => {
-        if (this.isMuted) return;
+        if (this.isMuted || this.useBrowserStt) return;
         const pcmData = audioProcessingEvent.inputBuffer.getChannelData(0);
         this.vad.process(new Float32Array(pcmData));
       };
@@ -1399,11 +1647,19 @@ export class GdmLiveAudio extends LitElement {
   private toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.isMuted) {
+      // Stop browser STT if active
+      if (this.useBrowserStt) {
+        this.stopBrowserSttRecognition();
+      }
       this.vad.reset();
       this.isSpeaking = false;
       clearTimeout(this.idlePromptTimeout);
       this.updateStatus('Muted');
     } else {
+      // Restart browser STT if using it
+      if (this.useBrowserStt) {
+        this.startBrowserSttRecognition();
+      }
       this.updateStatus('Idle');
       this.resetIdlePromptTimer();
     }
@@ -1477,6 +1733,24 @@ export class GdmLiveAudio extends LitElement {
     this.activeSidePanel = 'none';
     this.editingPersoni = null;
     this.checkProviderStatus();
+    
+    // Re-determine STT mode in case settings changed
+    const previousMode = this.useBrowserStt;
+    this.determineSttMode();
+    
+    // If STT mode changed, restart listening
+    if (previousMode !== this.useBrowserStt) {
+      if (this.useBrowserStt) {
+        // Switched to browser STT
+        this.stopBrowserSttRecognition();
+        if (!this.isMuted) {
+          this.startBrowserSttRecognition();
+        }
+      } else {
+        // Switched away from browser STT
+        this.stopBrowserSttRecognition();
+      }
+    }
     
     if (this.showOnboarding && this.providerStatus !== 'unconfigured') {
       this.showOnboarding = false;
