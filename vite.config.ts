@@ -8,16 +8,11 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 5000,
         host: '0.0.0.0',
-        allowedHosts: ['*'],
         hmr: {
           clientPort: 443,
         },
       },
       plugins: [],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
