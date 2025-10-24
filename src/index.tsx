@@ -28,6 +28,7 @@ import {
   personaTemplates,
   switchPersonaDeclaration,
   TextureName,
+  DEFAULT_CAPABILITIES,
 } from './personas';
 import { providerManager } from './services/provider-manager';
 
@@ -675,6 +676,12 @@ export class GdmLiveAudio extends LitElement {
     const storedPersonis = localStorage.getItem(PERSONIS_KEY);
     if (storedPersonis) {
       this.personis = JSON.parse(storedPersonis);
+      // Ensure all loaded PersonI have capabilities
+      this.personis = this.personis.map(p => ({
+        ...p,
+        capabilities: p.capabilities || { ...DEFAULT_CAPABILITIES },
+      }));
+      this.savePersonis(); // Save with updated capabilities
     } else {
       // First time setup: create Personis from templates
       this.personis = personaTemplates.map((template) => {
@@ -687,6 +694,7 @@ export class GdmLiveAudio extends LitElement {
           voiceName: template.voiceName,
           thinkingModel: template.thinkingModel,
           enabledConnectors: template.enabledConnectors,
+          capabilities: { ...DEFAULT_CAPABILITIES },
           visuals: template.visuals,
         };
       });
@@ -1200,6 +1208,7 @@ export class GdmLiveAudio extends LitElement {
       voiceName: template.voiceName,
       thinkingModel: template.thinkingModel,
       enabledConnectors: [...template.enabledConnectors],
+      capabilities: { ...DEFAULT_CAPABILITIES },
       visuals: {...template.visuals},
     };
     this.configPanelMode = 'edit';
@@ -1509,18 +1518,128 @@ export class GdmLiveAudio extends LitElement {
       <div class="form-group">
         <label>Capabilities</label>
         <div class="capabilities-grid">
+          <div class="capability-item">
+            <input
+              type="checkbox"
+              id="cap-vision"
+              .checked=${this.editingPersoni?.capabilities?.vision ?? false}
+              @change=${(e: Event) => {
+                if (!this.editingPersoni!.capabilities) {
+                  this.editingPersoni!.capabilities = {
+                    vision: false,
+                    imageGeneration: false,
+                    webSearch: false,
+                    tools: false,
+                    mcp: false,
+                    audioInput: true,
+                    audioOutput: true,
+                  };
+                }
+                this.editingPersoni!.capabilities.vision = (e.target as HTMLInputElement).checked;
+              }} />
+            <label for="cap-vision">👁️ Vision (Image Understanding)</label>
+          </div>
+          <div class="capability-item">
+            <input
+              type="checkbox"
+              id="cap-image-gen"
+              .checked=${this.editingPersoni?.capabilities?.imageGeneration ?? false}
+              @change=${(e: Event) => {
+                if (!this.editingPersoni!.capabilities) {
+                  this.editingPersoni!.capabilities = {
+                    vision: false,
+                    imageGeneration: false,
+                    webSearch: false,
+                    tools: false,
+                    mcp: false,
+                    audioInput: true,
+                    audioOutput: true,
+                  };
+                }
+                this.editingPersoni!.capabilities.imageGeneration = (e.target as HTMLInputElement).checked;
+              }} />
+            <label for="cap-image-gen">🎨 Image Generation</label>
+          </div>
+          <div class="capability-item">
+            <input
+              type="checkbox"
+              id="cap-web-search"
+              .checked=${this.editingPersoni?.capabilities?.webSearch ?? false}
+              @change=${(e: Event) => {
+                if (!this.editingPersoni!.capabilities) {
+                  this.editingPersoni!.capabilities = {
+                    vision: false,
+                    imageGeneration: false,
+                    webSearch: false,
+                    tools: false,
+                    mcp: false,
+                    audioInput: true,
+                    audioOutput: true,
+                  };
+                }
+                this.editingPersoni!.capabilities.webSearch = (e.target as HTMLInputElement).checked;
+              }} />
+            <label for="cap-web-search">🌐 Web Search</label>
+          </div>
+          <div class="capability-item">
+            <input
+              type="checkbox"
+              id="cap-tools"
+              .checked=${this.editingPersoni?.capabilities?.tools ?? false}
+              @change=${(e: Event) => {
+                if (!this.editingPersoni!.capabilities) {
+                  this.editingPersoni!.capabilities = {
+                    vision: false,
+                    imageGeneration: false,
+                    webSearch: false,
+                    tools: false,
+                    mcp: false,
+                    audioInput: true,
+                    audioOutput: true,
+                  };
+                }
+                this.editingPersoni!.capabilities.tools = (e.target as HTMLInputElement).checked;
+              }} />
+            <label for="cap-tools">🔧 Function Calling / Tools</label>
+          </div>
+          <div class="capability-item">
+            <input
+              type="checkbox"
+              id="cap-mcp"
+              .checked=${this.editingPersoni?.capabilities?.mcp ?? false}
+              @change=${(e: Event) => {
+                if (!this.editingPersoni!.capabilities) {
+                  this.editingPersoni!.capabilities = {
+                    vision: false,
+                    imageGeneration: false,
+                    webSearch: false,
+                    tools: false,
+                    mcp: false,
+                    audioInput: true,
+                    audioOutput: true,
+                  };
+                }
+                this.editingPersoni!.capabilities.mcp = (e.target as HTMLInputElement).checked;
+              }} />
+            <label for="cap-mcp">🔌 MCP (Model Context Protocol)</label>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Connectors</label>
+        <div class="capabilities-grid">
           ${activeConnectors.length > 0
             ? activeConnectors.map(
                 (c) => html`
                   <div class="capability-item">
                     <input
                       type="checkbox"
-                      id="cap-${c.id}"
+                      id="conn-${c.id}"
                       .checked=${this.editingPersoni?.enabledConnectors?.includes(
                         c.id,
                       )}
                       @change=${(e: Event) => handleCapabilityToggle(e, c.id)} />
-                    <label for="cap-${c.id}">${c.name}</label>
+                    <label for="conn-${c.id}">${c.name}</label>
                   </div>
                 `,
               )

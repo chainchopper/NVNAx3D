@@ -13,6 +13,7 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - ✅ Provider management system (OpenAI, Google)
 - ✅ Real API verification and model fetching from providers
 - ✅ Provider-PersonI integration (assign models from verified providers)
+- ✅ PersonI capabilities configuration (vision, image gen, web search, tools, MCP)
 - ✅ Organized codebase structure with src/ directory
 - ✅ App loads without requiring API keys (graceful fallback)
 

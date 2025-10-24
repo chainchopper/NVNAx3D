@@ -24,6 +24,26 @@ export interface Connector {
   functionDeclaration: FunctionDeclaration;
 }
 
+export interface PersoniCapabilities {
+  vision: boolean;
+  imageGeneration: boolean;
+  webSearch: boolean;
+  tools: boolean;
+  mcp: boolean;
+  audioInput: boolean;
+  audioOutput: boolean;
+}
+
+export const DEFAULT_CAPABILITIES: PersoniCapabilities = {
+  vision: false,
+  imageGeneration: false,
+  webSearch: false,
+  tools: false,
+  mcp: false,
+  audioInput: true,
+  audioOutput: true,
+};
+
 // User-configured instance of a Personi
 export interface PersoniConfig {
   id: string;
@@ -34,6 +54,7 @@ export interface PersoniConfig {
   voiceName: string;
   thinkingModel: string;
   enabledConnectors: string[]; // List of connector IDs
+  capabilities?: PersoniCapabilities;
   visuals: {
     shape: 'Icosahedron' | 'TorusKnot' | 'Box';
     accentColor: string; // hex string e.g., '#87ceeb'
