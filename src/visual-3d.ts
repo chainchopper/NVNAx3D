@@ -265,17 +265,6 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x100c14);
 
-    const backdropGeometry = new THREE.PlaneGeometry(20, 20);
-    const backdropMaterial = new THREE.MeshStandardMaterial({
-      color: 0x100c14,
-      roughness: 0.8,
-      metalness: 0.1,
-    });
-    const backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial);
-    backdrop.receiveShadow = true;
-    backdrop.position.z = -5;
-    this.scene.add(backdrop);
-
     this.camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
