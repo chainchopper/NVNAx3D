@@ -326,6 +326,24 @@ export class EnhancedRAGMemoryManager extends RAGMemoryManager {
     return reminders;
   }
 
+  async getTasks(limit?: number): Promise<Memory[]> {
+    const memories = await this.getAllMemories();
+    
+    let tasks = memories.filter(memory => memory.metadata.type === 'task');
+    
+    tasks.sort((a, b) => {
+      const priorityDiff = (b.metadata.priority || 3) - (a.metadata.priority || 3);
+      if (priorityDiff !== 0) return priorityDiff;
+      return new Date(b.metadata.updatedAt || b.metadata.timestamp).getTime() - new Date(a.metadata.updatedAt || a.metadata.timestamp).getTime();
+    });
+
+    if (limit) {
+      tasks = tasks.slice(0, limit);
+    }
+
+    return tasks;
+  }
+
   async searchWithTimeBoost(
     query: string, 
     options: EnhancedSearchOptions = {}

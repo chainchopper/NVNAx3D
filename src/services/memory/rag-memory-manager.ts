@@ -239,6 +239,87 @@ Content: ${memory.text}`;
       ready: this.isReady() && this.initialized,
     };
   }
+
+  async getMemoryById(id: string): Promise<Memory | null> {
+    if (!this.isReady()) {
+      throw new Error('RAGMemoryManager not ready. Call initialize() first.');
+    }
+
+    if (this.usingChroma && this.collection) {
+      try {
+        const result = await this.collection.get({
+          ids: [id],
+        });
+
+        if (!result.ids || result.ids.length === 0) {
+          return null;
+        }
+
+        return {
+          id: result.ids[0],
+          text: result.documents[0],
+          embedding: result.embeddings ? result.embeddings[0] : null,
+          metadata: result.metadatas[0],
+        };
+      } catch (error) {
+        console.error('[RAGMemoryManager] Failed to get memory from ChromaDB:', error);
+        return null;
+      }
+    } else if (this.localFallback) {
+      return this.localFallback.getMemoryById(id);
+    } else {
+      throw new Error('No storage backend available');
+    }
+  }
+
+  async deleteMemory(id: string): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('RAGMemoryManager not ready. Call initialize() first.');
+    }
+
+    if (this.usingChroma && this.collection) {
+      try {
+        await this.collection.delete({
+          ids: [id],
+        });
+        console.log(`[RAGMemoryManager] Deleted memory from ChromaDB: ${id}`);
+        return true;
+      } catch (error) {
+        console.error('[RAGMemoryManager] Failed to delete from ChromaDB:', error);
+        return false;
+      }
+    } else if (this.localFallback) {
+      return this.localFallback.deleteMemory(id);
+    } else {
+      throw new Error('No storage backend available');
+    }
+  }
+
+  async updateMemory(id: string, updatedMemory: Memory): Promise<boolean> {
+    if (!this.isReady()) {
+      throw new Error('RAGMemoryManager not ready. Call initialize() first.');
+    }
+
+    if (this.usingChroma && this.collection) {
+      try {
+        await this.collection.update({
+          ids: [id],
+          embeddings: [updatedMemory.embedding],
+          documents: [updatedMemory.text],
+          metadatas: [updatedMemory.metadata],
+        });
+        console.log(`[RAGMemoryManager] Updated memory in ChromaDB: ${id}`);
+        return true;
+      } catch (error) {
+        console.error('[RAGMemoryManager] Failed to update in ChromaDB:', error);
+        return false;
+      }
+    } else if (this.localFallback) {
+      return this.localFallback.updateMemory(id, updatedMemory);
+    } else {
+      throw new Error('No storage backend available');
+    }
+  }
 }
 
 export const ragMemoryManager = new RAGMemoryManager();
