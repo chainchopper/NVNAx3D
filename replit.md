@@ -9,6 +9,10 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - ✅ Five default PersonI: NIRVANA, ATHENA, ADAM, THEO, GHOST
 - ✅ 3D visualization system using Three.js (WebGL)
 - ✅ Connector system for external services (Google Drive, GitHub, YouTube)
+- ✅ Models menu added to settings (configure AI providers)
+- ✅ Provider management system (OpenAI, Google, xAI, Anthropic, Deepseek, Custom)
+- ✅ Organized codebase structure with src/ directory
+- 🚧 Provider verification and model fetching (in progress)
 
 ## Architecture
 

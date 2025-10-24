@@ -19,6 +19,7 @@ import {
   decodeAudioData,
 } from './utils';
 import './visual-3d';
+import './components/models-panel';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -53,7 +54,7 @@ const AVAILABLE_IDLE_ANIMATIONS: IdleAnimation[] = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors';
+type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -320,6 +321,10 @@ export class GdmLiveAudio extends LitElement {
     .settings-menu.open .menu-item:nth-child(2) {
       transform: translate(-56px, -56px);
       transition-delay: 0.2s;
+    }
+    .settings-menu.open .menu-item:nth-child(3) {
+      transform: translate(0px, -80px);
+      transition-delay: 0.3s;
     }
 
     .side-panel {
@@ -1638,9 +1643,31 @@ export class GdmLiveAudio extends LitElement {
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path>
             </svg>
           </div>
+          <div
+            class="menu-item"
+            title="Models"
+            @click=${() => this.openSidePanel('models')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+              <path d="M2 17l10 5 10-5"></path>
+              <path d="M2 12l10 5 10-5"></path>
+            </svg>
+          </div>
         </div>
 
-        ${this.renderPersonisPanel()} ${this.renderConnectorsPanel()}
+        ${this.renderPersonisPanel()} 
+        ${this.renderConnectorsPanel()}
+        ${this.activeSidePanel === 'models' ? html`
+          <models-panel @close=${this.closeSidePanel}></models-panel>
+        ` : ''}
 
         <div
           id="status"
