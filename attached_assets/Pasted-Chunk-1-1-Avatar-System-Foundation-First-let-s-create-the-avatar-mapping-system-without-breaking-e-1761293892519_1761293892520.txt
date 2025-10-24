@@ -1,0 +1,186 @@
+Chunk 1.1: Avatar System Foundation
+First, let's create the avatar mapping system without breaking existing functionality:
+
+javascript
+// Add to persona definitions in your existing persona system
+const personaAvatars = {
+  NIRVANA: {
+    default: '/assets/avatars/nirvana-blob.svg',
+    animated: '/assets/avatars/nirvana-liquid.gif'
+  },
+  VISION: {
+    default: '/assets/avatars/vision-creative.svg', 
+    animated: '/assets/avatars/vision-liquid.gif'
+  },
+  ADAM: {
+    default: '/assets/avatars/adam-visual.svg',
+    animated: '/assets/avatars/adam-liquid.gif'
+  },
+  THEO: {
+    default: '/assets/avatars/theo-code.svg',
+    animated: '/assets/avatars/theo-liquid.gif'
+  }
+};
+
+// Enhanced persona configuration - ADDITIVE, not replacing existing
+const enhancedPersonaConfig = {
+  NIRVANA: {
+    ...existingNirvanaConfig, // preserving existing
+    avatar: personaAvatars.NIRVANA,
+    voiceProfile: 'default',
+    capabilities: ['general', 'fallback']
+  },
+  VISION: {
+    ...existingVisionConfig,
+    avatar: personaAvatars.VISION,
+    voiceProfile: 'creative',
+    capabilities: ['visual_generation', 'editing', 'creative_direction']
+  },
+  ADAM: {
+    ...existingAdamConfig, 
+    avatar: personaAvatars.ADAM,
+    voiceProfile: 'analytical',
+    capabilities: ['visual_tracking', 'source_retrieval', 'editing']
+  },
+  THEO: {
+    ...existingTheoConfig,
+    avatar: personaAvatars.THEO,
+    voiceProfile: 'technical',
+    capabilities: ['coding', 'debugging', 'architecture']
+  }
+};
+What I just implemented:
+
+Created avatar mapping system with default and animated versions
+
+Built enhanced persona config that extends existing definitions
+
+Added voice profiles and capability matrices without removing existing functionality
+
+Chunk 1.2: Avatar Integration in Carousel
+Now let's integrate this into the existing carousel component:
+
+javascript
+// In your carousel component - ADD these functions, don't replace existing
+const getPersonaAvatar = (personaId, useAnimated = true) => {
+  const persona = enhancedPersonaConfig[personaId];
+  if (!persona) return personaAvatars.NIRVANA.default;
+  
+  return useAnimated ? persona.avatar.animated : persona.avatar.default;
+};
+
+const renderPersonaAvatar = (personaId, isActive) => {
+  const avatarSrc = getPersonaAvatar(personaId, isActive);
+  return `
+    <div class="persona-avatar ${isActive ? 'active' : ''}" 
+         data-persona="${personaId}">
+      <img src="${avatarSrc}" 
+           alt="${personaId} Avatar" 
+           class="liquid-avatar ${isActive ? 'pulse' : ''}" />
+      ${isActive ? '<div class="avatar-glow"></div>' : ''}
+    </div>
+  `;
+};
+
+// Update carousel rendering to use avatars
+const updateCarouselAvatars = () => {
+  const carouselItems = document.querySelectorAll('.persona-carousel-item');
+  carouselItems.forEach(item => {
+    const personaId = item.dataset.persona;
+    const isActive = item.classList.contains('active');
+    const avatarContainer = item.querySelector('.avatar-container');
+    
+    if (avatarContainer) {
+      avatarContainer.innerHTML = renderPersonaAvatar(personaId, isActive);
+    }
+  });
+};
+What I just implemented:
+
+Avatar retrieval system that works with existing carousel
+
+Rendering function that maintains liquid animation theme
+
+Non-destructive integration that enhances rather than replaces
+
+Chunk 1.3: Voice Profile System
+javascript
+// Voice profiles - ADDITIVE to existing audio system
+const voiceProfiles = {
+  default: {
+    rate: 1.0,
+    pitch: 1.0,
+    volume: 1.0,
+    voice: null // use system default
+  },
+  creative: {
+    rate: 1.1,
+    pitch: 1.05, 
+    volume: 1.0,
+    modulation: 'expressive'
+  },
+  analytical: {
+    rate: 0.9,
+    pitch: 0.95,
+    volume: 0.95,
+    modulation: 'precise'
+  },
+  technical: {
+    rate: 1.0,
+    pitch: 1.0,
+    volume: 1.0,
+    modulation: 'clipped'
+  }
+};
+
+// Enhanced TTS function that uses persona voice profiles
+const speakWithPersona = (text, personaId) => {
+  const persona = enhancedPersonaConfig[personaId];
+  const voiceSettings = voiceProfiles[persona?.voiceProfile || 'default'];
+  
+  // Use existing TTS system with enhanced settings
+  if (window.speechSynthesis && window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+  }
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  Object.assign(utterance, voiceSettings);
+  
+  // Apply persona-specific speech characteristics
+  applyPersonaSpeechStyle(utterance, personaId);
+  
+  window.speechSynthesis.speak(utterance);
+  return utterance;
+};
+
+const applyPersonaSpeechStyle = (utterance, personaId) => {
+  // Add persona-specific speech patterns
+  switch(personaId) {
+    case 'VISION':
+      utterance.volume = 1.1;
+      break;
+    case 'THEO':
+      utterance.rate = 0.95;
+      break;
+    case 'ADAM':
+      utterance.pitch = 0.9;
+      break;
+    default:
+      // Keep default settings
+      break;
+  }
+};
+What I just implemented:
+
+Voice profile system that extends existing TTS
+
+Persona-specific speech characteristics
+
+Backward-compatible function that enhances current audio
+
+Next Steps Ready for Implementation:
+I've written actual code for:
+✅ Avatar mapping system
+✅ Carousel avatar integration
+✅ Voice profile system
+✅ Enhanced persona configurations
