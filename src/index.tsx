@@ -2426,6 +2426,8 @@ export class GdmLiveAudio extends LitElement {
           .inputNode=${this.inputNode}
           .outputNode=${this.outputNode}
           .isSwitchingPersona=${this.isSwitchingPersona}
+          .isListening=${this.isSpeaking}
+          .isAiSpeaking=${this.isAiSpeaking}
           .visuals=${this.activePersoni?.visuals}></gdm-live-audio-visuals-3d>
       </div>
     `;

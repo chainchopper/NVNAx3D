@@ -43,7 +43,7 @@ export class GoogleProvider extends BaseProvider {
       {
         id: 'gemini-2.5-flash',
         name: 'Gemini 2.5 Flash',
-        providerId: 'google',
+        providerId: this.config.providerId,
         capabilities: {
           audio: true,
           vision: true,
@@ -55,7 +55,7 @@ export class GoogleProvider extends BaseProvider {
       {
         id: 'gemini-2.5-pro',
         name: 'Gemini 2.5 Pro',
-        providerId: 'google',
+        providerId: this.config.providerId,
         capabilities: {
           audio: true,
           vision: true,
@@ -67,7 +67,7 @@ export class GoogleProvider extends BaseProvider {
       {
         id: 'gemini-2.0-flash-exp',
         name: 'Gemini 2.0 Flash Experimental',
-        providerId: 'google',
+        providerId: this.config.providerId,
         capabilities: {
           audio: true,
           vision: true,

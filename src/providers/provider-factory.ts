@@ -12,9 +12,16 @@ export class ProviderFactory {
     type: ProviderType,
     apiKey: string,
     model: string,
-    endpoint?: string
+    endpoint?: string,
+    providerId?: string
   ): BaseProvider {
-    const config = { apiKey, model, endpoint };
+    const config = { 
+      apiKey, 
+      model, 
+      endpoint,
+      providerId: providerId || type,
+      providerType: type
+    };
 
     switch (type) {
       case 'google':

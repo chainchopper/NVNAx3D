@@ -428,7 +428,8 @@ export class ModelsPanel extends LitElement {
         provider.type,
         provider.apiKey,
         'gemini-2.5-flash', // Default model for verification
-        provider.endpoint
+        provider.endpoint,
+        provider.id
       );
 
       const verified = await providerInstance.verify();

@@ -40,19 +40,24 @@ export class OpenAIProvider extends BaseProvider {
 
       const data = await response.json();
       
-      // Filter for chat models
-      return data.data
-        .filter((model: any) => model.id.includes('gpt'))
-        .map((model: any) => ({
-          id: model.id,
-          name: model.id,
-          providerId: 'openai',
-          capabilities: {
-            vision: model.id.includes('vision') || model.id.includes('gpt-4'),
-            streaming: true,
-            functionCalling: true,
-          },
-        }));
+      const isCustomEndpoint = this.config.providerType === 'custom';
+      
+      // For OpenAI: filter for GPT models only
+      // For custom endpoints: include all models
+      const filteredData = isCustomEndpoint 
+        ? data.data 
+        : data.data.filter((model: any) => model.id.includes('gpt'));
+      
+      return filteredData.map((model: any) => ({
+        id: model.id,
+        name: model.id,
+        providerId: this.config.providerId,
+        capabilities: {
+          vision: model.id.includes('vision') || model.id.includes('gpt-4'),
+          streaming: true,
+          functionCalling: true,
+        },
+      }));
     } catch (error) {
       console.error('Failed to get OpenAI models:', error);
       return [];
