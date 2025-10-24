@@ -205,8 +205,8 @@ export class GdmLiveAudio extends LitElement {
 
     .persona-card {
       flex-shrink: 0;
-      width: 120px;
-      height: 80px;
+      width: 140px;
+      height: 160px;
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 12px;
@@ -214,14 +214,15 @@ export class GdmLiveAudio extends LitElement {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       text-align: center;
       color: white;
       font-family: sans-serif;
       font-size: 14px;
       transition: all 0.3s ease;
-      padding: 8px;
+      padding: 12px;
       box-sizing: border-box;
+      gap: 8px;
     }
 
     .persona-card:hover {
@@ -235,14 +236,26 @@ export class GdmLiveAudio extends LitElement {
       box-shadow: 0 0 15px rgba(135, 206, 250, 0.5);
     }
 
+    .persona-card-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      background: rgba(0, 0, 0, 0.2);
+      flex-shrink: 0;
+    }
+
     .persona-card-name {
       font-weight: bold;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
+      font-size: 13px;
     }
 
     .persona-card-desc {
       font-size: 10px;
       opacity: 0.8;
+      line-height: 1.2;
     }
 
     .settings-fab {
@@ -780,12 +793,16 @@ export class GdmLiveAudio extends LitElement {
     const storedPersonis = localStorage.getItem(PERSONIS_KEY);
     if (storedPersonis) {
       this.personis = JSON.parse(storedPersonis);
-      // Ensure all loaded PersonI have capabilities
-      this.personis = this.personis.map(p => ({
-        ...p,
-        capabilities: p.capabilities || { ...DEFAULT_CAPABILITIES },
-      }));
-      this.savePersonis(); // Save with updated capabilities
+      // Ensure all loaded PersonI have capabilities and avatarUrl from templates
+      this.personis = this.personis.map(p => {
+        const template = personaTemplates.find(t => t.templateName === p.templateName);
+        return {
+          ...p,
+          capabilities: p.capabilities || { ...DEFAULT_CAPABILITIES },
+          avatarUrl: p.avatarUrl || template?.avatarUrl,
+        };
+      });
+      this.savePersonis(); // Save with updated capabilities and avatarUrl
     } else {
       // First time setup: create Personis from templates
       this.personis = personaTemplates.map((template) => {
@@ -799,6 +816,7 @@ export class GdmLiveAudio extends LitElement {
           thinkingModel: template.thinkingModel,
           enabledConnectors: template.enabledConnectors,
           capabilities: { ...DEFAULT_CAPABILITIES },
+          avatarUrl: template.avatarUrl,
           visuals: template.visuals,
         };
       });
@@ -1902,6 +1920,12 @@ export class GdmLiveAudio extends LitElement {
                   @click=${() => this.requestPersoniSwitch(personi)}
                   title="Switch to ${personi.name}"
                   style="--accent-color: ${personi.visuals.accentColor}">
+                  ${personi.avatarUrl
+                    ? html`<img
+                        class="persona-card-avatar"
+                        src="${personi.avatarUrl}"
+                        alt="${personi.name} avatar" />`
+                    : nothing}
                   <div class="persona-card-name">${personi.name}</div>
                   <div class="persona-card-desc">${personi.tagline}</div>
                 </div>
