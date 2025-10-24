@@ -23,6 +23,7 @@ import './components/models-panel';
 import './components/user-profile-panel';
 import './components/notes-panel';
 import './components/tasks-panel';
+import './components/memory-panel';
 import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
@@ -99,7 +100,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks';
+type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -498,6 +499,14 @@ export class GdmLiveAudio extends LitElement {
     .settings-menu.open .menu-item:nth-child(5) {
       transform: translate(90px, -50px);
       transition-delay: 0.5s;
+    }
+    .settings-menu.open .menu-item:nth-child(6) {
+      transform: translate(110px, 10px);
+      transition-delay: 0.6s;
+    }
+    .settings-menu.open .menu-item:nth-child(7) {
+      transform: translate(110px, 70px);
+      transition-delay: 0.7s;
     }
 
     .side-panel {
@@ -2742,6 +2751,24 @@ export class GdmLiveAudio extends LitElement {
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
             </svg>
           </div>
+          <div
+            class="menu-item"
+            title="Memory"
+            @click=${() => this.openSidePanel('memory')}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z"></path>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </div>
         </div>
 
         ${this.renderPersonisPanel()} 
@@ -2776,6 +2803,11 @@ export class GdmLiveAudio extends LitElement {
           <tasks-panel
             @close=${this.closeSidePanel}
           ></tasks-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'memory' ? html`
+          <memory-panel
+            @close=${this.closeSidePanel}
+          ></memory-panel>
         ` : ''}
 
         <div
