@@ -106,6 +106,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       inset: 0;
       width: 100%;
       height: 100%;
+      z-index: 1;
     }
     canvas {
       width: 100% !important;
@@ -285,7 +286,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
 
   private init() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x100c14);
+    this.scene.background = null;
 
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -299,11 +300,13 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       canvas: this.canvas,
       antialias: false,
       powerPreference: 'high-performance',
+      alpha: true,
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(window.devicePixelRatio * 0.75);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setClearColor(0x000000, 0);
 
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
     this.pmremGenerator.compileEquirectangularShader();
