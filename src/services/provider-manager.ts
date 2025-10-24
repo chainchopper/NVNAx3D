@@ -194,7 +194,8 @@ export class ProviderManager {
         provider.type,
         provider.apiKey,
         model,
-        provider.endpoint
+        provider.endpoint,
+        providerId
       );
       
       this.providerInstances.set(cacheKey, instance);

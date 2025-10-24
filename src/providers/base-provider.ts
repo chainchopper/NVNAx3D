@@ -19,6 +19,8 @@ export interface ProviderConfig {
   apiKey?: string;
   endpoint?: string;
   model: string;
+  providerId: string;
+  providerType: string;
 }
 
 export abstract class BaseProvider {

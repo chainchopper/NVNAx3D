@@ -60,8 +60,18 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private codeCanvas: HTMLCanvasElement | null = null;
   private codeContext: CanvasRenderingContext2D | null = null;
   private codeTexture: THREE.CanvasTexture | null = null;
+  private codeStreams: Array<{x: number; y: number; speed: number; chars: string[]}> = [];
+  
+  private previousEmissiveIntensity = 0.1;
+  private targetEmissiveIntensity = 0.1;
+  private previousPointLightIntensity = 0.5;
+  
+  private listeningGlowColor = new THREE.Color(0x00ff00);
+  private originalEmissiveColor = new THREE.Color(0xffffff);
 
   @property({type: Boolean}) isSwitchingPersona = false;
+  @property({type: Boolean}) isListening = false;
+  @property({type: Boolean}) isAiSpeaking = false;
   @property({type: Object}) visuals: PersoniConfig['visuals'];
 
   private _outputNode!: AudioNode;
@@ -446,25 +456,23 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   }
 
   private updateGlowAnimation(time: number) {
-    // Base "breathing" pulse from time
-    const timePulse = 0.15 + (Math.sin(time * 2) * 0.5 + 0.5) * 0.1;
-
-    // Reactive pulse from ambient microphone input
+    const baseIntensity = this.visuals.textureName === 'lava' ? 0.5 : 0.1;
+    const timePulse = (Math.sin(time * 1.5) * 0.5 + 0.5) * 0.08;
+    
     let ambientPulse = 0;
     if (this.inputAnalyser && this.inputAnalyser.data.length > 0) {
       const ambientLevel =
         this.inputAnalyser.data.reduce((a, b) => a + b) /
         (this.inputAnalyser.data.length * 255);
-      // Amplify the effect slightly, but keep it subtle.
-      ambientPulse = ambientLevel * 0.2;
+      ambientPulse = ambientLevel * 0.15;
     }
 
-    const finalIntensity = timePulse + ambientPulse;
-
-    this.sphereMaterial.emissiveIntensity =
-      this.visuals.textureName === 'lava'
-        ? 0.5 + finalIntensity * 2
-        : finalIntensity;
+    this.targetEmissiveIntensity = baseIntensity + timePulse + ambientPulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.1;
+    
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
   }
 
   private updateParticlesAnimation(dt: number) {
@@ -510,19 +518,103 @@ export class GdmLiveAudioVisuals3D extends LitElement {
         this.sphereMaterial.emissiveMap = this.codeTexture;
       }
       this.sphereMaterial.needsUpdate = true;
+      
+      const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ';
+      for (let i = 0; i < 15; i++) {
+        this.codeStreams.push({
+          x: Math.random() * 512,
+          y: Math.random() * -512,
+          speed: 2 + Math.random() * 4,
+          chars: Array.from({length: 20}, () => 
+            matrixChars[Math.floor(Math.random() * matrixChars.length)]
+          )
+        });
+      }
     }
+    
     const ctx = this.codeContext!;
-    ctx.fillStyle = '#000000'; // Clear with black
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
     ctx.fillRect(0, 0, 512, 512);
-    ctx.fillStyle = this.accentColor.getStyle();
-    ctx.font = '20px monospace';
-    const lines = 25;
-    for (let i = 0; i < lines; i++) {
-      const text = Math.random().toString(2).substring(2, 40); // Binary-like
-      const y = (i * 22 + time * 50) % (lines * 22);
-      ctx.fillText(text, 10, y);
-    }
+    
+    ctx.font = 'bold 16px monospace';
+    const matrixChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ';
+    
+    this.codeStreams.forEach(stream => {
+      stream.y += stream.speed;
+      if (stream.y > 600) {
+        stream.y = Math.random() * -200;
+        stream.x = Math.random() * 512;
+      }
+      
+      stream.chars.forEach((char, idx) => {
+        const y = stream.y - idx * 18;
+        if (y > 0 && y < 512) {
+          const brightness = Math.max(0, 1 - idx / stream.chars.length);
+          const green = Math.floor(255 * brightness);
+          ctx.fillStyle = `rgb(0, ${green}, 0)`;
+          ctx.fillText(char, stream.x, y);
+          
+          if (Math.random() > 0.98) {
+            stream.chars[idx] = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+          }
+        }
+      });
+    });
+    
     this.codeTexture!.needsUpdate = true;
+  }
+  
+  private updateListeningVisuals(audioLevel: number) {
+    this.targetEmissiveIntensity = 0.3 + audioLevel * 0.4;
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.15;
+    
+    this.sphereMaterial.emissive.lerp(this.listeningGlowColor, 0.1);
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+  }
+  
+  private updateSpeakingVisuals(audioData: Uint8Array, time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    const bassFreq = audioData[0] / 255;
+    const midFreq = audioData[Math.floor(audioData.length / 2)] / 255;
+    const highFreq = audioData[audioData.length - 1] / 255;
+    const avgAmp = audioData.reduce((a, b) => a + b) / (audioData.length * 255);
+    
+    const rotationIntensity = midFreq * 0.02 * dt;
+    this.centralObject.rotation.y += rotationIntensity;
+    this.centralObject.rotation.x += rotationIntensity * 0.5;
+    this.centralObject.rotation.z += highFreq * 0.01 * dt;
+    
+    const shakeAmount = bassFreq * 0.1;
+    this.centralObject.position.x = Math.sin(time * 20) * shakeAmount;
+    this.centralObject.position.y = Math.cos(time * 15) * shakeAmount;
+    this.centralObject.position.z = Math.sin(time * 18) * shakeAmount * 0.5;
+    
+    const scaleBase = 1.0 + avgAmp * 0.15;
+    this.centralObject.scale.set(scaleBase, scaleBase, scaleBase);
+    
+    this.targetEmissiveIntensity = 0.3 + avgAmp * 0.5;
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.2;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.outputData.value.set(
+        bassFreq * 3,
+        midFreq * 2,
+        highFreq * 5,
+        avgAmp
+      );
+    }
+  }
+  
+  private resetGeometryTransforms() {
+    if (!this.centralObject) return;
+    
+    this.centralObject.position.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+    this.centralObject.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
   }
 
   private animation() {
@@ -565,10 +657,18 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     const outputIntensity =
       this.outputAnalyser.data.reduce((a, b) => a + b) /
       (this.outputAnalyser.data.length * 255);
+    
+    const inputIntensity =
+      this.inputAnalyser.data.reduce((a, b) => a + b) /
+      (this.inputAnalyser.data.length * 255);
 
+    const targetPointLightIntensity = outputIntensity * 2 + 0.3;
+    this.previousPointLightIntensity += 
+      (targetPointLightIntensity - this.previousPointLightIntensity) * 0.08;
+    
     this.pointLights.forEach((light) => {
       light.color.copy(this.accentColor);
-      light.intensity = outputIntensity * 2 + 0.3;
+      light.intensity = this.previousPointLightIntensity;
     });
 
     const isCurrentlySpeaking = outputIntensity > 0.05;
@@ -583,15 +683,30 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.isIdle = true;
     }
 
-    if (this.isIdle) {
+    if (this.isListening && inputIntensity > 0.01) {
+      this.updateListeningVisuals(inputIntensity);
+      if (this.activeIdleAnimation !== 'none') {
+        this.cleanupIdleAnimation(this.activeIdleAnimation);
+        this.activeIdleAnimation = 'none';
+      }
+    } else if (this.isAiSpeaking && outputIntensity > 0.01) {
+      this.updateSpeakingVisuals(this.outputAnalyser.data, time, dt);
+      if (this.activeIdleAnimation !== 'none') {
+        this.cleanupIdleAnimation(this.activeIdleAnimation);
+        this.activeIdleAnimation = 'none';
+      }
+    } else if (this.isIdle) {
       this.updateIdleAnimation(dt, t);
+      this.resetGeometryTransforms();
+      this.sphereMaterial.emissive.lerp(this.originalEmissiveColor, 0.05);
     } else {
       if (this.activeIdleAnimation !== 'none') {
         this.cleanupIdleAnimation(this.activeIdleAnimation);
         this.activeIdleAnimation = 'none';
-        // Reset glow
         this.updateMaterialForVisuals();
       }
+      this.resetGeometryTransforms();
+      this.sphereMaterial.emissive.lerp(this.originalEmissiveColor, 0.05);
     }
 
     if (this.sphereMaterial.userData.shader) {
