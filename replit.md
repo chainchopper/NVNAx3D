@@ -106,6 +106,22 @@ npm run preview
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 
 ## Recent Changes
+- **2025-10-24 (Session 5)**: Local Whisper STT Integration
+  - ✅ **Browser-Based Speech Recognition** - No server required, runs 100% locally
+    - Integrated @xenova/transformers with Whisper models (tiny.en, base, small)
+    - Lazy loading with progress indicators during model download
+    - IndexedDB caching for offline use after first load
+    - Toggle enable/disable in Settings → Models → Speech-to-Text
+    - Model size selection (75MB-466MB) with performance trade-offs
+    - Disabled by default to prevent CDN/CORS issues, users opt-in when needed
+  - ✅ **Remote STT Fallback** - Seamless provider integration
+    - Falls back to Google Gemini or configured provider STT when local Whisper disabled
+    - AudioContext lifecycle properly managed (prevents browser quota exhaustion)
+    - Unified transcription pipeline regardless of STT source
+  - ✅ **3D Visualization Fixes** - Removed spinning transparent backdrop plane
+    - Cleaned up scene artifacts and visual glitches
+    - Scene now only contains central PersonI object, lights, and particles
+  
 - **2025-10-24 (Session 4)**: Provider Runtime Integration & Visual Polish
   - ✅ **MAJOR**: PersonI now actually use their assigned providers for inference
     - Added provider instance caching with proper invalidation on config changes
