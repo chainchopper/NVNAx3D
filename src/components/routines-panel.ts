@@ -6,7 +6,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { routineExecutor } from '../services/routine-executor';
-import type { RoutineSummary, RoutineDetail, RoutineTrigger, RoutineCondition, RoutineAction } from '../types/routine-types';
+import type { RoutineSummary, RoutineDetail, RoutineTrigger, RoutineCondition, RoutineAction, RoutinePattern } from '../types/routine-types';
 
 type RoutinePanelMode = 'list' | 'create' | 'edit';
 
@@ -252,6 +252,127 @@ export class RoutinesPanel extends LitElement {
       font-size: 48px;
       margin-bottom: 16px;
     }
+
+    .suggestions-section {
+      margin-bottom: 24px;
+    }
+
+    .suggestions-header {
+      font-size: 18px;
+      font-weight: bold;
+      color: #87ceeb;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .suggestions-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .suggestion-item {
+      background: rgba(135, 206, 250, 0.1);
+      border: 1px solid rgba(135, 206, 250, 0.3);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+
+    .suggestion-item:hover {
+      background: rgba(135, 206, 250, 0.15);
+      border-color: rgba(135, 206, 250, 0.5);
+    }
+
+    .suggestion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .suggestion-description {
+      color: white;
+      font-size: 14px;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .suggestion-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 12px;
+    }
+
+    .confidence-badge {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 11px;
+      color: #4caf50;
+      font-weight: bold;
+    }
+
+    .confidence-badge.medium {
+      background: rgba(255, 193, 7, 0.2);
+      border-color: rgba(255, 193, 7, 0.5);
+      color: #ffc107;
+    }
+
+    .confidence-badge.low {
+      background: rgba(255, 152, 0, 0.2);
+      border-color: rgba(255, 152, 0, 0.5);
+      color: #ff9800;
+    }
+
+    .suggestion-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .suggestion-actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+
+    .suggestion-actions button:hover {
+      opacity: 0.8;
+    }
+
+    .suggestion-actions button.create {
+      background: #87ceeb;
+      color: #100c14;
+    }
+
+    .suggestion-actions button.dismiss {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .routines-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+      margin: 24px 0;
+    }
+
+    .routines-header {
+      font-size: 18px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 12px;
+    }
   `;
 
   async connectedCallback() {
@@ -427,6 +548,53 @@ export class RoutinesPanel extends LitElement {
     this.resetForm();
   }
 
+  private getAppComponent(): any {
+    return document.querySelector('gdm-live-audio');
+  }
+
+  private getDetectedPatterns(): RoutinePattern[] {
+    const app = this.getAppComponent();
+    if (app && typeof app.getActivePatterns === 'function') {
+      return app.getActivePatterns();
+    }
+    return [];
+  }
+
+  private getPatternId(pattern: RoutinePattern): string {
+    return `${pattern.type}_${pattern.description.substring(0, 50)}`;
+  }
+
+  private handleCreateFromPattern(pattern: RoutinePattern) {
+    if (!pattern.suggestedRoutine) {
+      console.error('[RoutinesPanel] Pattern has no suggested routine');
+      return;
+    }
+
+    this.mode = 'create';
+    this.formName = pattern.suggestedRoutine.name || '';
+    this.formDescription = pattern.suggestedRoutine.description || '';
+    
+    if (pattern.suggestedRoutine.trigger) {
+      this.formTriggerType = pattern.suggestedRoutine.trigger.type;
+      this.formTriggerSchedule = pattern.suggestedRoutine.trigger.config.schedule || 'every day';
+    }
+    
+    this.formTags = pattern.suggestedRoutine.tags || [];
+    this.formActions = pattern.suggestedRoutine.actions || [];
+    this.formConditions = pattern.suggestedRoutine.conditions || [];
+
+    console.log('[RoutinesPanel] Created routine form from pattern');
+  }
+
+  private handleDismissPattern(pattern: RoutinePattern) {
+    const app = this.getAppComponent();
+    if (app && typeof app.dismissPattern === 'function') {
+      const patternId = this.getPatternId(pattern);
+      app.dismissPattern(patternId);
+      this.requestUpdate();
+    }
+  }
+
   render() {
     if (this.mode === 'create' || this.mode === 'edit') {
       return this.renderForm();
@@ -437,6 +605,7 @@ export class RoutinesPanel extends LitElement {
 
   private renderList() {
     const filteredRoutines = this.getFilteredRoutines();
+    const detectedPatterns = this.getDetectedPatterns();
 
     return html`
       <div class="panel-content">
@@ -450,19 +619,74 @@ export class RoutinesPanel extends LitElement {
           <button @click=${this.handleCreateNew}>+ New Routine</button>
         </div>
 
-        ${filteredRoutines.length === 0
+        ${detectedPatterns.length > 0 ? this.renderSuggestionsSection(detectedPatterns) : ''}
+
+        ${detectedPatterns.length > 0 && filteredRoutines.length > 0
+          ? html`<div class="routines-divider"></div>`
+          : ''}
+
+        ${filteredRoutines.length > 0 ? html`<div class="routines-header">Your Routines</div>` : ''}
+
+        ${filteredRoutines.length === 0 && detectedPatterns.length === 0
           ? html`
               <div class="empty-state">
                 <div class="empty-state-icon">🤖</div>
                 <div>No routines yet. Create your first automation!</div>
               </div>
             `
-          : html`
+          : filteredRoutines.length > 0
+          ? html`
               <ul class="routine-list">
                 ${filteredRoutines.map(routine => this.renderRoutineItem(routine))}
               </ul>
-            `}
+            `
+          : ''}
       </div>
+    `;
+  }
+
+  private renderSuggestionsSection(patterns: RoutinePattern[]) {
+    return html`
+      <div class="suggestions-section">
+        <div class="suggestions-header">
+          <span>💡</span>
+          <span>Suggested Automations (${patterns.length})</span>
+        </div>
+        <ul class="suggestions-list">
+          ${patterns.map(pattern => this.renderSuggestionItem(pattern))}
+        </ul>
+      </div>
+    `;
+  }
+
+  private renderSuggestionItem(pattern: RoutinePattern) {
+    const confidencePercent = Math.round(pattern.confidence * 100);
+    const confidenceClass = 
+      confidencePercent >= 80 ? '' : 
+      confidencePercent >= 60 ? 'medium' : 
+      'low';
+
+    return html`
+      <li class="suggestion-item">
+        <div class="suggestion-header">
+          <div class="suggestion-description">${pattern.description}</div>
+        </div>
+        <div class="suggestion-meta">
+          <span>Type: ${pattern.type}</span>
+          <span>Occurrences: ${pattern.occurrences}</span>
+          <span class="confidence-badge ${confidenceClass}">
+            ${confidencePercent}% confidence
+          </span>
+        </div>
+        <div class="suggestion-actions">
+          <button class="dismiss" @click=${() => this.handleDismissPattern(pattern)}>
+            Dismiss
+          </button>
+          <button class="create" @click=${() => this.handleCreateFromPattern(pattern)}>
+            Create Routine
+          </button>
+        </div>
+      </li>
     `;
   }
 
