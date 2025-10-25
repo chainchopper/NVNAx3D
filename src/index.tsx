@@ -54,11 +54,13 @@ import { IdleSpeechManager } from './services/idle-speech-manager';
 import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
 import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
 import './components/song-info-bubble';
+import { activePersonasManager, PersonaSlot } from './services/active-personas-manager';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
 const STT_PREFERENCES_KEY = 'stt-preferences';
 const SETTINGS_FAB_POSITION_KEY = 'settings-fab-position';
+const DUAL_MODE_KEY = 'dual-mode-settings';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
 const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
@@ -115,6 +117,7 @@ interface TranscriptEntry {
   text: string;
   personiName?: string;
   personiColor?: string;
+  slot?: PersonaSlot;
 }
 
 @customElement('gdm-live-audio')
@@ -146,6 +149,11 @@ export class GdmLiveAudio extends LitElement {
   @state() userProfile: UserProfile;
   @state() ragEnabled = true;
   @state() ragInitialized = false;
+  
+  // Dual PersonI mode state (opt-in feature)
+  @state() dualModeEnabled = false;
+  @state() secondaryPersoni: PersoniConfig | null = null;
+  @state() currentSpeakerSlot: PersonaSlot | null = null;
   
   // Music detection state
   @state() musicDetectionEnabled = true;
@@ -958,6 +966,17 @@ export class GdmLiveAudio extends LitElement {
     sharedMic.unregisterConsumer('music-detector');
   }
 
+  protected firstUpdated() {
+    console.log('[Lifecycle] firstUpdated called, ensuring dual mode system is initialized');
+    // Ensure dual mode system is initialized after first render
+    // This is a safety net in case init() hasn't completed yet
+    if (this.activePersoni) {
+      this.initializeDualModeSystem();
+    } else {
+      console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
+    }
+  }
+
   protected updated(
     changedProperties: PropertyValueMap<any> | Map<PropertyKey, unknown>,
   ) {
@@ -1025,6 +1044,138 @@ export class GdmLiveAudio extends LitElement {
 
     if (this.activePersoni?.name === 'NIRVANA') {
       this.startNirvanaGradientUpdates();
+    }
+    
+    // Initialize dual mode system AFTER all async initialization is complete
+    this.initializeDualModeSystem();
+  }
+  
+  private initializeDualModeSystem() {
+    console.log('[DualMode] Initializing dual mode system...');
+    
+    this.loadDualModeSettings();
+    
+    if (this.activePersoni) {
+      activePersonasManager.setPersona('primary', this.activePersoni);
+      console.log(`[DualMode] Synced primary slot with ${this.activePersoni.name}`);
+    }
+    
+    if (this.dualModeEnabled && this.secondaryPersoni) {
+      activePersonasManager.setPersona('secondary', this.secondaryPersoni);
+      console.log(`[DualMode] Dual mode enabled with secondary: ${this.secondaryPersoni.name}`);
+    }
+    
+    activePersonasManager.addEventListener((event) => {
+      this.handlePersonaEvent(event);
+    });
+  }
+  
+  private loadDualModeSettings() {
+    const stored = localStorage.getItem(DUAL_MODE_KEY);
+    if (stored) {
+      try {
+        const settings = JSON.parse(stored);
+        this.dualModeEnabled = settings.enabled || false;
+        
+        if (settings.secondaryPersoniId && this.personis.length > 0) {
+          this.secondaryPersoni = this.personis.find(p => p.id === settings.secondaryPersoniId) || null;
+        }
+      } catch (error) {
+        console.error('[DualMode] Failed to load settings:', error);
+      }
+    }
+  }
+  
+  private saveDualModeSettings() {
+    try {
+      const settings = {
+        enabled: this.dualModeEnabled,
+        secondaryPersoniId: this.secondaryPersoni?.id || null,
+      };
+      localStorage.setItem(DUAL_MODE_KEY, JSON.stringify(settings));
+      console.log('[DualMode] Settings saved:', settings);
+    } catch (error) {
+      console.error('[DualMode] Failed to save settings:', error);
+    }
+  }
+  
+  private async handlePersonaEvent(event: any) {
+    console.log(`[DualMode] Event from ${event.slot}:`, event.type, event.data);
+    
+    if (event.type === 'speaking' && event.data?.text) {
+      this.currentSpeakerSlot = event.slot;
+      
+      const persona = event.slot === 'primary' ? this.activePersoni : this.secondaryPersoni;
+      if (persona) {
+        await this.speakTextForSlot(event.slot, event.data.text, persona);
+      }
+    } else if (event.type === 'statusChange' && event.data?.status === 'idle') {
+      if (this.currentSpeakerSlot === event.slot) {
+        this.currentSpeakerSlot = null;
+      }
+    }
+  }
+  
+  private async speakTextForSlot(slot: PersonaSlot, text: string, persona: PersoniConfig) {
+    if (!text || this.isMuted) return;
+    
+    try {
+      this.isAiSpeaking = true;
+      this.updateStatus(`${persona.name} is speaking...`);
+      
+      const provider = this.getProviderForSlot(slot);
+      if (!provider || persona.voiceName === 'none') {
+        await this.speakWithBrowserTTS(text, 'ai');
+        return;
+      }
+      
+      if (provider instanceof GoogleProvider) {
+        const googleProvider = provider as any;
+        if (!googleProvider.client) {
+          await googleProvider.verify();
+        }
+        
+        const response = await googleProvider.client.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: { parts: [{ text }] },
+          config: {
+            response_modalities: ['AUDIO'],
+            speech_config: {
+              voice_config: { prebuilt_voice_config: { voice_name: persona.voiceName } },
+            },
+          },
+        });
+        
+        const audioData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (audioData) {
+          await this.playAudio(audioData);
+          await new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+              if (this.sources.size === 0) {
+                clearInterval(checkInterval);
+                resolve(null);
+              }
+            }, 100);
+          });
+        }
+      } else {
+        await this.speakWithBrowserTTS(text, 'ai');
+      }
+    } catch (error) {
+      console.error(`[DualMode] Speech error for ${slot}:`, error);
+      await this.speakWithBrowserTTS(text, 'ai');
+    } finally {
+      this.isAiSpeaking = false;
+      this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+    }
+  }
+  
+  private queueSpeechForSlot(slot: PersonaSlot, text: string, priority: number = 0) {
+    if (this.dualModeEnabled) {
+      console.log(`[DualMode] Queueing speech for ${slot}: "${text}"`);
+      activePersonasManager.queueAudio(slot, text, priority);
+    } else {
+      this.speakText(text, 'ai');
     }
   }
   
@@ -1416,6 +1567,7 @@ export class GdmLiveAudio extends LitElement {
         text: detail.commentary,
         personiName: this.activePersoni.name,
         personiColor: this.activePersoni.visuals.accentColor,
+        slot: this.dualModeEnabled ? 'primary' : undefined,
       },
     ];
     
@@ -1487,6 +1639,7 @@ export class GdmLiveAudio extends LitElement {
     this.stopNirvanaGradientUpdates();
 
     this.activePersoni = personi;
+    activePersonasManager.setPersona('primary', personi);
     this.updateStatus(`${personi.name} is now active.`);
 
     if (personi.name === 'NIRVANA') {
@@ -1543,6 +1696,26 @@ export class GdmLiveAudio extends LitElement {
     }
     
     return providerManager.getProviderInstance(modelInfo.providerId, modelId);
+  }
+  
+  private getProviderForSlot(slot: PersonaSlot): BaseProvider | null {
+    if (this.dualModeEnabled) {
+      return activePersonasManager.getProvider(slot);
+    } else {
+      if (slot === 'primary' && this.activePersoni) {
+        return this.getProviderForPersoni(this.activePersoni);
+      }
+      return null;
+    }
+  }
+  
+  private getActiveProvider(): BaseProvider | null {
+    if (this.dualModeEnabled) {
+      return activePersonasManager.getProvider('primary');
+    } else if (this.activePersoni) {
+      return this.getProviderForPersoni(this.activePersoni);
+    }
+    return null;
   }
 
   private async convertBlobToFloat32Array(audioBlob: Blob): Promise<{ audio: Float32Array, sampleRate: number }> {
@@ -1696,7 +1869,11 @@ export class GdmLiveAudio extends LitElement {
     
     this.transcriptHistory = [
       ...this.transcriptHistory,
-      {speaker: 'user', text: transcript},
+      {
+        speaker: 'user', 
+        text: transcript,
+        slot: undefined,
+      },
     ];
     this.currentTranscript = '';
 
@@ -1941,6 +2118,7 @@ export class GdmLiveAudio extends LitElement {
           speaker === 'ai'
             ? this.activePersoni!.visuals.accentColor
             : undefined,
+        slot: this.dualModeEnabled && speaker === 'ai' ? 'primary' : undefined,
       },
     ];
 
@@ -2389,6 +2567,7 @@ export class GdmLiveAudio extends LitElement {
         text,
         personiName: this.activePersoni.name,
         personiColor: this.activePersoni.visuals.accentColor,
+        slot: this.dualModeEnabled ? 'primary' : undefined,
       },
     ];
 
@@ -2497,6 +2676,7 @@ export class GdmLiveAudio extends LitElement {
     // If the active personi was edited, update it
     if (this.activePersoni?.id === this.editingPersoni.id) {
       this.activePersoni = this.editingPersoni;
+      activePersonasManager.setPersona('primary', this.editingPersoni);
       this.checkProviderStatus();
     }
 
@@ -2512,6 +2692,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.activePersoni?.id === personiId) {
       this.activePersoni =
         this.personis.find((p) => p.id !== personiId) || null;
+      activePersonasManager.setPersona('primary', this.activePersoni);
     }
     this.personis = this.personis.filter((p) => p.id !== personiId);
     this.savePersonis();
@@ -2614,6 +2795,91 @@ export class GdmLiveAudio extends LitElement {
       <button class="primary" @click=${this.startCreatePersoniFlow}>
         Create New Personi
       </button>
+      
+      <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.2);">
+        <h3>Dual PersonI Mode (Beta)</h3>
+        <div class="form-group">
+          <label class="form-group-inline">
+            <input
+              type="checkbox"
+              .checked=${this.dualModeEnabled}
+              @change=${(e: Event) => {
+                this.dualModeEnabled = (e.target as HTMLInputElement).checked;
+                this.saveDualModeSettings();
+                if (!this.dualModeEnabled) {
+                  activePersonasManager.setPersona('secondary', null);
+                  this.secondaryPersoni = null;
+                } else if (this.secondaryPersoni) {
+                  activePersonasManager.setPersona('secondary', this.secondaryPersoni);
+                }
+                this.requestUpdate();
+              }}
+            />
+            <span>Enable Dual PersonI Mode</span>
+          </label>
+          <p style="font-size: 12px; opacity: 0.7; margin-top: 8px;">
+            Run two PersonI simultaneously for collaborative conversations
+          </p>
+        </div>
+        
+        ${this.dualModeEnabled ? html`
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Primary PersonI</label>
+            <select
+              .value=${this.activePersoni?.id || ''}
+              @change=${(e: Event) => {
+                const personiId = (e.target as HTMLSelectElement).value;
+                const personi = this.personis.find(p => p.id === personiId);
+                if (personi) {
+                  this.activePersoni = personi;
+                  activePersonasManager.setPersona('primary', personi);
+                  this.requestUpdate();
+                }
+              }}>
+              ${this.personis.map(p => html`
+                <option value=${p.id} ?selected=${this.activePersoni?.id === p.id}>
+                  ${p.name}
+                </option>
+              `)}
+            </select>
+          </div>
+          
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Secondary PersonI</label>
+            <select
+              .value=${this.secondaryPersoni?.id || ''}
+              @change=${(e: Event) => {
+                const personiId = (e.target as HTMLSelectElement).value;
+                const personi = this.personis.find(p => p.id === personiId);
+                if (personi) {
+                  this.secondaryPersoni = personi;
+                  activePersonasManager.setPersona('secondary', personi);
+                  this.saveDualModeSettings();
+                  this.requestUpdate();
+                }
+              }}>
+              <option value="">None</option>
+              ${this.personis.filter(p => p.id !== this.activePersoni?.id).map(p => html`
+                <option value=${p.id} ?selected=${this.secondaryPersoni?.id === p.id}>
+                  ${p.name}
+                </option>
+              `)}
+            </select>
+          </div>
+          
+          ${this.currentSpeakerSlot ? html`
+            <div style="margin-top: 16px; padding: 12px; background: rgba(135, 206, 250, 0.2); border-radius: 4px; border: 1px solid rgba(135, 206, 250, 0.4);">
+              <div style="font-size: 12px; opacity: 0.8;">Currently Speaking:</div>
+              <div style="font-weight: bold; margin-top: 4px;">
+                ${this.currentSpeakerSlot === 'primary' 
+                  ? this.activePersoni?.name 
+                  : this.secondaryPersoni?.name} 
+                (${this.currentSpeakerSlot})
+              </div>
+            </div>
+          ` : ''}
+        ` : ''}
+      </div>
     `;
   }
 
