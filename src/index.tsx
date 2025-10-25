@@ -27,6 +27,7 @@ import './components/user-profile-panel';
 import './components/notes-panel';
 import './components/tasks-panel';
 import './components/memory-panel';
+import './components/routines-panel';
 import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
@@ -56,6 +57,8 @@ import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConf
 import './components/song-info-bubble';
 import { activePersonasManager, PersonaSlot } from './services/active-personas-manager';
 import { connectorHandlers, ConnectorResult } from './services/connector-handlers';
+import { routineExecutor } from './services/routine-executor';
+import { routinePatternDetector } from './services/routine-pattern-detector';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -111,7 +114,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory';
+type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -634,6 +637,10 @@ export class GdmLiveAudio extends LitElement {
       transform: translate(110px, 70px);
       transition-delay: 0.7s;
     }
+    .settings-menu.open .menu-item:nth-child(8) {
+      transform: translate(90px, 130px);
+      transition-delay: 0.8s;
+    }
 
     .side-panel {
       position: fixed;
@@ -1036,6 +1043,14 @@ export class GdmLiveAudio extends LitElement {
       this.ragInitialized = true;
       const storageInfo = ragMemoryManager.getStorageInfo();
       console.log(`[RAG] ✅ Initialized with ${storageInfo.type} storage and ${storageInfo.embeddingType} embeddings`);
+      
+      console.log('[Routines] Initializing routine executor...');
+      await routineExecutor.initialize();
+      console.log('[Routines] ✅ Routine executor initialized');
+      
+      console.log('[Routines] Initializing pattern detector...');
+      await routinePatternDetector.initialize();
+      console.log('[Routines] ✅ Pattern detector initialized');
     } catch (error) {
       console.error('[RAG] ❌ Failed to initialize:', error);
       this.ragInitialized = false;
@@ -3758,6 +3773,33 @@ export class GdmLiveAudio extends LitElement {
               <line x1="12" y1="17" x2="12.01" y2="17"></line>
             </svg>
           </div>
+          <div
+            class="menu-item group-productivity"
+            title="Routines - Create and manage automation routines"
+            aria-label="Routines Manager"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('routines')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('routines');
+              }
+            }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
+            </svg>
+          </div>
         </div>
 
         ${this.renderPersonisPanel()} 
@@ -3797,6 +3839,15 @@ export class GdmLiveAudio extends LitElement {
           <memory-panel
             @close=${this.closeSidePanel}
           ></memory-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'routines' ? html`
+          <div class="side-panel visible">
+            <div class="panel-header">
+              <span>Routines</span>
+              <button @click=${this.closeSidePanel}>&times;</button>
+            </div>
+            <routines-panel></routines-panel>
+          </div>
         ` : ''}
 
         <!-- Music Detection Indicator -->

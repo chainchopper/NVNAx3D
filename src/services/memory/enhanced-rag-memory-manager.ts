@@ -435,6 +435,32 @@ export class EnhancedRAGMemoryManager extends RAGMemoryManager {
 
     return filtered;
   }
+
+  async getRoutines(enabledOnly: boolean = false): Promise<Memory[]> {
+    const memories = await this.getAllMemories();
+    
+    let routines = memories.filter(memory => memory.metadata.type === 'routine');
+    
+    if (enabledOnly) {
+      routines = routines.filter(routine => routine.metadata.routineEnabled === true);
+    }
+    
+    routines.sort((a, b) => {
+      const executionCountDiff = (b.metadata.routineExecutionCount || 0) - (a.metadata.routineExecutionCount || 0);
+      if (executionCountDiff !== 0) return executionCountDiff;
+      return new Date(b.metadata.timestamp).getTime() - new Date(a.metadata.timestamp).getTime();
+    });
+
+    return routines;
+  }
+
+  async getRoutinesByTag(tag: string): Promise<Memory[]> {
+    const routines = await this.getRoutines();
+    return routines.filter(routine => {
+      const tags = routine.metadata.routineTags as string[] | undefined;
+      return tags && Array.isArray(tags) && tags.includes(tag);
+    });
+  }
 }
 
 export const enhancedRagMemoryManager = new EnhancedRAGMemoryManager();
