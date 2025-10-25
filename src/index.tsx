@@ -59,12 +59,15 @@ import { activePersonasManager, PersonaSlot } from './services/active-personas-m
 import { connectorHandlers, ConnectorResult } from './services/connector-handlers';
 import { routineExecutor } from './services/routine-executor';
 import { routinePatternDetector } from './services/routine-pattern-detector';
+import type { RoutinePattern } from './types/routine-types';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
 const STT_PREFERENCES_KEY = 'stt-preferences';
 const SETTINGS_FAB_POSITION_KEY = 'settings-fab-position';
 const DUAL_MODE_KEY = 'dual-mode-settings';
+const DETECTED_PATTERNS_KEY = 'detected-patterns';
+const DISMISSED_PATTERNS_KEY = 'dismissed-patterns';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
 const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
@@ -152,6 +155,10 @@ export class GdmLiveAudio extends LitElement {
   @state() userProfile: UserProfile;
   @state() ragEnabled = true;
   @state() ragInitialized = false;
+  
+  // Routine pattern detection state
+  @state() detectedPatterns: RoutinePattern[] = [];
+  private dismissedPatternIds: Set<string> = new Set();
   
   // Dual PersonI mode state (opt-in feature)
   @state() dualModeEnabled = false;
@@ -1050,6 +1057,11 @@ export class GdmLiveAudio extends LitElement {
       
       console.log('[Routines] Initializing pattern detector...');
       await routinePatternDetector.initialize();
+      this.loadDetectedPatterns();
+      routinePatternDetector.onPatternDetected((pattern) => {
+        console.log('[Routines] Pattern detected:', pattern);
+        this.handlePatternDetected(pattern);
+      });
       console.log('[Routines] ✅ Pattern detector initialized');
     } catch (error) {
       console.error('[RAG] ❌ Failed to initialize:', error);
@@ -1146,6 +1158,85 @@ export class GdmLiveAudio extends LitElement {
     } catch (error) {
       console.error('[DualMode] Failed to save settings:', error);
     }
+  }
+  
+  private loadDetectedPatterns() {
+    try {
+      const stored = localStorage.getItem(DETECTED_PATTERNS_KEY);
+      if (stored) {
+        this.detectedPatterns = JSON.parse(stored);
+        console.log(`[Routines] Loaded ${this.detectedPatterns.length} detected patterns`);
+      }
+      
+      const dismissedStored = localStorage.getItem(DISMISSED_PATTERNS_KEY);
+      if (dismissedStored) {
+        this.dismissedPatternIds = new Set(JSON.parse(dismissedStored));
+        console.log(`[Routines] Loaded ${this.dismissedPatternIds.size} dismissed patterns`);
+      }
+    } catch (error) {
+      console.error('[Routines] Failed to load detected patterns:', error);
+    }
+  }
+  
+  private saveDetectedPatterns() {
+    try {
+      localStorage.setItem(DETECTED_PATTERNS_KEY, JSON.stringify(this.detectedPatterns));
+      localStorage.setItem(DISMISSED_PATTERNS_KEY, JSON.stringify([...this.dismissedPatternIds]));
+      console.log('[Routines] Saved detected patterns');
+    } catch (error) {
+      console.error('[Routines] Failed to save detected patterns:', error);
+    }
+  }
+  
+  private handlePatternDetected(pattern: RoutinePattern) {
+    const patternId = this.getPatternId(pattern);
+    
+    if (this.dismissedPatternIds.has(patternId)) {
+      console.log('[Routines] Pattern already dismissed, skipping:', patternId);
+      return;
+    }
+    
+    const existingIndex = this.detectedPatterns.findIndex(p => this.getPatternId(p) === patternId);
+    if (existingIndex >= 0) {
+      this.detectedPatterns[existingIndex] = pattern;
+      console.log('[Routines] Updated existing pattern:', patternId);
+    } else {
+      this.detectedPatterns.push(pattern);
+      console.log('[Routines] Added new pattern:', patternId);
+      
+      this.showPatternNotification(pattern);
+    }
+    
+    this.saveDetectedPatterns();
+    this.requestUpdate();
+  }
+  
+  private getPatternId(pattern: RoutinePattern): string {
+    return `${pattern.type}_${pattern.description.substring(0, 50)}`;
+  }
+  
+  private showPatternNotification(pattern: RoutinePattern) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🤖 Routine Pattern Detected', {
+        body: `${pattern.description}\nConfidence: ${Math.round(pattern.confidence * 100)}%`,
+        icon: '/public/avatars/nirvana.png',
+        tag: 'routine-pattern',
+      });
+    } else {
+      console.log(`[Routines] 💡 SUGGESTION: ${pattern.description} (${Math.round(pattern.confidence * 100)}% confidence)`);
+    }
+  }
+  
+  dismissPattern(patternId: string) {
+    this.dismissedPatternIds.add(patternId);
+    this.detectedPatterns = this.detectedPatterns.filter(p => this.getPatternId(p) !== patternId);
+    this.saveDetectedPatterns();
+    this.requestUpdate();
+    console.log('[Routines] Pattern dismissed:', patternId);
+  }
+  
+  getActivePatterns(): RoutinePattern[] {
+    return this.detectedPatterns.filter(p => !this.dismissedPatternIds.has(this.getPatternId(p)));
   }
   
   private async handlePersonaEvent(event: any) {
