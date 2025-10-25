@@ -17,6 +17,9 @@ import {
   blobToBase64,
   decode,
   decodeAudioData,
+  getSharedMicrophone,
+  AudioConsumer,
+  AudioAnalysisData,
 } from './utils';
 import './visual-3d';
 import './components/models-panel';
@@ -48,6 +51,7 @@ import { userProfileManager } from './services/user-profile-manager';
 import { UserProfile } from './types/user-profile';
 import { ragMemoryManager } from './services/memory/rag-memory-manager';
 import { IdleSpeechManager } from './services/idle-speech-manager';
+import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -137,6 +141,14 @@ export class GdmLiveAudio extends LitElement {
   @state() userProfile: UserProfile;
   @state() ragEnabled = true;
   @state() ragInitialized = false;
+  
+  // Music detection state
+  @state() musicDetectionEnabled = true;
+  @state() isMusicDetected = false;
+  @state() musicBpm = 0;
+  @state() musicBeatDetected = false;
+  @state() musicConfidence = 0;
+  @state() musicDetectorConfig: MusicDetectorConfig;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
@@ -205,6 +217,41 @@ export class GdmLiveAudio extends LitElement {
 
     .background-gradient.default {
       background: linear-gradient(135deg, #100c14 0%, #1a1520 100%);
+    }
+
+    .music-indicator {
+      position: absolute;
+      bottom: 12vh;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      padding: 8px 16px;
+      background: rgba(156, 39, 176, 0.3);
+      border: 1px solid rgba(156, 39, 176, 0.6);
+      border-radius: 20px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      pointer-events: none;
+    }
+    
+    .music-indicator.visible {
+      opacity: 1;
+    }
+    
+    .music-indicator-icon {
+      font-size: 16px;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
     }
 
     #status {
@@ -856,6 +903,10 @@ export class GdmLiveAudio extends LitElement {
     window.addEventListener('mousemove', this.handleUserActivity);
     window.addEventListener('touchstart', this.handleUserActivity);
     this.handleUserActivity();
+    
+    // Initialize music detector
+    this.musicDetectorConfig = musicDetector.getConfig();
+    this.setupMusicDetector();
   }
 
   disconnectedCallback() {
@@ -865,6 +916,10 @@ export class GdmLiveAudio extends LitElement {
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
     if (this.idlePromptTimeout) clearTimeout(this.idlePromptTimeout);
     this.stopNirvanaGradientUpdates();
+    
+    // Cleanup music detector
+    const sharedMic = getSharedMicrophone();
+    sharedMic.unregisterConsumer('music-detector');
   }
 
   protected updated(
@@ -1835,6 +1890,87 @@ export class GdmLiveAudio extends LitElement {
         this.updateStatus('Idle');
       }
     }, 5000);
+  }
+
+  /**
+   * Set up music detector with SharedMicrophoneManager
+   */
+  private async setupMusicDetector() {
+    try {
+      const sharedMic = getSharedMicrophone();
+      
+      // Request microphone access
+      const granted = await sharedMic.requestMicrophoneAccess();
+      if (!granted) {
+        console.warn('[MusicDetector] Microphone access not granted, music detection disabled');
+        this.musicDetectionEnabled = false;
+        return;
+      }
+      
+      // Create consumer for music detector
+      const musicConsumer: AudioConsumer = {
+        id: 'music-detector',
+        name: 'Music Detector',
+        bufferSize: 4096,
+        onAudioData: (data: Float32Array, timestamp: number) => {
+          // We don't need raw audio data for music detection
+        },
+        onAnalysisData: (analysisData: AudioAnalysisData) => {
+          // Feed analysis data to music detector
+          if (this.musicDetectionEnabled) {
+            const result = musicDetector.processAudioAnalysis(analysisData);
+            this.updateMusicDetectionState(result);
+          }
+        }
+      };
+      
+      // Register consumer
+      sharedMic.registerConsumer(musicConsumer);
+      console.log('[MusicDetector] Music detector consumer registered');
+      
+      // Set up event listeners for music detector
+      musicDetector.addEventListener('musicstart', (event: any) => {
+        console.log(`[MusicDetector] Music started, confidence: ${event.detail.confidence}`);
+        
+        // Mute idle speech if configured
+        if (this.musicDetectorConfig.muteIdleSpeechOnMusic) {
+          this.idleSpeechManager.pause();
+        }
+      });
+      
+      musicDetector.addEventListener('musicstop', () => {
+        console.log('[MusicDetector] Music stopped');
+        
+        // Resume idle speech if configured and active
+        if (this.musicDetectorConfig.muteIdleSpeechOnMusic && this.activePersoni) {
+          const provider = this.getProviderForPersoni(this.activePersoni);
+          this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
+            this.speakIdleSpeech(text);
+          });
+        }
+      });
+      
+      musicDetector.addEventListener('beat', (event: any) => {
+        // Beat detected - visual feedback is handled in visual-3d
+        this.musicBeatDetected = true;
+        setTimeout(() => { this.musicBeatDetected = false; }, 100);
+      });
+      
+    } catch (error) {
+      console.error('[MusicDetector] Failed to set up music detector:', error);
+      this.musicDetectionEnabled = false;
+    }
+  }
+  
+  /**
+   * Update music detection state
+   */
+  private updateMusicDetectionState(result: MusicDetectionResult) {
+    this.isMusicDetected = result.isMusic;
+    this.musicConfidence = result.confidence;
+    this.musicBpm = result.bpm;
+    
+    // Beat detection is handled by event listener for immediate feedback
   }
 
   private setupVadListeners() {
@@ -2928,6 +3064,14 @@ export class GdmLiveAudio extends LitElement {
           ></memory-panel>
         ` : ''}
 
+        <!-- Music Detection Indicator -->
+        <div class="music-indicator ${this.isMusicDetected && this.musicDetectionEnabled ? 'visible' : ''}">
+          <span class="music-indicator-icon">🎵</span>
+          <span>Music Detected</span>
+          ${this.musicBpm > 0 ? html`<span>${Math.round(this.musicBpm)} BPM</span>` : ''}
+          <span>${Math.round(this.musicConfidence * 100)}%</span>
+        </div>
+
         <div
           id="status"
           style="opacity: ${this.settingsButtonVisible ||
@@ -2943,7 +3087,11 @@ export class GdmLiveAudio extends LitElement {
           .isSwitchingPersona=${this.isSwitchingPersona}
           .isListening=${this.isSpeaking}
           .isAiSpeaking=${this.isAiSpeaking}
-          .visuals=${this.activePersoni?.visuals}></gdm-live-audio-visuals-3d>
+          .visuals=${this.activePersoni?.visuals}
+          .isMusicDetected=${this.isMusicDetected}
+          .musicBpm=${this.musicBpm}
+          .musicBeatDetected=${this.musicBeatDetected}
+          .musicConfidence=${this.musicConfidence}></gdm-live-audio-visuals-3d>
       </div>
     `;
   }
