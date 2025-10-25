@@ -1,0 +1,37 @@
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+[EmbeddingGenerator] No valid Google provider found, using fallback embeddings <anonymous code>:1:147461
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked WebAssembly (script-src) from being executed because it violates the following directive: “script-src 'self' https://esm.sh 'unsafe-inline'” (Missing 'wasm-unsafe-eval' or 'unsafe-eval') index-CiCaEPzm.js:4402:25185
+Content-Security-Policy: The page’s settings blocked a JavaScript eval (script-src) from being executed because it violates the following directive: “script-src 'self' https://esm.sh 'unsafe-inline'” (Missing 'unsafe-eval') 2 index-CiCaEPzm.js:4402:22689
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider 2 <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+Source map error: Error: request failed with status 404
+Stack in the worker:networkRequest@resource://devtools/client/shared/source-map-loader/utils/network-request.js:43:9
+
+Resource URL: https://emojithing.com/%3Canonymous%20code%3E
+Source Map URL: installHook.js.map
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461

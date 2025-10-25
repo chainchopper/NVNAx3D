@@ -137,7 +137,6 @@ export class GdmLiveAudio extends LitElement {
   @state() activeSidePanel: ActiveSidePanel = 'none';
   @state() configPanelMode: ConfigPanelMode = 'list';
   @state() personis: PersoniConfig[] = [];
-  @state() connectors: {[id: string]: {enabled: boolean}} = {};
   @state() activePersoni: PersoniConfig | null = null;
   @state() editingPersoni: PersoniConfig | null = null;
 
@@ -860,6 +859,40 @@ export class GdmLiveAudio extends LitElement {
       transform: translateX(16px);
     }
 
+    .connector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .connector-checkbox-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      font-size: 13px;
+    }
+
+    .connector-checkbox-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .connector-checkbox-item input[type="checkbox"] {
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .connector-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .transcription-log-container {
       position: absolute;
       top: 5vh;
@@ -1365,18 +1398,6 @@ export class GdmLiveAudio extends LitElement {
       this.activePersoni = this.personis[0];
     }
 
-    const storedConnectors = localStorage.getItem(CONNECTORS_KEY);
-    if (storedConnectors) {
-      this.connectors = JSON.parse(storedConnectors);
-    } else {
-      // Initialize all connectors as disabled
-      this.connectors = AVAILABLE_CONNECTORS.reduce((acc, conn) => {
-        acc[conn.id] = {enabled: false};
-        return acc;
-      }, {});
-      this.saveConnectors();
-    }
-
     const storedSttPreferences = localStorage.getItem(STT_PREFERENCES_KEY);
     if (storedSttPreferences) {
       this.sttPreferences = JSON.parse(storedSttPreferences);
@@ -1393,11 +1414,6 @@ export class GdmLiveAudio extends LitElement {
   private savePersonis() {
     localStorage.setItem(PERSONIS_KEY, JSON.stringify(this.personis));
     this.personis = [...this.personis];
-  }
-
-  private saveConnectors() {
-    localStorage.setItem(CONNECTORS_KEY, JSON.stringify(this.connectors));
-    this.connectors = {...this.connectors};
   }
 
   private saveFabPosition() {
@@ -1905,15 +1921,13 @@ export class GdmLiveAudio extends LitElement {
     try {
       const enabledDeclarations = [switchPersonaDeclaration];
 
-      if (this.activePersoni.enabledConnectors) {
+      if (this.activePersoni.enabledConnectors && this.activePersoni.enabledConnectors.length > 0) {
         for (const connectorId of this.activePersoni.enabledConnectors) {
-          if (this.connectors[connectorId]?.enabled) {
-            const connector = AVAILABLE_CONNECTORS.find(
-              (c) => c.id === connectorId,
-            );
-            if (connector) {
-              enabledDeclarations.push(connector.functionDeclaration);
-            }
+          const connector = AVAILABLE_CONNECTORS.find(
+            (c) => c.id === connectorId,
+          );
+          if (connector) {
+            enabledDeclarations.push(connector.functionDeclaration);
           }
         }
       }
@@ -2871,7 +2885,60 @@ export class GdmLiveAudio extends LitElement {
     `;
   }
 
+  private getConnectorStatusIndicator(connectorId: string): string {
+    const connectorIntegrationMap: Record<string, string> = {
+      'gmail': 'Google Mail',
+      'google_calendar': 'Google Calendar',
+      'google_drive': 'Google Drive',
+      'google_docs': 'Google Docs',
+      'google_sheets': 'Google Sheets',
+      'github': 'GitHub',
+      'notion': 'Notion',
+      'linear': 'Linear',
+      'slack': 'Slack',
+      'jira': 'Jira',
+      'asana': 'Asana',
+      'confluence': 'Confluence',
+      'hubspot': 'HubSpot',
+      'youtube': 'YouTube',
+      'dropbox': 'Dropbox',
+      'box': 'Box',
+      'onedrive': 'OneDrive',
+      'sharepoint': 'SharePoint',
+      'discord': 'Discord',
+      'spotify': 'Spotify',
+      'outlook': 'Outlook',
+      'twilio': 'Twilio',
+      'sendgrid': 'SendGrid',
+      'resend': 'Resend',
+    };
+    
+    const implementedConnectors = ['gmail', 'google_calendar', 'notion', 'linear', 'slack', 'github'];
+    
+    if (implementedConnectors.includes(connectorId)) {
+      return '✓';
+    } else {
+      return '⚠';
+    }
+  }
+
   private renderConnectorsPanel() {
+    const toggleConnectorForPersoni = (personiId: string, connectorId: string, enabled: boolean) => {
+      const personi = this.personis.find(p => p.id === personiId);
+      if (!personi) return;
+      
+      if (enabled) {
+        if (!personi.enabledConnectors.includes(connectorId)) {
+          personi.enabledConnectors = [...personi.enabledConnectors, connectorId];
+        }
+      } else {
+        personi.enabledConnectors = personi.enabledConnectors.filter(id => id !== connectorId);
+      }
+      
+      this.savePersonis();
+      this.requestUpdate();
+    };
+
     return html`
       <div class="side-panel ${this.activeSidePanel === 'connectors' ? 'visible' : ''}">
         <div class="panel-header">
@@ -2879,31 +2946,71 @@ export class GdmLiveAudio extends LitElement {
           <button @click=${this.closeSidePanel}>&times;</button>
         </div>
         <div class="panel-content">
-          <h3>Manage Integrations</h3>
-          <ul class="connector-list">
-            ${AVAILABLE_CONNECTORS.map(
-              (connector) => html`
-                <li class="connector-list-item">
-                  <div class="info">
-                    <strong>${connector.name}</strong>
-                    <p>${connector.description}</p>
-                  </div>
-                  <label class="toggle-switch">
-                    <input
-                      type="checkbox"
-                      .checked=${this.connectors[connector.id]?.enabled}
-                      @change=${(e: Event) => {
-                        this.connectors[connector.id].enabled = (
-                          e.target as HTMLInputElement
-                        ).checked;
-                        this.saveConnectors();
-                      }} />
-                    <span class="slider"></span>
-                  </label>
-                </li>
-              `,
-            )}
-          </ul>
+          <h3>Configure PersonI Connectors</h3>
+          <p style="font-size: 14px; opacity: 0.8; margin-bottom: 20px;">
+            Enable specific connectors for each PersonI. Only enabled connectors will be available as tools during conversations.
+          </p>
+          
+          ${this.personis.length === 0 ? html`
+            <p style="opacity: 0.6;">No PersonI available. Create a PersonI first to configure connectors.</p>
+          ` : html`
+            ${this.personis.map(personi => html`
+              <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                <h4 style="margin-bottom: 12px; color: ${personi.visuals.accentColor};">
+                  ${personi.name}
+                  ${personi.id === this.activePersoni?.id ? html`<span style="font-size: 12px; opacity: 0.7;"> (Active)</span>` : ''}
+                </h4>
+                <p style="font-size: 12px; opacity: 0.6; margin-bottom: 12px;">
+                  ${personi.enabledConnectors.length} connector${personi.enabledConnectors.length !== 1 ? 's' : ''} enabled
+                </p>
+                
+                <div class="connector-grid">
+                  ${AVAILABLE_CONNECTORS.map(connector => {
+                    const isEnabled = personi.enabledConnectors.includes(connector.id);
+                    const statusIndicator = this.getConnectorStatusIndicator(connector.id);
+                    const isImplemented = statusIndicator === '✓';
+                    return html`
+                      <label 
+                        class="connector-checkbox-item" 
+                        title="${connector.description}${isImplemented ? ' (Backend implemented)' : ' (Setup required - check backend)'}"
+                        style="opacity: ${isImplemented ? '1' : '0.7'}">
+                        <input
+                          type="checkbox"
+                          .checked=${isEnabled}
+                          @change=${(e: Event) => {
+                            toggleConnectorForPersoni(
+                              personi.id,
+                              connector.id,
+                              (e.target as HTMLInputElement).checked
+                            );
+                          }}
+                        />
+                        <span class="connector-name">
+                          ${connector.name}
+                          <span style="margin-left: 4px; font-size: 10px; ${isImplemented ? 'color: #4CAF50;' : 'color: #FFA726;'}">
+                            ${statusIndicator}
+                          </span>
+                        </span>
+                      </label>
+                    `;
+                  })}
+                </div>
+              </div>
+            `)}
+          `}
+          
+          <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
+            <h4 style="margin-bottom: 8px; font-size: 14px;">ℹ️ Setup Instructions</h4>
+            <p style="font-size: 12px; opacity: 0.8; line-height: 1.5; margin-bottom: 8px;">
+              To use connectors, you need to set up Replit integrations in the Connectors panel of your Replit workspace. 
+              The backend server will use these integrations to access external services.
+            </p>
+            <p style="font-size: 11px; opacity: 0.6; line-height: 1.4;">
+              <strong>Status Indicators:</strong><br/>
+              <span style="color: #4CAF50;">✓</span> = Backend handler implemented<br/>
+              <span style="color: #FFA726;">⚠</span> = Setup required (connector defined but handler not yet implemented)
+            </p>
+          </div>
         </div>
       </div>
     `;
@@ -3065,10 +3172,6 @@ export class GdmLiveAudio extends LitElement {
       }
       this.requestUpdate();
     };
-
-    const activeConnectors = AVAILABLE_CONNECTORS.filter(
-      (c) => this.connectors[c.id]?.enabled,
-    );
 
     return html`
       <div class="form-group">
@@ -3293,25 +3396,24 @@ export class GdmLiveAudio extends LitElement {
       </div>
       <div class="form-group">
         <label>Connectors</label>
+        <p style="font-size: 12px; opacity: 0.7; margin-bottom: 8px;">
+          Select which connectors this PersonI can use during conversations.
+        </p>
         <div class="capabilities-grid">
-          ${activeConnectors.length > 0
-            ? activeConnectors.map(
-                (c) => html`
-                  <div class="capability-item">
-                    <input
-                      type="checkbox"
-                      id="conn-${c.id}"
-                      .checked=${this.editingPersoni?.enabledConnectors?.includes(
-                        c.id,
-                      )}
-                      @change=${(e: Event) => handleCapabilityToggle(e, c.id)} />
-                    <label for="conn-${c.id}">${c.name}</label>
-                  </div>
-                `,
-              )
-            : html`<p style="font-size: 12px; opacity: 0.7;">
-                No connectors are active. Enable them in the Connectors menu.
-              </p>`}
+          ${AVAILABLE_CONNECTORS.map(
+            (c) => html`
+              <div class="capability-item">
+                <input
+                  type="checkbox"
+                  id="conn-${c.id}"
+                  .checked=${this.editingPersoni?.enabledConnectors?.includes(
+                    c.id,
+                  )}
+                  @change=${(e: Event) => handleCapabilityToggle(e, c.id)} />
+                <label for="conn-${c.id}">${c.name}</label>
+              </div>
+            `,
+          )}
         </div>
       </div>
       <button class="primary" @click=${this.handleSavePersoni}>
