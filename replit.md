@@ -27,8 +27,10 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model (text-embedding-004). Supports various memory types (conversations, notes, tasks) with semantic search, temporal queries, and speaker management.
 - **User Profile System**: Stores user-specific information (name, pronouns, preferences) to provide context to PersonI.
 - **Local Speech-to-Text (STT)**: Integration of browser-based Whisper models (@xenova/transformers) for on-device speech processing with IndexedDB caching and remote STT fallback.
+- **Enhanced Audio Recording System**: EnhancedAudioRecorder class with SharedMicrophoneManager enabling multiple concurrent audio consumers (STT, music detection, voice commands, reactive 3D) sharing a single microphone device. Features include configurable buffer sizes, multiple export formats (Blob WAV, AudioBuffer, raw PCM), VAD integration, and real-time audio analysis with event-driven architecture.
+- **Music Detection System**: Real-time music vs speech classification using frequency distribution analysis (7 bands), temporal pattern recognition, spectral complexity measurement, and beat detection. Provides BPM estimation, automatic idle speech muting during music playback, and dramatic beat-synchronized 3D visual reactions with enhanced lighting and color shifting.
 - **Dynamic Backgrounds**: Persona-specific animated backgrounds (e.g., Game of Life for ADAM, Constellation map for ATHENA) with smooth transitions.
-- **Enhanced Audio-Reactive Animations**: Dynamic visual feedback during listening and speaking modes, driven by audio frequencies and amplitude.
+- **Enhanced Audio-Reactive Animations**: Dynamic visual feedback during listening and speaking modes, driven by audio frequencies and amplitude. Music mode features dramatic reactions with beat synchronization, full-spectrum frequency response, and multi-axis rotation.
 - **CSP Security Hardening**: Implemented Content Security Policy to allow necessary external resources while blocking unsafe-eval.
 
 ### UI/UX Decisions
