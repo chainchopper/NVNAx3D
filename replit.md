@@ -29,6 +29,15 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Local Speech-to-Text (STT)**: Integration of browser-based Whisper models (@xenova/transformers) for on-device speech processing with IndexedDB caching and remote STT fallback.
 - **Enhanced Audio Recording System**: EnhancedAudioRecorder class with SharedMicrophoneManager enabling multiple concurrent audio consumers (STT, music detection, voice commands, reactive 3D) sharing a single microphone device. Features include configurable buffer sizes, multiple export formats (Blob WAV, AudioBuffer, raw PCM), VAD integration, and real-time audio analysis with event-driven architecture.
 - **Music Detection System**: Real-time music vs speech classification using frequency distribution analysis (7 bands), temporal pattern recognition, spectral complexity measurement, and beat detection. Provides BPM estimation, automatic idle speech muting during music playback, and dramatic beat-synchronized 3D visual reactions with enhanced lighting and color shifting.
+- **Song Identification System (Task 069)**: Soundhound-style song recognition with lyrics and album art. Features include:
+  - Audio fingerprinting and song identification via AudD API (ACRCloud support planned)
+  - Automatic capture after 7s of music detection using SharedMicrophoneManager
+  - Fetches song metadata: title, artist, album, year, genre, album art
+  - Lyrics fetching from Genius API with synchronized display support
+  - Glass-morphism UI bubble displaying album art, song info, and scrolling lyrics
+  - PersonI commentary generation using RAG memory to recognize previously heard songs
+  - Stores identified songs in RAG memory with 'song_identification' type for future context
+  - Configurable delay, API provider selection, and PersonI commentary toggle
 - **Dynamic Backgrounds**: Persona-specific animated backgrounds (e.g., Game of Life for ADAM, Constellation map for ATHENA) with smooth transitions.
 - **Enhanced Audio-Reactive Animations**: Dynamic visual feedback during listening and speaking modes, driven by audio frequencies and amplitude. Music mode features dramatic reactions with beat synchronization, full-spectrum frequency response, and multi-axis rotation.
 - **CSP Security Hardening**: Implemented Content Security Policy to allow necessary external resources while blocking unsafe-eval.

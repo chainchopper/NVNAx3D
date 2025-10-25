@@ -52,10 +52,13 @@ import { UserProfile } from './types/user-profile';
 import { ragMemoryManager } from './services/memory/rag-memory-manager';
 import { IdleSpeechManager } from './services/idle-speech-manager';
 import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
+import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
+import './components/song-info-bubble';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
 const STT_PREFERENCES_KEY = 'stt-preferences';
+const SETTINGS_FAB_POSITION_KEY = 'settings-fab-position';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
 const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
@@ -123,6 +126,8 @@ export class GdmLiveAudio extends LitElement {
   @state() error = '';
   @state() settingsButtonVisible = false;
   @state() settingsMenuVisible = false;
+  @state() fabPosition = { x: 0, y: 0 };
+  @state() isDraggingFab = false;
 
   // New state for unified config panel
   @state() activeSidePanel: ActiveSidePanel = 'none';
@@ -149,11 +154,26 @@ export class GdmLiveAudio extends LitElement {
   @state() musicBeatDetected = false;
   @state() musicConfidence = 0;
   @state() musicDetectorConfig: MusicDetectorConfig;
+  
+  // Song identification state
+  @state() songIdentificationEnabled = true;
+  @state() currentSongInfo: SongInfo | null = null;
+  @state() currentLyrics: LyricsInfo | null = null;
+  @state() showSongBubble = false;
+  @state() songIdentificationConfig: SongIdentificationConfig;
+  
+  private musicStartTime = 0;
+  private identificationTimeout: number | undefined;
 
   private settingsTimeout: number | undefined;
   private idlePromptTimeout: number | undefined;
   private nirvanaGradientInterval: number | undefined;
   private idleSpeechManager = new IdleSpeechManager();
+  
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragOffsetX = 0;
+  private dragOffsetY = 0;
   
   private browserSttSupported = false;
   private useBrowserStt = false;
@@ -393,9 +413,7 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .settings-fab {
-      position: absolute;
-      bottom: 24px;
-      right: 24px;
+      position: fixed;
       z-index: 100;
       opacity: 0;
       transition: opacity 0.5s ease-in-out;
@@ -403,10 +421,25 @@ export class GdmLiveAudio extends LitElement {
       flex-direction: column;
       align-items: center;
       gap: 8px;
+      cursor: move;
+      user-select: none;
     }
 
     .settings-fab.visible {
       opacity: 1;
+    }
+
+    .settings-fab.dragging {
+      opacity: 0.7;
+      cursor: grabbing;
+    }
+
+    .settings-fab.dragging button {
+      pointer-events: none;
+    }
+
+    .settings-fab.dragging .provider-status-indicator {
+      pointer-events: none;
     }
 
     .provider-status-indicator {
@@ -499,10 +532,13 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .settings-menu {
-      position: absolute;
-      bottom: 24px;
-      right: 24px;
+      position: fixed;
       z-index: 99;
+      pointer-events: none;
+    }
+
+    .settings-menu .menu-item {
+      pointer-events: all;
     }
 
     .settings-menu .menu-item {
@@ -969,6 +1005,9 @@ export class GdmLiveAudio extends LitElement {
       });
     }
     
+    // Initialize song identification
+    this.setupSongIdentification();
+    
     if (this.providerStatus === 'unconfigured') {
       if (this.useBrowserStt) {
         this.showOnboarding = true;
@@ -1190,6 +1229,13 @@ export class GdmLiveAudio extends LitElement {
     if (storedSttPreferences) {
       this.sttPreferences = JSON.parse(storedSttPreferences);
     }
+
+    const storedFabPosition = localStorage.getItem(SETTINGS_FAB_POSITION_KEY);
+    if (storedFabPosition) {
+      this.fabPosition = JSON.parse(storedFabPosition);
+    } else {
+      this.fabPosition = { x: window.innerWidth - 104, y: window.innerHeight - 104 };
+    }
   }
 
   private savePersonis() {
@@ -1202,6 +1248,63 @@ export class GdmLiveAudio extends LitElement {
     this.connectors = {...this.connectors};
   }
 
+  private saveFabPosition() {
+    localStorage.setItem(SETTINGS_FAB_POSITION_KEY, JSON.stringify(this.fabPosition));
+  }
+
+  private handleFabMouseDown = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('.provider-status-indicator')) {
+      return;
+    }
+    
+    e.preventDefault();
+    this.isDraggingFab = true;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.dragOffsetX = this.fabPosition.x;
+    this.dragOffsetY = this.fabPosition.y;
+    
+    document.addEventListener('mousemove', this.handleFabMouseMove);
+    document.addEventListener('mouseup', this.handleFabMouseUp);
+  };
+
+  private handleFabMouseMove = (e: MouseEvent) => {
+    if (!this.isDraggingFab) return;
+    
+    e.preventDefault();
+    
+    const deltaX = e.clientX - this.dragStartX;
+    const deltaY = e.clientY - this.dragStartY;
+    
+    let newX = this.dragOffsetX + deltaX;
+    let newY = this.dragOffsetY + deltaY;
+    
+    const menuWidth = 120;
+    const menuHeight = 120;
+    const fabSize = 80;
+    
+    const minX = menuWidth - 50;
+    const maxX = window.innerWidth - fabSize - 10;
+    const minY = menuHeight - 50;
+    const maxY = window.innerHeight - fabSize - 10;
+    
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
+    
+    this.fabPosition = { x: newX, y: newY };
+  };
+
+  private handleFabMouseUp = (e: MouseEvent) => {
+    if (!this.isDraggingFab) return;
+    
+    e.preventDefault();
+    this.isDraggingFab = false;
+    this.saveFabPosition();
+    
+    document.removeEventListener('mousemove', this.handleFabMouseMove);
+    document.removeEventListener('mouseup', this.handleFabMouseUp);
+  };
+
   private handleUserActivity() {
     this.settingsButtonVisible = true;
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
@@ -1209,6 +1312,187 @@ export class GdmLiveAudio extends LitElement {
       this.settingsButtonVisible = false;
       this.settingsMenuVisible = false;
     }, 4000);
+  }
+  
+  private async setupSongIdentification() {
+    try {
+      if (this.ragInitialized) {
+        songIdentificationService.setRAGMemoryManager(ragMemoryManager);
+      }
+      
+      if (this.activePersoni) {
+        const provider = this.getProviderForPersoni(this.activePersoni);
+        if (provider) {
+          songIdentificationService.setProvider(provider);
+        }
+        songIdentificationService.setPersona(this.activePersoni.name);
+      }
+      
+      const initialized = await songIdentificationService.initialize();
+      if (!initialized) {
+        console.warn('[SongIdentification] Failed to initialize');
+        return;
+      }
+      
+      console.log('[SongIdentification] Service initialized');
+      
+      musicDetector.addEventListener('musicstart', ((event: CustomEvent) => {
+        this.handleMusicStart(event.detail);
+      }) as EventListener);
+      
+      musicDetector.addEventListener('musicstop', (() => {
+        this.handleMusicStop();
+      }) as EventListener);
+      
+      songIdentificationService.addEventListener('identified', ((event: CustomEvent) => {
+        this.handleSongIdentified(event.detail);
+      }) as EventListener);
+      
+      songIdentificationService.addEventListener('lyricsfetched', ((event: CustomEvent) => {
+        this.handleLyricsFetched(event.detail);
+      }) as EventListener);
+      
+      songIdentificationService.addEventListener('commentary', ((event: CustomEvent) => {
+        this.handleSongCommentary(event.detail);
+      }) as EventListener);
+      
+      songIdentificationService.addEventListener('cleared', (() => {
+        this.showSongBubble = false;
+        this.currentSongInfo = null;
+        this.currentLyrics = null;
+      }) as EventListener);
+    } catch (error) {
+      console.error('[SongIdentification] Setup error:', error);
+    }
+  }
+  
+  private handleMusicStart(detail: { confidence: number }) {
+    if (!this.songIdentificationEnabled) return;
+    
+    console.log('[SongIdentification] Music detected, scheduling identification...');
+    this.musicStartTime = Date.now();
+    
+    clearTimeout(this.identificationTimeout);
+    
+    const config = songIdentificationService.getConfig();
+    this.identificationTimeout = window.setTimeout(() => {
+      if (this.isMusicDetected) {
+        songIdentificationService.startCapture();
+      }
+    }, config.identificationDelayMs);
+  }
+  
+  private handleMusicStop() {
+    console.log('[SongIdentification] Music stopped');
+    clearTimeout(this.identificationTimeout);
+    
+    setTimeout(() => {
+      this.showSongBubble = false;
+      songIdentificationService.clearCurrent();
+    }, 5000);
+  }
+  
+  private async handleSongIdentified(songInfo: SongInfo) {
+    console.log('[SongIdentification] Song identified:', songInfo.title, 'by', songInfo.artist);
+    
+    this.currentSongInfo = songInfo;
+    this.showSongBubble = true;
+    
+    const config = songIdentificationService.getConfig();
+    if (config.personiCommentary && this.activePersoni) {
+      await this.generateSongCommentary(songInfo);
+    }
+    
+    if (this.ragEnabled && this.ragInitialized) {
+      await this.storeSongInMemory(songInfo);
+    }
+  }
+  
+  private handleLyricsFetched(lyricsInfo: LyricsInfo) {
+    console.log('[SongIdentification] Lyrics fetched from', lyricsInfo.source);
+    this.currentLyrics = lyricsInfo;
+  }
+  
+  private async generateSongCommentary(songInfo: SongInfo) {
+    if (!this.activePersoni || this.isAiSpeaking || this.isSpeaking) return;
+    
+    try {
+      let previouslyHeard = false;
+      let commentary = '';
+      
+      if (this.ragEnabled && this.ragInitialized) {
+        const searchQuery = `song ${songInfo.title} by ${songInfo.artist}`;
+        const memories = await ragMemoryManager.retrieveRelevantMemories(searchQuery, {
+          limit: 3,
+          threshold: 0.7,
+          memoryType: 'song_identification',
+        });
+        
+        previouslyHeard = memories.length > 0;
+      }
+      
+      const provider = this.getProviderForPersoni(this.activePersoni);
+      if (!provider) return;
+      
+      const commentaryPrompt = previouslyHeard
+        ? `Generate a brief (1-2 sentences) comment about hearing the song "${songInfo.title}" by ${songInfo.artist} again. Show recognition and maybe mention something about the song. Stay in character as ${this.activePersoni.name}.`
+        : `Generate a brief (1-2 sentences) comment about discovering the song "${songInfo.title}" by ${songInfo.artist}${songInfo.genre ? ` (${songInfo.genre})` : ''}. Be enthusiastic or analytical depending on your character. Stay in character as ${this.activePersoni.name}.`;
+      
+      const messages = [
+        { role: 'system' as const, content: this.activePersoni.systemInstruction },
+        { role: 'user' as const, content: commentaryPrompt }
+      ];
+      
+      const response = await provider.sendMessage(messages);
+      commentary = response || '';
+      
+      if (commentary) {
+        this.transcriptHistory = [
+          ...this.transcriptHistory,
+          {
+            speaker: 'ai',
+            text: commentary,
+            personiName: this.activePersoni.name,
+            personiColor: this.activePersoni.visuals.accentColor,
+          },
+        ];
+        
+        await this.speakText(commentary);
+      }
+    } catch (error) {
+      console.error('[SongIdentification] Commentary generation error:', error);
+    }
+  }
+  
+  private async storeSongInMemory(songInfo: SongInfo) {
+    try {
+      const memoryText = `Heard song: "${songInfo.title}" by ${songInfo.artist}${songInfo.album ? ` from album "${songInfo.album}"` : ''}${songInfo.year ? ` (${songInfo.year})` : ''}${songInfo.genre ? `, genre: ${songInfo.genre}` : ''}`;
+      
+      await ragMemoryManager.addMemory(
+        memoryText,
+        this.activePersoni?.name || 'system',
+        'song_identification',
+        this.activePersoni?.name || 'system',
+        7,
+        {
+          songTitle: songInfo.title,
+          artist: songInfo.artist,
+          album: songInfo.album,
+          year: songInfo.year,
+          genre: songInfo.genre,
+          identifiedAt: songInfo.identifiedAt,
+        }
+      );
+      
+      console.log('[SongIdentification] Stored in RAG memory');
+    } catch (error) {
+      console.error('[SongIdentification] Failed to store in memory:', error);
+    }
+  }
+  
+  private handleCloseSongBubble() {
+    this.showSongBubble = false;
+    songIdentificationService.clearCurrent();
   }
 
   private updateNirvanaGradient() {
@@ -1945,7 +2229,7 @@ export class GdmLiveAudio extends LitElement {
         if (this.musicDetectorConfig.muteIdleSpeechOnMusic && this.activePersoni) {
           const provider = this.getProviderForPersoni(this.activePersoni);
           this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
-            this.speakIdleSpeech(text);
+            this.speakText(text, 'ai');
           });
         }
       });
@@ -2802,7 +3086,9 @@ export class GdmLiveAudio extends LitElement {
         </div>
 
         <div
-          class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''}">
+          class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''} ${this.isDraggingFab ? 'dragging' : ''}"
+          style="left: ${this.fabPosition.x}px; top: ${this.fabPosition.y}px;"
+          @mousedown=${this.handleFabMouseDown}>
           <div
             class="provider-status-indicator ${this.providerStatus}"
             @click=${() => this.openSidePanel('models')}
@@ -2827,7 +3113,9 @@ export class GdmLiveAudio extends LitElement {
           </button>
         </div>
 
-        <div class="settings-menu ${this.settingsMenuVisible ? 'open' : ''}">
+        <div 
+          class="settings-menu ${this.settingsMenuVisible ? 'open' : ''}"
+          style="left: ${this.fabPosition.x}px; top: ${this.fabPosition.y}px;">
           <div
             class="menu-item group-user"
             title="User Profile - Manage your personal information and preferences"
@@ -3071,6 +3359,16 @@ export class GdmLiveAudio extends LitElement {
           ${this.musicBpm > 0 ? html`<span>${Math.round(this.musicBpm)} BPM</span>` : ''}
           <span>${Math.round(this.musicConfidence * 100)}%</span>
         </div>
+
+        <!-- Song Identification Bubble -->
+        <song-info-bubble
+          .songInfo=${this.currentSongInfo}
+          .lyricsInfo=${this.currentLyrics}
+          .visible=${this.showSongBubble && this.songIdentificationEnabled}
+          .showLyrics=${songIdentificationService.getConfig().fetchLyrics}
+          .playbackTime=${this.musicStartTime > 0 ? (Date.now() - this.musicStartTime) / 1000 : 0}
+          @close=${this.handleCloseSongBubble}
+        ></song-info-bubble>
 
         <div
           id="status"
