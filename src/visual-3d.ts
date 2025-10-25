@@ -72,10 +72,19 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private idleAnimationPhase = 0;
   private baseOpacity = 0.7;
 
+  // Music detection state
+  private musicBeatPhase = 0;
+  private lastBeatTime = 0;
+  private musicIntensitySmoothed = 0;
+
   @property({type: Boolean}) isSwitchingPersona = false;
   @property({type: Boolean}) isListening = false;
   @property({type: Boolean}) isAiSpeaking = false;
   @property({type: Object}) visuals: PersoniConfig['visuals'];
+  @property({type: Boolean}) isMusicDetected = false;
+  @property({type: Number}) musicBpm = 0;
+  @property({type: Boolean}) musicBeatDetected = false;
+  @property({type: Number}) musicConfidence = 0;
 
   private _outputNode!: AudioNode;
   private _inputNode!: AudioNode;
@@ -704,6 +713,73 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.centralObject.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
   }
 
+  /**
+   * Update visuals when music is detected
+   * More dramatic, beat-synchronized, full-spectrum reactions
+   */
+  private updateMusicVisuals(frequencyData: Uint8Array, time: number, dt: number) {
+    if (!this.centralObject) return;
+
+    // Get frequency bands for full-spectrum reaction
+    const bassFreq = frequencyData.slice(0, 10).reduce((a, b) => a + b) / (10 * 255);
+    const lowMidFreq = frequencyData.slice(10, 30).reduce((a, b) => a + b) / (20 * 255);
+    const midFreq = frequencyData.slice(30, 60).reduce((a, b) => a + b) / (30 * 255);
+    const highMidFreq = frequencyData.slice(60, 120).reduce((a, b) => a + b) / (60 * 255);
+    const highFreq = frequencyData.slice(120, 200).reduce((a, b) => a + b) / (80 * 255);
+
+    // Smooth music intensity for dramatic but controlled reactions
+    const instantIntensity = bassFreq + midFreq + highFreq;
+    this.musicIntensitySmoothed = this.musicIntensitySmoothed * 0.7 + instantIntensity * 0.3;
+
+    // Beat-synchronized pulsing
+    if (this.musicBeatDetected) {
+      this.musicBeatPhase = 1.0;
+      this.lastBeatTime = time;
+    }
+
+    // Decay beat phase for smooth pulse
+    const timeSinceBeat = time - this.lastBeatTime;
+    this.musicBeatPhase = Math.max(0, this.musicBeatPhase - dt * 0.05);
+    const beatPulse = Math.pow(this.musicBeatPhase, 0.5);
+
+    // Dramatic scale with beat sync - larger reactions than speech
+    const musicScale = 1.0 + beatPulse * 0.4 + this.musicIntensitySmoothed * 0.3;
+    this.centralObject.scale.set(musicScale, musicScale, musicScale);
+
+    // Enhanced rotation for music - faster and multi-axis
+    this.centralObject.rotation.y += (bassFreq * 0.05 + 0.01) * dt;
+    this.centralObject.rotation.x += midFreq * 0.03 * dt;
+    this.centralObject.rotation.z += highFreq * 0.02 * dt;
+
+    // Dramatic emissive intensity - more vibrant than speech
+    const musicEmissive = 0.5 + this.musicIntensitySmoothed * 0.8 + beatPulse * 0.5;
+    this.sphereMaterial.emissiveIntensity = musicEmissive;
+
+    // Color shift based on frequency content
+    const hue = (bassFreq * 0.3 + midFreq * 0.4 + highFreq * 0.3);
+    const tempColor = new THREE.Color().setHSL(hue, 0.8, 0.6);
+    this.sphereMaterial.emissive.lerp(tempColor, 0.15);
+
+    // Enhanced point light intensity for music
+    const musicLightIntensity = 1.0 + this.musicIntensitySmoothed * 2.0 + beatPulse * 1.5;
+    this.pointLights.forEach((light) => {
+      light.intensity = musicLightIntensity;
+      light.color.lerp(tempColor, 0.2);
+    });
+
+    // Update shader uniforms with full spectrum data
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.outputData.value.set(
+        bassFreq * 5,      // More dramatic bass response
+        midFreq * 4,       // Enhanced mid response
+        highFreq * 6,      // Strong high response
+        beatPulse          // Beat sync
+      );
+      shaderUniforms.jiggleIntensity.value = this.musicIntensitySmoothed * 2;
+    }
+  }
+
   private animation() {
     requestAnimationFrame(() => this.animation());
 
@@ -770,6 +846,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.isIdle = true;
     }
 
+    // Priority order: Listening > Speaking > Music > Idle > Default
     if (this.isListening && inputIntensity > 0.01) {
       this.updateListeningVisuals(inputIntensity);
       if (this.activeIdleAnimation !== 'none') {
@@ -778,6 +855,14 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       }
     } else if (this.isAiSpeaking && outputIntensity > 0.01) {
       this.updateSpeakingVisuals(this.outputAnalyser.data, time, dt);
+      if (this.activeIdleAnimation !== 'none') {
+        this.cleanupIdleAnimation(this.activeIdleAnimation);
+        this.activeIdleAnimation = 'none';
+      }
+    } else if (this.isMusicDetected && (inputIntensity > 0.01 || outputIntensity > 0.01)) {
+      // Music detected - use more dramatic reactions
+      const musicData = inputIntensity > outputIntensity ? this.inputAnalyser.data : this.outputAnalyser.data;
+      this.updateMusicVisuals(musicData, time, dt);
       if (this.activeIdleAnimation !== 'none') {
         this.cleanupIdleAnimation(this.activeIdleAnimation);
         this.activeIdleAnimation = 'none';
