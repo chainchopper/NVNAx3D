@@ -17,12 +17,20 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **AI Provider**: Google Gemini API (@google/genai), with multi-provider support
 - **3D Graphics**: Three.js (WebGL, planned WebGPU migration)
 - **Language**: TypeScript
+- **Backend**: Express.js (Node.js) for secure connector API proxy
 
 ### Key Components
 - **PersonI System**: Defines AI personas with unique personalities, voices, models, and visual styles. Each PersonI can have specific capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline - MCP). Includes a template system for custom PersonI creation.
 - **3D Visualization**: WebGL-based animated 3D objects (Icosahedron, TorusKnot, Box) with texture mapping, idle animations, and audio-reactive visuals. PersonI have unique visual configurations and dynamic backgrounds.
 - **Main Component**: Manages audio input/output, Gemini AI streaming, PersonI switching, and voice activity detection.
-- **Connectors**: Extensible system for integrating external services like Google Drive, GitHub, and YouTube.
+- **Connector Backend Proxy (Task 073)**: Secure backend server architecture for external service integrations. Features include:
+  - Express.js backend server (`server.js`) running on port 3001
+  - Handles OAuth tokens and API keys server-side (never exposed to browser)
+  - REST endpoints for connectors: Gmail, Google Calendar, GitHub, Linear, Notion, Slack
+  - Frontend calls backend proxy via Vite dev proxy (`/api/*` → `http://localhost:3001`)
+  - Proper error handling with setup instructions when tokens are missing
+  - Environment variables: GOOGLE_ACCESS_TOKEN, NOTION_TOKEN, LINEAR_API_KEY, SLACK_BOT_TOKEN, GITHUB_TOKEN
+  - Security: NO sensitive credentials in browser, all API calls made server-side
 - **Model Provider System**: Allows configuration and integration of multiple AI providers (OpenAI, Google, custom endpoints like Ollama) and management of their respective models. PersonI can be assigned models from any verified provider.
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model (text-embedding-004). Supports various memory types (conversations, notes, tasks) with semantic search, temporal queries, and speaker management.
 - **User Profile System**: Stores user-specific information (name, pronouns, preferences) to provide context to PersonI.
@@ -56,5 +64,7 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Vite**: Build tool.
 - **@google/genai**: Google Gemini API client library.
 - **@xenova/transformers**: Used for local Whisper STT integration.
+- **Express**: Backend server for secure connector API proxy.
+- **CORS**: Cross-origin resource sharing for backend API.
 - **ChromaDB**: Planned for vector database integration in the RAG system.
 - **raw.githubusercontent.com, HuggingFace CDN**: Allowed for content delivery.

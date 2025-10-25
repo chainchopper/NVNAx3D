@@ -55,6 +55,7 @@ import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './serv
 import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
 import './components/song-info-bubble';
 import { activePersonasManager, PersonaSlot } from './services/active-personas-manager';
+import { connectorHandlers, ConnectorResult } from './services/connector-handlers';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -2019,52 +2020,191 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private async handleFunctionCall(fc: FunctionCall) {
-    switch (fc.name) {
-      case 'switchPersona': {
-        const targetName = (fc.args.personaName as string).toLowerCase();
-        const targetPersoni = this.personis.find(
-          (p) => p.name.toLowerCase() === targetName,
-        );
+    console.log('[FunctionCall] Received:', fc.name, fc.args);
 
-        if (targetPersoni) {
-          this.requestPersoniSwitch(targetPersoni);
-        } else {
-          this.speakText(
-            `I'm sorry, I don't know any Personi named ${fc.args.personaName}.`,
-          );
-        }
-        break;
-      }
-      case 'getYoutubeVideoDetails': {
-        const url = fc.args.url as string;
-        await this.speakText(
-          `Okay, I'm looking at that YouTube video for you. Based on the transcript, it seems to be about the future of AI.`,
-          'system',
+    if (fc.name === 'switchPersona') {
+      const targetName = (fc.args.personaName as string).toLowerCase();
+      const targetPersoni = this.personis.find(
+        (p) => p.name.toLowerCase() === targetName,
+      );
+
+      if (targetPersoni) {
+        this.requestPersoniSwitch(targetPersoni);
+      } else {
+        this.speakText(
+          `I'm sorry, I don't know any Personi named ${fc.args.personaName}.`,
         );
-        break;
       }
-      case 'readFileFromGoogleDrive': {
-        const fileName = fc.args.fileName as string;
-        await this.speakText(
-          `Accessing Google Drive... I've found the file "${fileName}". The document outlines a new strategy for Q3.`,
-          'system',
-        );
+      return;
+    }
+
+    let result: ConnectorResult | null = null;
+
+    switch (fc.name) {
+      case 'searchGmailEmails':
+        result = await connectorHandlers.handleGmail(fc.args as any);
         break;
-      }
-      case 'getGithubRepoDetails': {
-        const repoName = fc.args.repoName as string;
-        await this.speakText(
-          `Checking the GitHub repository "${repoName}". It looks like there are 5 new pull requests that need review.`,
-          'system',
-        );
+      case 'getCalendarEvents':
+        result = await connectorHandlers.handleGoogleCalendar(fc.args as any);
         break;
-      }
+      case 'searchNotionPages':
+        result = await connectorHandlers.handleNotion(fc.args as any);
+        break;
+      case 'getLinearIssues':
+        result = await connectorHandlers.handleLinear(fc.args as any);
+        break;
+      case 'sendSlackMessage':
+        result = await connectorHandlers.handleSlack(fc.args as any);
+        break;
+      case 'getGithubRepoDetails':
+        result = await connectorHandlers.handleGitHub(fc.args as any);
+        break;
+      case 'readFileFromGoogleDrive':
+        result = await connectorHandlers.handleGoogleDrive(fc.args as any);
+        break;
+      case 'readGoogleDoc':
+        result = await connectorHandlers.handleGoogleDocs(fc.args as any);
+        break;
+      case 'readGoogleSheet':
+        result = await connectorHandlers.handleGoogleSheets(fc.args as any);
+        break;
+      case 'getYoutubeVideoDetails':
+        result = await connectorHandlers.handleYouTube(fc.args as any);
+        break;
+      case 'searchJiraIssues':
+        result = await connectorHandlers.handleJira(fc.args as any);
+        break;
+      case 'getAsanaTasks':
+        result = await connectorHandlers.handleAsana(fc.args as any);
+        break;
+      case 'searchConfluencePages':
+        result = await connectorHandlers.handleConfluence(fc.args as any);
+        break;
+      case 'getHubSpotContacts':
+        result = await connectorHandlers.handleHubSpot(fc.args as any);
+        break;
+      case 'readDropboxFile':
+        result = await connectorHandlers.handleDropbox(fc.args as any);
+        break;
+      case 'readBoxFile':
+        result = await connectorHandlers.handleBox(fc.args as any);
+        break;
+      case 'readOneDriveFile':
+        result = await connectorHandlers.handleOneDrive(fc.args as any);
+        break;
+      case 'readSharePointFile':
+        result = await connectorHandlers.handleSharePoint(fc.args as any);
+        break;
+      case 'sendDiscordMessage':
+        result = await connectorHandlers.handleDiscord(fc.args as any);
+        break;
+      case 'getCurrentSpotifyTrack':
+        result = await connectorHandlers.handleSpotify(fc.args as any);
+        break;
+      case 'searchOutlookEmails':
+        result = await connectorHandlers.handleOutlook(fc.args as any);
+        break;
+      case 'sendTwilioSMS':
+        result = await connectorHandlers.handleTwilio(fc.args as any);
+        break;
+      case 'sendEmailViaSendGrid':
+        result = await connectorHandlers.handleSendGrid(fc.args as any);
+        break;
+      case 'sendEmailViaResend':
+        result = await connectorHandlers.handleResend(fc.args as any);
+        break;
       default:
         await this.speakText(
           `I received a request to use the tool "${fc.name}", but I'm not fully equipped to handle that yet.`,
           'system',
         );
-        break;
+        return;
+    }
+
+    if (result) {
+      await this.handleConnectorResult(fc.name, result);
+    }
+  }
+
+  private async handleConnectorResult(
+    functionName: string,
+    result: ConnectorResult,
+  ) {
+    console.log('[ConnectorResult]', functionName, result);
+
+    if (result.success && result.data) {
+      const responseText = this.formatConnectorResponse(functionName, result.data);
+      await this.speakText(responseText, 'system');
+    } else if (result.requiresSetup && result.setupInstructions) {
+      await this.speakText(result.setupInstructions, 'system');
+    } else if (result.error) {
+      await this.speakText(
+        `I encountered an error: ${result.error}`,
+        'system',
+      );
+    } else {
+      await this.speakText(
+        `I couldn't complete that action. Please try again.`,
+        'system',
+      );
+    }
+  }
+
+  private formatConnectorResponse(functionName: string, data: any): string {
+    switch (functionName) {
+      case 'searchGmailEmails':
+        if (data.emails && data.emails.length > 0) {
+          const emailList = data.emails
+            .map(
+              (email: any, i: number) =>
+                `${i + 1}. From ${email.from}: "${email.subject}"`,
+            )
+            .join(', ');
+          return `I found ${data.resultCount} email${data.resultCount !== 1 ? 's' : ''} matching "${data.query}". Here are the first few: ${emailList}`;
+        }
+        return `I didn't find any emails matching "${data.query}".`;
+
+      case 'getCalendarEvents':
+        if (data.events && data.events.length > 0) {
+          const eventList = data.events
+            .map(
+              (event: any) =>
+                `"${event.summary}" on ${new Date(event.start).toLocaleDateString()}`,
+            )
+            .join(', ');
+          return `I found ${data.eventCount} upcoming event${data.eventCount !== 1 ? 's' : ''}: ${eventList}`;
+        }
+        return `You don't have any upcoming events in the specified time range.`;
+
+      case 'searchNotionPages':
+        if (data.pages && data.pages.length > 0) {
+          const pageList = data.pages
+            .map((page: any, i: number) => `${i + 1}. ${page.title}`)
+            .join(', ');
+          return `I found ${data.resultCount} Notion page${data.resultCount !== 1 ? 's' : ''} matching "${data.query}": ${pageList}`;
+        }
+        return `I didn't find any Notion pages matching "${data.query}".`;
+
+      case 'getLinearIssues':
+        if (data.issues && data.issues.length > 0) {
+          const issueList = data.issues
+            .map(
+              (issue: any) =>
+                `${issue.id}: ${issue.title} (${issue.state})`,
+            )
+            .join(', ');
+          return `I found ${data.issueCount} Linear issue${data.issueCount !== 1 ? 's' : ''}: ${issueList}`;
+        }
+        return `I didn't find any Linear issues.`;
+
+      case 'sendSlackMessage':
+        return `Message sent to Slack channel ${data.channel} successfully.`;
+
+      case 'getGithubRepoDetails':
+        return `Repository ${data.fullName}: ${data.description || 'No description'}. It has ${data.stars} stars, ${data.forks} forks, ${data.openIssues} open issues, and ${data.openPullRequests} open pull requests.`;
+
+      default:
+        return JSON.stringify(data, null, 2);
     }
   }
 
