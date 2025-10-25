@@ -35,6 +35,8 @@
  * Notion                  | NOTION_TOKEN            | connector:ccfg_notion_01K49R392Z3CSNMXCPWSV67AF4
  * Linear                  | LINEAR_API_KEY          | connector:ccfg_linear_01K4B3DCSR7JEAJK400V1HTJAK
  * Slack                   | SLACK_BOT_TOKEN         | (Manual Secret - add via Secrets panel)
+ * Home Assistant          | HOME_ASSISTANT_URL      | (Manual Secret - add via Secrets panel)
+ * Home Assistant          | HOME_ASSISTANT_TOKEN    | (Manual Secret - add via Secrets panel)
  * 
  * For services without Replit connectors (like Slack), add API keys manually
  * via the Secrets panel (lock icon in sidebar).
@@ -46,6 +48,9 @@
  * - POST /api/connectors/linear/issues      - Get Linear issues
  * - POST /api/connectors/slack/send         - Send Slack message
  * - POST /api/connectors/github/repo        - Get GitHub repository details
+ * - POST /api/connectors/homeassistant/devices  - List Home Assistant entities
+ * - POST /api/connectors/homeassistant/state    - Get entity state
+ * - POST /api/connectors/homeassistant/control  - Control Home Assistant device
  * 
  * All endpoints return a consistent response format:
  * {
@@ -480,6 +485,227 @@ app.post('/api/connectors/github/repo', async (req, res) => {
       success: false,
       error: error.message,
       setupInstructions: 'GitHub integration required. Please configure GitHub access to view repository details.',
+    });
+  }
+});
+
+app.post('/api/connectors/homeassistant/devices', async (req, res) => {
+  try {
+    const { domain } = req.body;
+    
+    const haUrl = process.env.HOME_ASSISTANT_URL;
+    const token = process.env.HOME_ASSISTANT_TOKEN;
+    
+    if (!haUrl || !token) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+      });
+    }
+
+    const url = `${haUrl.replace(/\/$/, '')}/api/states`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Home Assistant authentication failed. Please check your HOME_ASSISTANT_TOKEN.',
+        });
+      }
+      throw new Error(`Home Assistant API error: ${response.statusText}`);
+    }
+
+    let entities = await response.json();
+
+    if (domain) {
+      entities = entities.filter((entity) => entity.entity_id.startsWith(`${domain}.`));
+    }
+
+    const devices = entities.map((entity) => ({
+      entityId: entity.entity_id,
+      state: entity.state,
+      friendlyName: entity.attributes?.friendly_name || entity.entity_id,
+      domain: entity.entity_id.split('.')[0],
+      attributes: entity.attributes,
+      lastChanged: entity.last_changed,
+      lastUpdated: entity.last_updated,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        deviceCount: devices.length,
+        domain: domain || 'all',
+        devices,
+      },
+    });
+  } catch (error) {
+    console.error('[Home Assistant API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Home Assistant integration required. Please configure HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN.',
+    });
+  }
+});
+
+app.post('/api/connectors/homeassistant/state', async (req, res) => {
+  try {
+    const { entityId } = req.body;
+    
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        error: 'entityId is required',
+      });
+    }
+
+    const haUrl = process.env.HOME_ASSISTANT_URL;
+    const token = process.env.HOME_ASSISTANT_TOKEN;
+    
+    if (!haUrl || !token) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+      });
+    }
+
+    const url = `${haUrl.replace(/\/$/, '')}/api/states/${entityId}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return res.status(404).json({
+          success: false,
+          error: `Entity ${entityId} not found`,
+        });
+      }
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Home Assistant authentication failed. Please check your HOME_ASSISTANT_TOKEN.',
+        });
+      }
+      throw new Error(`Home Assistant API error: ${response.statusText}`);
+    }
+
+    const entity = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        entityId: entity.entity_id,
+        state: entity.state,
+        friendlyName: entity.attributes?.friendly_name || entity.entity_id,
+        domain: entity.entity_id.split('.')[0],
+        attributes: entity.attributes,
+        lastChanged: entity.last_changed,
+        lastUpdated: entity.last_updated,
+      },
+    });
+  } catch (error) {
+    console.error('[Home Assistant API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Home Assistant integration required. Please configure HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN.',
+    });
+  }
+});
+
+app.post('/api/connectors/homeassistant/control', async (req, res) => {
+  try {
+    const { domain, service, entityId, serviceData } = req.body;
+    
+    if (!domain || !service || !entityId) {
+      return res.status(400).json({
+        success: false,
+        error: 'domain, service, and entityId are required',
+      });
+    }
+
+    const haUrl = process.env.HOME_ASSISTANT_URL;
+    const token = process.env.HOME_ASSISTANT_TOKEN;
+    
+    if (!haUrl || !token) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+      });
+    }
+
+    const url = `${haUrl.replace(/\/$/, '')}/api/services/${domain}/${service}`;
+    
+    let parsedServiceData = {};
+    if (serviceData) {
+      try {
+        parsedServiceData = typeof serviceData === 'string' ? JSON.parse(serviceData) : serviceData;
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid serviceData JSON',
+        });
+      }
+    }
+
+    const requestBody = {
+      entity_id: entityId,
+      ...parsedServiceData,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Home Assistant authentication failed. Please check your HOME_ASSISTANT_TOKEN.',
+        });
+      }
+      const errorText = await response.text();
+      throw new Error(`Home Assistant API error: ${response.statusText} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        service: `${domain}.${service}`,
+        entityId,
+        result,
+      },
+    });
+  } catch (error) {
+    console.error('[Home Assistant API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Home Assistant integration required. Please configure HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN.',
     });
   }
 });

@@ -628,6 +628,75 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
+  {
+    id: 'homeassistant',
+    name: 'Home Assistant',
+    description: 'Control and monitor smart home devices through Home Assistant (lights, switches, climate, sensors, etc.).',
+    functionDeclaration: {
+      name: 'getHomeAssistantDevices',
+      description: 'Lists all entities (devices) available in Home Assistant, including lights, switches, sensors, climate controls, and more.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          domain: {
+            type: Type.STRING,
+            description: 'Optional: Filter by domain (e.g., "light", "switch", "sensor", "climate"). If not provided, returns all entities.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'homeassistant_state',
+    name: 'Home Assistant State',
+    description: 'Get the current state of a specific Home Assistant entity.',
+    functionDeclaration: {
+      name: 'getHomeAssistantState',
+      description: 'Gets the current state and attributes of a specific Home Assistant entity (e.g., "light.living_room", "sensor.temperature").',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          entityId: {
+            type: Type.STRING,
+            description: 'The entity ID to query (e.g., "light.living_room", "sensor.bedroom_temperature", "switch.kitchen").',
+          },
+        },
+        required: ['entityId'],
+      },
+    },
+  },
+  {
+    id: 'homeassistant_control',
+    name: 'Home Assistant Control',
+    description: 'Control Home Assistant devices (turn on/off, set brightness, adjust temperature, etc.).',
+    functionDeclaration: {
+      name: 'controlHomeAssistantDevice',
+      description: 'Controls a Home Assistant device by calling a service. Can turn devices on/off, set brightness, adjust temperature, and more.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          domain: {
+            type: Type.STRING,
+            description: 'The service domain (e.g., "light", "switch", "climate", "cover").',
+          },
+          service: {
+            type: Type.STRING,
+            description: 'The service to call (e.g., "turn_on", "turn_off", "set_temperature", "toggle").',
+          },
+          entityId: {
+            type: Type.STRING,
+            description: 'The entity ID to control (e.g., "light.living_room", "switch.kitchen", "climate.bedroom").',
+          },
+          serviceData: {
+            type: Type.STRING,
+            description: 'Optional: JSON string of additional service data (e.g., \'{"brightness": 255}\', \'{"temperature": 72}\').',
+          },
+        },
+        required: ['domain', 'service', 'entityId'],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [
