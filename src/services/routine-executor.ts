@@ -21,6 +21,7 @@ export class RoutineExecutor {
   private initialized = false;
   private timeBasedTimers: Map<string, number> = new Map();
   private eventListeners: Map<string, Function> = new Map();
+  private stateMonitors: Map<string, { timerId: number; lastState: any }> = new Map();
   
   constructor() {
     this.ragMemory = new EnhancedRAGMemoryManager();
@@ -328,6 +329,8 @@ export class RoutineExecutor {
   private setupTriggerForRoutine(routine: Routine): void {
     if (routine.trigger.type === 'time') {
       this.setupTimeTrigger(routine);
+    } else if (routine.trigger.type === 'state_change') {
+      this.setupStateChangeTrigger(routine);
     }
   }
 
@@ -354,6 +357,60 @@ export class RoutineExecutor {
 
     this.timeBasedTimers.set(routine.id, timerId);
     console.log(`[RoutineExecutor] Set up time trigger for routine ${routine.name}: ${schedule} (${intervalMs}ms)`);
+  }
+
+  private setupStateChangeTrigger(routine: Routine): void {
+    const monitor = routine.trigger.config.monitor;
+    
+    if (!monitor || !monitor.service || !monitor.entity) {
+      console.warn(`[RoutineExecutor] State change trigger for routine ${routine.id} missing service or entity`);
+      return;
+    }
+
+    if (monitor.service !== 'homeassistant') {
+      console.warn(`[RoutineExecutor] State change monitoring only supports Home Assistant currently`);
+      return;
+    }
+
+    const pollInterval = 30000;
+    const targetProperty = monitor.property;
+    
+    const checkState = async () => {
+      try {
+        const result = await connectorHandlers.handleHomeassistantState({ entityId: monitor.entity! });
+        
+        if (!result.success) {
+          console.warn(`[RoutineExecutor] Failed to check state for ${monitor.entity}:`, result.error);
+          return;
+        }
+
+        const currentState = targetProperty 
+          ? result.data?.attributes?.[targetProperty]
+          : result.data?.state;
+        const previousMonitor = this.stateMonitors.get(routine.id);
+        
+        if (previousMonitor && previousMonitor.lastState !== undefined && previousMonitor.lastState !== currentState) {
+          console.log(`[RoutineExecutor] State change detected for ${monitor.entity}: ${previousMonitor.lastState} → ${currentState}`);
+          this.executeRoutine(routine.id, false).catch(error => {
+            console.error(`[RoutineExecutor] Error executing routine ${routine.id}:`, error);
+          });
+        }
+
+        const existingMonitor = this.stateMonitors.get(routine.id);
+        if (existingMonitor) {
+          existingMonitor.lastState = currentState;
+        }
+      } catch (error) {
+        console.error(`[RoutineExecutor] Error checking state for routine ${routine.id}:`, error);
+      }
+    };
+
+    checkState();
+
+    const timerId = window.setInterval(checkState, pollInterval);
+
+    this.stateMonitors.set(routine.id, { timerId, lastState: undefined });
+    console.log(`[RoutineExecutor] Set up state change monitor for routine ${routine.name}: ${monitor.entity} (polling every ${pollInterval}ms)`);
   }
 
   private parseSchedule(schedule: string): number | null {
@@ -388,6 +445,13 @@ export class RoutineExecutor {
       window.clearInterval(timerId);
       this.timeBasedTimers.delete(routineId);
       console.log(`[RoutineExecutor] Removed time trigger for routine ${routineId}`);
+    }
+
+    if (this.stateMonitors.has(routineId)) {
+      const monitor = this.stateMonitors.get(routineId)!;
+      window.clearInterval(monitor.timerId);
+      this.stateMonitors.delete(routineId);
+      console.log(`[RoutineExecutor] Removed state monitor for routine ${routineId}`);
     }
 
     if (this.eventListeners.has(routineId)) {
@@ -561,6 +625,12 @@ export class RoutineExecutor {
       window.clearInterval(timerId);
     });
     this.timeBasedTimers.clear();
+    
+    this.stateMonitors.forEach((monitor) => {
+      window.clearInterval(monitor.timerId);
+    });
+    this.stateMonitors.clear();
+    
     this.eventListeners.clear();
     console.log('[RoutineExecutor] Shutdown complete');
   }

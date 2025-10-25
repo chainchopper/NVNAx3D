@@ -303,6 +303,30 @@ export class ConnectorHandlers {
         'Resend handler not yet fully implemented. Integration coming soon.',
     };
   }
+
+  async handleHomeassistant(params: {
+    domain?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Home Assistant', 'getHomeAssistantDevices', params);
+    return this.callBackend('/api/connectors/homeassistant/devices', params);
+  }
+
+  async handleHomeassistantState(params: {
+    entityId: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Home Assistant', 'getHomeAssistantState', params);
+    return this.callBackend('/api/connectors/homeassistant/state', params);
+  }
+
+  async handleHomeassistantControl(params: {
+    domain: string;
+    service: string;
+    entityId: string;
+    serviceData?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Home Assistant', 'controlHomeAssistantDevice', params);
+    return this.callBackend('/api/connectors/homeassistant/control', params);
+  }
 }
 
 export const connectorHandlers = new ConnectorHandlers();
