@@ -3,7 +3,7 @@
  * IF-THEN-THAT automation system for NIRVANA
  */
 
-export type TriggerType = 'time' | 'event' | 'state_change' | 'user_action' | 'completion';
+export type TriggerType = 'time' | 'event' | 'state_change' | 'user_action' | 'completion' | 'vision_detection';
 export type ConditionType = 'time_range' | 'state_check' | 'comparison' | 'custom';
 export type ActionType = 'connector_call' | 'notification' | 'state_change' | 'custom';
 
@@ -19,6 +19,15 @@ export interface RoutineTrigger {
     };
     actionType?: string;
     taskPattern?: string;
+    visionDetection?: {
+      service: 'frigate' | 'codeprojectai' | 'yolo';
+      camera?: string;
+      objectTypes: string[];
+      minConfidence?: number;
+      zone?: string;
+      imageSource?: string;
+      checkInterval?: number;
+    };
   };
 }
 

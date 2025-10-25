@@ -710,6 +710,336 @@ app.post('/api/connectors/homeassistant/control', async (req, res) => {
   }
 });
 
+app.post('/api/connectors/frigate/events', async (req, res) => {
+  try {
+    const { camera, objectType, limit = 10 } = req.body;
+    
+    if (!camera) {
+      return res.status(400).json({
+        success: false,
+        error: 'camera is required',
+      });
+    }
+
+    const frigateUrl = process.env.FRIGATE_URL;
+    
+    if (!frigateUrl) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable (e.g., "http://frigate.local:5000").',
+      });
+    }
+
+    let url = `${frigateUrl.replace(/\/$/, '')}/api/events?camera=${encodeURIComponent(camera)}&limit=${limit}`;
+    if (objectType) {
+      url += `&label=${encodeURIComponent(objectType)}`;
+    }
+
+    const response = await fetch(url, {
+      headers: process.env.FRIGATE_API_KEY ? {
+        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      } : {},
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Frigate authentication failed. Please check your FRIGATE_API_KEY.',
+        });
+      }
+      throw new Error(`Frigate API error: ${response.statusText}`);
+    }
+
+    const events = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        camera,
+        objectType: objectType || 'all',
+        eventCount: events.length,
+        events: events.map(event => ({
+          id: event.id,
+          label: event.label,
+          camera: event.camera,
+          startTime: event.start_time,
+          endTime: event.end_time,
+          score: event.top_score,
+          thumbnail: event.thumbnail,
+          hasSnapshot: event.has_snapshot,
+          hasClip: event.has_clip,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('[Frigate API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Frigate integration required. Please configure FRIGATE_URL to access events.',
+    });
+  }
+});
+
+app.post('/api/connectors/frigate/snapshot', async (req, res) => {
+  try {
+    const { camera, eventId } = req.body;
+    
+    if (!camera) {
+      return res.status(400).json({
+        success: false,
+        error: 'camera is required',
+      });
+    }
+
+    const frigateUrl = process.env.FRIGATE_URL;
+    
+    if (!frigateUrl) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable.',
+      });
+    }
+
+    let url;
+    if (eventId) {
+      url = `${frigateUrl.replace(/\/$/, '')}/api/events/${eventId}/snapshot.jpg`;
+    } else {
+      url = `${frigateUrl.replace(/\/$/, '')}/api/${encodeURIComponent(camera)}/latest.jpg`;
+    }
+
+    const response = await fetch(url, {
+      headers: process.env.FRIGATE_API_KEY ? {
+        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      } : {},
+    });
+
+    if (!response.ok) {
+      throw new Error(`Frigate API error: ${response.statusText}`);
+    }
+
+    const imageBuffer = await response.arrayBuffer();
+    const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+    res.json({
+      success: true,
+      data: {
+        camera,
+        eventId: eventId || 'latest',
+        imageUrl: `data:image/jpeg;base64,${base64Image}`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('[Frigate Snapshot Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Frigate integration required. Please configure FRIGATE_URL.',
+    });
+  }
+});
+
+app.post('/api/connectors/frigate/camera-state', async (req, res) => {
+  try {
+    const { camera } = req.body;
+    
+    if (!camera) {
+      return res.status(400).json({
+        success: false,
+        error: 'camera is required',
+      });
+    }
+
+    const frigateUrl = process.env.FRIGATE_URL;
+    
+    if (!frigateUrl) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable.',
+      });
+    }
+
+    const configResponse = await fetch(`${frigateUrl.replace(/\/$/, '')}/api/config`, {
+      headers: process.env.FRIGATE_API_KEY ? {
+        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      } : {},
+    });
+
+    if (!configResponse.ok) {
+      throw new Error(`Frigate API error: ${configResponse.statusText}`);
+    }
+
+    const config = await configResponse.json();
+    const cameraConfig = config.cameras?.[camera];
+
+    if (!cameraConfig) {
+      return res.status(404).json({
+        success: false,
+        error: `Camera "${camera}" not found in Frigate configuration`,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        camera,
+        enabled: cameraConfig.enabled !== false,
+        detect: cameraConfig.detect,
+        record: cameraConfig.record,
+        snapshots: cameraConfig.snapshots,
+        motion: cameraConfig.motion,
+        objects: cameraConfig.objects,
+      },
+    });
+  } catch (error) {
+    console.error('[Frigate Camera State Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Frigate integration required. Please configure FRIGATE_URL.',
+    });
+  }
+});
+
+app.post('/api/connectors/codeprojectai/detect', async (req, res) => {
+  try {
+    const { imageUrl, minConfidence = 0.5 } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'imageUrl is required',
+      });
+    }
+
+    const codeProjectAIUrl = process.env.CODEPROJECT_AI_URL;
+    
+    if (!codeProjectAIUrl) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'CodeProject.AI not configured. Please set CODEPROJECT_AI_URL environment variable (e.g., "http://localhost:32168").',
+      });
+    }
+
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch image from ${imageUrl}`);
+    }
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const formData = new FormData();
+    formData.append('image', new Blob([imageBuffer]), 'image.jpg');
+    formData.append('min_confidence', minConfidence.toString());
+
+    const response = await fetch(`${codeProjectAIUrl.replace(/\/$/, '')}/v1/vision/detection`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`CodeProject.AI API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        imageUrl,
+        minConfidence,
+        detectionCount: result.predictions?.length || 0,
+        detections: (result.predictions || []).map(pred => ({
+          label: pred.label,
+          confidence: pred.confidence,
+          boundingBox: {
+            x: pred.x_min,
+            y: pred.y_min,
+            width: pred.x_max - pred.x_min,
+            height: pred.y_max - pred.y_min,
+          },
+        })),
+        processingTime: result.processMs,
+      },
+    });
+  } catch (error) {
+    console.error('[CodeProject.AI Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'CodeProject.AI integration required. Please configure CODEPROJECT_AI_URL.',
+    });
+  }
+});
+
+app.post('/api/connectors/yolo/detect', async (req, res) => {
+  try {
+    const { imageUrl, minConfidence = 0.5 } = req.body;
+    
+    if (!imageUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'imageUrl is required',
+      });
+    }
+
+    const yoloApiUrl = process.env.YOLO_API_URL;
+    
+    if (!yoloApiUrl) {
+      return res.json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'YOLO API not configured. You can either set YOLO_API_URL for server-side detection, or use browser-based YOLO with TensorFlow.js (recommended).',
+        useBrowserYOLO: true,
+      });
+    }
+
+    const response = await fetch(`${yoloApiUrl.replace(/\/$/, '')}/detect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        confidence: minConfidence,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`YOLO API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        imageUrl,
+        minConfidence,
+        detectionCount: result.detections?.length || 0,
+        detections: (result.detections || []).map(det => ({
+          label: det.class || det.label,
+          confidence: det.score || det.confidence,
+          boundingBox: det.bbox || det.box,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error('[YOLO API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'YOLO API integration optional. For browser-based detection, use TensorFlow.js COCO-SSD model instead.',
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);

@@ -327,6 +327,46 @@ export class ConnectorHandlers {
     this.logOperation('Home Assistant', 'controlHomeAssistantDevice', params);
     return this.callBackend('/api/connectors/homeassistant/control', params);
   }
+
+  async handleFrigateEvents(params: {
+    camera: string;
+    objectType?: string;
+    limit?: number;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Frigate', 'getFrigateEvents', params);
+    return this.callBackend('/api/connectors/frigate/events', params);
+  }
+
+  async handleFrigateSnapshot(params: {
+    camera: string;
+    eventId?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Frigate', 'getFrigateSnapshot', params);
+    return this.callBackend('/api/connectors/frigate/snapshot', params);
+  }
+
+  async handleFrigateCameraState(params: {
+    camera: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Frigate', 'getFrigateCameraState', params);
+    return this.callBackend('/api/connectors/frigate/camera-state', params);
+  }
+
+  async handleCodeprojectaiDetect(params: {
+    imageUrl: string;
+    minConfidence?: number;
+  }): Promise<ConnectorResult> {
+    this.logOperation('CodeProject.AI', 'detectObjectsCodeProjectAI', params);
+    return this.callBackend('/api/connectors/codeprojectai/detect', params);
+  }
+
+  async handleYoloDetect(params: {
+    imageUrl: string;
+    minConfidence?: number;
+  }): Promise<ConnectorResult> {
+    this.logOperation('YOLO', 'detectObjectsYOLO', params);
+    return this.callBackend('/api/connectors/yolo/detect', params);
+  }
 }
 
 export const connectorHandlers = new ConnectorHandlers();

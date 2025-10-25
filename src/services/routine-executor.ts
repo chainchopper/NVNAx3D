@@ -331,6 +331,8 @@ export class RoutineExecutor {
       this.setupTimeTrigger(routine);
     } else if (routine.trigger.type === 'state_change') {
       this.setupStateChangeTrigger(routine);
+    } else if (routine.trigger.type === 'vision_detection') {
+      this.setupVisionDetectionTrigger(routine);
     }
   }
 
@@ -411,6 +413,109 @@ export class RoutineExecutor {
 
     this.stateMonitors.set(routine.id, { timerId, lastState: undefined });
     console.log(`[RoutineExecutor] Set up state change monitor for routine ${routine.name}: ${monitor.entity} (polling every ${pollInterval}ms)`);
+  }
+
+  private setupVisionDetectionTrigger(routine: Routine): void {
+    const visionConfig = routine.trigger.config.visionDetection;
+    
+    if (!visionConfig || !visionConfig.service || !visionConfig.objectTypes || visionConfig.objectTypes.length === 0) {
+      console.warn(`[RoutineExecutor] Vision detection trigger for routine ${routine.id} missing required configuration`);
+      return;
+    }
+
+    const pollInterval = visionConfig.checkInterval || 10000;
+    const minConfidence = visionConfig.minConfidence || 0.5;
+    
+    const checkForObjects = async () => {
+      try {
+        let result;
+        
+        if (visionConfig.service === 'frigate') {
+          if (!visionConfig.camera) {
+            console.warn(`[RoutineExecutor] Frigate vision trigger missing camera for routine ${routine.id}`);
+            return;
+          }
+          
+          result = await connectorHandlers.handleFrigateEvents({
+            camera: visionConfig.camera,
+            objectType: visionConfig.objectTypes.join(','),
+            limit: 5,
+          });
+        } else if (visionConfig.service === 'codeprojectai') {
+          if (!visionConfig.imageSource) {
+            console.warn(`[RoutineExecutor] CodeProject.AI vision trigger missing imageSource for routine ${routine.id}`);
+            return;
+          }
+          
+          result = await connectorHandlers.handleCodeprojectaiDetect({
+            imageUrl: visionConfig.imageSource,
+            minConfidence,
+          });
+        } else if (visionConfig.service === 'yolo') {
+          if (!visionConfig.imageSource) {
+            console.warn(`[RoutineExecutor] YOLO vision trigger missing imageSource for routine ${routine.id}`);
+            return;
+          }
+          
+          result = await connectorHandlers.handleYoloDetect({
+            imageUrl: visionConfig.imageSource,
+            minConfidence,
+          });
+        } else {
+          console.warn(`[RoutineExecutor] Unknown vision service: ${visionConfig.service}`);
+          return;
+        }
+
+        if (!result.success) {
+          console.warn(`[RoutineExecutor] Vision detection failed for routine ${routine.id}:`, result.error);
+          return;
+        }
+
+        let detectedObjects: string[] = [];
+        
+        if (visionConfig.service === 'frigate') {
+          const events = result.data?.events || [];
+          detectedObjects = events.map((event: any) => event.label);
+        } else {
+          const detections = result.data?.detections || [];
+          detectedObjects = detections
+            .filter((det: any) => det.confidence >= minConfidence)
+            .map((det: any) => det.label);
+        }
+
+        const matchedObjects = detectedObjects.filter(obj => 
+          visionConfig.objectTypes.some(target => 
+            obj.toLowerCase().includes(target.toLowerCase()) || target.toLowerCase().includes(obj.toLowerCase())
+          )
+        );
+
+        const previousMonitor = this.stateMonitors.get(routine.id);
+        const currentDetectionHash = matchedObjects.sort().join(',');
+        
+        if (matchedObjects.length > 0) {
+          if (!previousMonitor || previousMonitor.lastState !== currentDetectionHash) {
+            console.log(`[RoutineExecutor] Vision detection triggered for ${routine.name}: detected ${matchedObjects.join(', ')}`);
+            this.executeRoutine(routine.id, false).catch(error => {
+              console.error(`[RoutineExecutor] Error executing routine ${routine.id}:`, error);
+            });
+          }
+        }
+
+        const existingMonitor = this.stateMonitors.get(routine.id);
+        if (existingMonitor) {
+          existingMonitor.lastState = currentDetectionHash;
+        }
+      } catch (error) {
+        console.error(`[RoutineExecutor] Error checking vision for routine ${routine.id}:`, error);
+      }
+    };
+
+    checkForObjects();
+
+    const timerId = window.setInterval(checkForObjects, pollInterval);
+
+    this.stateMonitors.set(routine.id, { timerId, lastState: undefined });
+    console.log(`[RoutineExecutor] Set up vision detection for routine ${routine.name}: ${visionConfig.service} monitoring ${visionConfig.objectTypes.join(', ')} (polling every ${pollInterval}ms)`);
   }
 
   private parseSchedule(schedule: string): number | null {
@@ -573,6 +678,9 @@ export class RoutineExecutor {
         return `User action: ${trigger.config.actionType || 'Unknown action'}`;
       case 'completion':
         return `Task completion: ${trigger.config.taskPattern || 'Any task'}`;
+      case 'vision_detection':
+        const vision = trigger.config.visionDetection;
+        return `Vision detection: ${vision?.service || 'Unknown service'} detecting ${vision?.objectTypes?.join(', ') || 'objects'}`;
       default:
         return 'Unknown trigger';
     }

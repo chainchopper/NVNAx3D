@@ -697,6 +697,121 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
+  {
+    id: 'frigate_events',
+    name: 'Frigate Events',
+    description: 'Get object detection events from Frigate NVR (e.g., person detected at front door, car in driveway).',
+    functionDeclaration: {
+      name: 'getFrigateEvents',
+      description: 'Retrieves object detection events from Frigate NVR for a specific camera and object type.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          camera: {
+            type: Type.STRING,
+            description: 'The camera name (e.g., "front_door", "driveway", "backyard").',
+          },
+          objectType: {
+            type: Type.STRING,
+            description: 'Optional: Filter by object type (e.g., "person", "car", "dog", "package"). If not provided, returns all events.',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of events to return (default: 10).',
+          },
+        },
+        required: ['camera'],
+      },
+    },
+  },
+  {
+    id: 'frigate_snapshot',
+    name: 'Frigate Snapshot',
+    description: 'Get a snapshot image from a Frigate camera for a specific event.',
+    functionDeclaration: {
+      name: 'getFrigateSnapshot',
+      description: 'Gets a snapshot image from Frigate for a specific camera and event ID.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          camera: {
+            type: Type.STRING,
+            description: 'The camera name (e.g., "front_door", "driveway").',
+          },
+          eventId: {
+            type: Type.STRING,
+            description: 'Optional: The event ID to get the snapshot for. If not provided, gets the latest snapshot.',
+          },
+        },
+        required: ['camera'],
+      },
+    },
+  },
+  {
+    id: 'frigate_camera_state',
+    name: 'Frigate Camera State',
+    description: 'Get the current state of a Frigate camera (online status, detection settings, etc.).',
+    functionDeclaration: {
+      name: 'getFrigateCameraState',
+      description: 'Gets the current state and configuration of a Frigate camera.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          camera: {
+            type: Type.STRING,
+            description: 'The camera name (e.g., "front_door", "driveway").',
+          },
+        },
+        required: ['camera'],
+      },
+    },
+  },
+  {
+    id: 'codeprojectai_detect',
+    name: 'CodeProject.AI Detection',
+    description: 'Detect objects in images using CodeProject.AI server (supports person, car, dog, cat, and many other objects).',
+    functionDeclaration: {
+      name: 'detectObjectsCodeProjectAI',
+      description: 'Detects objects in an image using CodeProject.AI server. Returns detected objects with bounding boxes and confidence scores.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          imageUrl: {
+            type: Type.STRING,
+            description: 'The URL of the image to analyze (e.g., "http://camera.local/snapshot.jpg").',
+          },
+          minConfidence: {
+            type: Type.NUMBER,
+            description: 'Minimum confidence threshold (0.0-1.0). Default: 0.5. Higher values return fewer but more certain detections.',
+          },
+        },
+        required: ['imageUrl'],
+      },
+    },
+  },
+  {
+    id: 'yolo_detect',
+    name: 'YOLO Object Detection',
+    description: 'Detect objects in images using YOLO (You Only Look Once) real-time object detection.',
+    functionDeclaration: {
+      name: 'detectObjectsYOLO',
+      description: 'Detects objects in an image using YOLO model. Returns detected objects with bounding boxes and confidence scores.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          imageUrl: {
+            type: Type.STRING,
+            description: 'The URL or base64-encoded image to analyze.',
+          },
+          minConfidence: {
+            type: Type.NUMBER,
+            description: 'Minimum confidence threshold (0.0-1.0). Default: 0.5.',
+          },
+        },
+        required: ['imageUrl'],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [
