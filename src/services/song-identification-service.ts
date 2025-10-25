@@ -619,7 +619,11 @@ Provide a brief, friendly comment acknowledging this is a favorite or recurring 
 Provide a brief, friendly comment about discovering this new song. Keep it under 2 sentences.`;
       }
 
-      const commentary = await this.provider.generateText(contextPrompt);
+      const messages = [
+        { role: 'user' as const, content: contextPrompt }
+      ];
+      
+      const commentary = await this.provider.sendMessage(messages);
 
       console.log(`[SongIdentification] Generated commentary: ${commentary}`);
 

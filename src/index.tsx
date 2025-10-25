@@ -1397,15 +1397,6 @@ export class GdmLiveAudio extends LitElement {
     
     this.currentSongInfo = songInfo;
     this.showSongBubble = true;
-    
-    const config = songIdentificationService.getConfig();
-    if (config.personiCommentary && this.activePersoni) {
-      await this.generateSongCommentary(songInfo);
-    }
-    
-    if (this.ragEnabled && this.ragInitialized) {
-      await this.storeSongInMemory(songInfo);
-    }
   }
   
   private handleLyricsFetched(lyricsInfo: LyricsInfo) {
@@ -1413,80 +1404,23 @@ export class GdmLiveAudio extends LitElement {
     this.currentLyrics = lyricsInfo;
   }
   
-  private async generateSongCommentary(songInfo: SongInfo) {
+  private async handleSongCommentary(detail: { songInfo: SongInfo; commentary: string; timesHeard: number; isRepeated: boolean }) {
+    console.log('[SongIdentification] Commentary generated:', detail.commentary);
+    
     if (!this.activePersoni || this.isAiSpeaking || this.isSpeaking) return;
     
-    try {
-      let previouslyHeard = false;
-      let commentary = '';
-      
-      if (this.ragEnabled && this.ragInitialized) {
-        const searchQuery = `song ${songInfo.title} by ${songInfo.artist}`;
-        const memories = await ragMemoryManager.retrieveRelevantMemories(searchQuery, {
-          limit: 3,
-          threshold: 0.7,
-          memoryType: 'song_identification',
-        });
-        
-        previouslyHeard = memories.length > 0;
-      }
-      
-      const provider = this.getProviderForPersoni(this.activePersoni);
-      if (!provider) return;
-      
-      const commentaryPrompt = previouslyHeard
-        ? `Generate a brief (1-2 sentences) comment about hearing the song "${songInfo.title}" by ${songInfo.artist} again. Show recognition and maybe mention something about the song. Stay in character as ${this.activePersoni.name}.`
-        : `Generate a brief (1-2 sentences) comment about discovering the song "${songInfo.title}" by ${songInfo.artist}${songInfo.genre ? ` (${songInfo.genre})` : ''}. Be enthusiastic or analytical depending on your character. Stay in character as ${this.activePersoni.name}.`;
-      
-      const messages = [
-        { role: 'system' as const, content: this.activePersoni.systemInstruction },
-        { role: 'user' as const, content: commentaryPrompt }
-      ];
-      
-      const response = await provider.sendMessage(messages);
-      commentary = response || '';
-      
-      if (commentary) {
-        this.transcriptHistory = [
-          ...this.transcriptHistory,
-          {
-            speaker: 'ai',
-            text: commentary,
-            personiName: this.activePersoni.name,
-            personiColor: this.activePersoni.visuals.accentColor,
-          },
-        ];
-        
-        await this.speakText(commentary);
-      }
-    } catch (error) {
-      console.error('[SongIdentification] Commentary generation error:', error);
-    }
-  }
-  
-  private async storeSongInMemory(songInfo: SongInfo) {
-    try {
-      const memoryText = `Heard song: "${songInfo.title}" by ${songInfo.artist}${songInfo.album ? ` from album "${songInfo.album}"` : ''}${songInfo.year ? ` (${songInfo.year})` : ''}${songInfo.genre ? `, genre: ${songInfo.genre}` : ''}`;
-      
-      await ragMemoryManager.addMemory(
-        memoryText,
-        this.activePersoni?.name || 'system',
-        'song_identification',
-        this.activePersoni?.name || 'system',
-        7,
-        {
-          songTitle: songInfo.title,
-          artist: songInfo.artist,
-          album: songInfo.album,
-          year: songInfo.year,
-          genre: songInfo.genre,
-          identifiedAt: songInfo.identifiedAt,
-        }
-      );
-      
-      console.log('[SongIdentification] Stored in RAG memory');
-    } catch (error) {
-      console.error('[SongIdentification] Failed to store in memory:', error);
+    this.transcriptHistory = [
+      ...this.transcriptHistory,
+      {
+        speaker: 'ai',
+        text: detail.commentary,
+        personiName: this.activePersoni.name,
+        personiColor: this.activePersoni.visuals.accentColor,
+      },
+    ];
+    
+    if (!this.isMuted && this.activePersoni.voiceName !== 'none') {
+      await this.speakText(detail.commentary, 'ai');
     }
   }
   
@@ -1559,6 +1493,12 @@ export class GdmLiveAudio extends LitElement {
       this.startNirvanaGradientUpdates();
     }
 
+    const provider = this.getProviderForPersoni(personi);
+    if (provider) {
+      songIdentificationService.setProvider(provider);
+    }
+    songIdentificationService.setPersona(personi.name);
+
     const template = personaTemplates.find(
       (t) => t.name === this.activePersoni?.templateName,
     );
@@ -1575,7 +1515,6 @@ export class GdmLiveAudio extends LitElement {
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
     this.resetIdlePromptTimer();
 
-    const provider = this.getProviderForPersoni(this.activePersoni);
     if (provider && !this.isMuted) {
       this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
         this.handleIdleSpeech(text);
