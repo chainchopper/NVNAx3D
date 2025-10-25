@@ -94,6 +94,108 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
     },
   },
   {
+    id: 'gmail',
+    name: 'Gmail',
+    description: 'Search and read emails from your Gmail inbox.',
+    functionDeclaration: {
+      name: 'searchGmailEmails',
+      description:
+        'Searches for emails in Gmail using a query string (e.g., "from:user@example.com subject:meeting").',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description:
+              'Gmail search query (supports Gmail search syntax, e.g., "from:user@example.com", "is:unread", "subject:report").',
+          },
+          maxResults: {
+            type: Type.NUMBER,
+            description: 'Maximum number of emails to return (default: 10).',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    id: 'google_calendar',
+    name: 'Google Calendar',
+    description: 'Access your Google Calendar events and schedules.',
+    functionDeclaration: {
+      name: 'getCalendarEvents',
+      description:
+        'Retrieves upcoming events from Google Calendar for a specified time range.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          timeMin: {
+            type: Type.STRING,
+            description:
+              'Start time in ISO 8601 format (e.g., "2025-10-25T00:00:00Z"). Defaults to now.',
+          },
+          timeMax: {
+            type: Type.STRING,
+            description:
+              'End time in ISO 8601 format (e.g., "2025-10-30T23:59:59Z"). Defaults to 7 days from now.',
+          },
+          maxResults: {
+            type: Type.NUMBER,
+            description: 'Maximum number of events to return (default: 10).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'google_docs',
+    name: 'Google Docs',
+    description: 'Read and access Google Docs documents.',
+    functionDeclaration: {
+      name: 'readGoogleDoc',
+      description:
+        'Reads the content of a Google Doc given its document ID or URL.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          documentId: {
+            type: Type.STRING,
+            description:
+              'The Google Doc ID or URL (e.g., "1ABC...XYZ" or "https://docs.google.com/document/d/1ABC...XYZ/edit").',
+          },
+        },
+        required: ['documentId'],
+      },
+    },
+  },
+  {
+    id: 'google_sheets',
+    name: 'Google Sheets',
+    description: 'Read and access Google Sheets spreadsheets.',
+    functionDeclaration: {
+      name: 'readGoogleSheet',
+      description:
+        'Reads data from a Google Sheet given its spreadsheet ID and optional range.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          spreadsheetId: {
+            type: Type.STRING,
+            description:
+              'The Google Sheets ID or URL (e.g., "1ABC...XYZ" or "https://docs.google.com/spreadsheets/d/1ABC...XYZ/edit").',
+          },
+          range: {
+            type: Type.STRING,
+            description:
+              'The A1 notation range to read (e.g., "Sheet1!A1:D10"). Defaults to all data.',
+          },
+        },
+        required: ['spreadsheetId'],
+      },
+    },
+  },
+  {
     id: 'github',
     name: 'GitHub',
     description: 'Access GitHub repositories, users, and organizations.',
@@ -133,7 +235,399 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
-  // Add other connectors here...
+  {
+    id: 'notion',
+    name: 'Notion',
+    description:
+      'Search and access your Notion pages, databases, and workspaces.',
+    functionDeclaration: {
+      name: 'searchNotionPages',
+      description: 'Searches for pages and databases in your Notion workspace.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description: 'Search query to find pages or databases in Notion.',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    id: 'linear',
+    name: 'Linear',
+    description: 'Access Linear issues, projects, and team workflows.',
+    functionDeclaration: {
+      name: 'getLinearIssues',
+      description:
+        'Retrieves issues from Linear based on filters like status, assignee, or label.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          filter: {
+            type: Type.STRING,
+            description:
+              'Filter criteria (e.g., "status:in-progress", "assignee:me", "label:bug").',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of issues to return (default: 20).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    description: 'Access Jira issues, projects, and sprint information.',
+    functionDeclaration: {
+      name: 'searchJiraIssues',
+      description: 'Searches for Jira issues using JQL (Jira Query Language).',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          jql: {
+            type: Type.STRING,
+            description:
+              'JQL query string (e.g., "project = PROJ AND status = Open", "assignee = currentUser()").',
+          },
+          maxResults: {
+            type: Type.NUMBER,
+            description: 'Maximum number of issues to return (default: 50).',
+          },
+        },
+        required: ['jql'],
+      },
+    },
+  },
+  {
+    id: 'asana',
+    name: 'Asana',
+    description: 'Access Asana tasks, projects, and team workspaces.',
+    functionDeclaration: {
+      name: 'getAsanaTasks',
+      description: 'Retrieves tasks from Asana based on project or assignee.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          projectId: {
+            type: Type.STRING,
+            description: 'The Asana project ID to fetch tasks from.',
+          },
+          assignee: {
+            type: Type.STRING,
+            description: 'Filter by assignee (e.g., "me" or user ID).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'confluence',
+    name: 'Confluence',
+    description: 'Search and access Confluence pages and spaces.',
+    functionDeclaration: {
+      name: 'searchConfluencePages',
+      description: 'Searches for pages in Confluence using CQL or text search.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description:
+              'Search query or CQL (Confluence Query Language) to find pages.',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of pages to return (default: 25).',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    id: 'hubspot',
+    name: 'HubSpot',
+    description: 'Access HubSpot contacts, companies, and CRM data.',
+    functionDeclaration: {
+      name: 'getHubSpotContacts',
+      description: 'Retrieves contacts from HubSpot CRM based on filters.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          searchQuery: {
+            type: Type.STRING,
+            description:
+              'Search query to filter contacts (e.g., email, name, company).',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of contacts to return (default: 10).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'dropbox',
+    name: 'Dropbox',
+    description: 'Access and manage your Dropbox files and folders.',
+    functionDeclaration: {
+      name: 'readDropboxFile',
+      description: 'Reads the content of a file from Dropbox given its path.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          filePath: {
+            type: Type.STRING,
+            description:
+              'The path to the file in Dropbox (e.g., "/Documents/report.txt").',
+          },
+        },
+        required: ['filePath'],
+      },
+    },
+  },
+  {
+    id: 'box',
+    name: 'Box',
+    description: 'Access and manage your Box files and folders.',
+    functionDeclaration: {
+      name: 'readBoxFile',
+      description: 'Reads the content of a file from Box given its file ID.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          fileId: {
+            type: Type.STRING,
+            description: 'The Box file ID or URL.',
+          },
+        },
+        required: ['fileId'],
+      },
+    },
+  },
+  {
+    id: 'onedrive',
+    name: 'OneDrive',
+    description: 'Access and manage your OneDrive files and folders.',
+    functionDeclaration: {
+      name: 'readOneDriveFile',
+      description:
+        'Reads the content of a file from OneDrive given its path or ID.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          filePath: {
+            type: Type.STRING,
+            description:
+              'The path or ID of the file in OneDrive (e.g., "/Documents/presentation.pptx").',
+          },
+        },
+        required: ['filePath'],
+      },
+    },
+  },
+  {
+    id: 'sharepoint',
+    name: 'SharePoint',
+    description: 'Access SharePoint sites, lists, and documents.',
+    functionDeclaration: {
+      name: 'readSharePointFile',
+      description:
+        'Reads the content of a file from SharePoint given its site and file path.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          siteUrl: {
+            type: Type.STRING,
+            description:
+              'The SharePoint site URL (e.g., "https://company.sharepoint.com/sites/team").',
+          },
+          filePath: {
+            type: Type.STRING,
+            description:
+              'The relative path to the file (e.g., "/Shared Documents/file.docx").',
+          },
+        },
+        required: ['siteUrl', 'filePath'],
+      },
+    },
+  },
+  {
+    id: 'discord',
+    name: 'Discord',
+    description: 'Send messages and interact with Discord servers.',
+    functionDeclaration: {
+      name: 'sendDiscordMessage',
+      description: 'Sends a message to a Discord channel.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          channelId: {
+            type: Type.STRING,
+            description: 'The Discord channel ID where the message will be sent.',
+          },
+          message: {
+            type: Type.STRING,
+            description: 'The message content to send.',
+          },
+        },
+        required: ['channelId', 'message'],
+      },
+    },
+  },
+  {
+    id: 'spotify',
+    name: 'Spotify',
+    description: 'Access Spotify playlists, tracks, and current playback.',
+    functionDeclaration: {
+      name: 'getCurrentSpotifyTrack',
+      description:
+        'Gets information about the currently playing track on Spotify.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'outlook',
+    name: 'Outlook',
+    description: 'Search and read emails from your Outlook inbox.',
+    functionDeclaration: {
+      name: 'searchOutlookEmails',
+      description: 'Searches for emails in Outlook using a query string.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description:
+              'Search query (e.g., "from:user@example.com", "subject:meeting", "hasAttachments:true").',
+          },
+          maxResults: {
+            type: Type.NUMBER,
+            description: 'Maximum number of emails to return (default: 10).',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    id: 'twilio',
+    name: 'Twilio',
+    description: 'Send SMS messages and make calls using Twilio.',
+    functionDeclaration: {
+      name: 'sendTwilioSMS',
+      description: 'Sends an SMS message using Twilio.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          to: {
+            type: Type.STRING,
+            description:
+              'The recipient phone number in E.164 format (e.g., "+1234567890").',
+          },
+          message: {
+            type: Type.STRING,
+            description: 'The SMS message content to send.',
+          },
+        },
+        required: ['to', 'message'],
+      },
+    },
+  },
+  {
+    id: 'sendgrid',
+    name: 'SendGrid',
+    description: 'Send emails using SendGrid email service.',
+    functionDeclaration: {
+      name: 'sendEmailViaSendGrid',
+      description: 'Sends an email using SendGrid.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          to: {
+            type: Type.STRING,
+            description: 'The recipient email address.',
+          },
+          subject: {
+            type: Type.STRING,
+            description: 'The email subject line.',
+          },
+          body: {
+            type: Type.STRING,
+            description: 'The email body content (supports HTML).',
+          },
+        },
+        required: ['to', 'subject', 'body'],
+      },
+    },
+  },
+  {
+    id: 'resend',
+    name: 'Resend',
+    description: 'Send emails using Resend email service.',
+    functionDeclaration: {
+      name: 'sendEmailViaResend',
+      description: 'Sends an email using Resend.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          to: {
+            type: Type.STRING,
+            description: 'The recipient email address.',
+          },
+          subject: {
+            type: Type.STRING,
+            description: 'The email subject line.',
+          },
+          body: {
+            type: Type.STRING,
+            description: 'The email body content (supports HTML).',
+          },
+        },
+        required: ['to', 'subject', 'body'],
+      },
+    },
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    description: 'Send messages to Slack channels and users via Web API (requires Bot Token with chat:write scope).',
+    functionDeclaration: {
+      name: 'sendSlackMessage',
+      description: 'Sends a message to a Slack channel or direct message using Slack Web API (chat.postMessage).',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          channel: {
+            type: Type.STRING,
+            description: 'The Slack channel ID (e.g., "C1234567890"), channel name (e.g., "#general"), or user ID for DM.',
+          },
+          message: {
+            type: Type.STRING,
+            description: 'The message text to send (supports Slack markdown and Block Kit).',
+          },
+          threadTs: {
+            type: Type.STRING,
+            description: 'Optional: timestamp of parent message to reply in a thread.',
+          },
+        },
+        required: ['channel', 'message'],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [
