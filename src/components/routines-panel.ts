@@ -6,7 +6,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { routineExecutor } from '../services/routine-executor';
-import type { RoutineSummary, RoutineDetail, RoutineTrigger, RoutineCondition, RoutineAction, RoutinePattern } from '../types/routine-types';
+import type { RoutineSummary, RoutineDetail, RoutineTrigger, RoutineCondition, RoutineAction, RoutinePattern, TriggerType } from '../types/routine-types';
 
 type RoutinePanelMode = 'list' | 'create' | 'edit';
 
@@ -21,7 +21,7 @@ export class RoutinesPanel extends LitElement {
 
   @state() formName = '';
   @state() formDescription = '';
-  @state() formTriggerType: 'time' | 'event' | 'state_change' | 'user_action' | 'completion' = 'time';
+  @state() formTriggerType: TriggerType = 'time';
   @state() formTriggerSchedule = 'every day';
   @state() formTags: string[] = [];
   @state() formActions: RoutineAction[] = [];
@@ -747,6 +747,7 @@ export class RoutinesPanel extends LitElement {
             <option value="state_change">State Change</option>
             <option value="user_action">User Action</option>
             <option value="completion">Task Completion</option>
+            <option value="vision_detection">Vision Detection (Camera/AI)</option>
           </select>
         </div>
 
