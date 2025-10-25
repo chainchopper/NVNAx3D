@@ -2,7 +2,7 @@
  * Memory system types and interfaces
  */
 
-export type MemoryType = 'conversation' | 'note' | 'reminder' | 'preference' | 'fact' | 'task' | 'song_identification';
+export type MemoryType = 'conversation' | 'note' | 'reminder' | 'preference' | 'fact' | 'task' | 'song_identification' | 'routine';
 
 export interface Memory {
   id: string;
