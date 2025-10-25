@@ -1,0 +1,274 @@
+NIRVANA Project Outline & Engineering Specification
+1. Project Vision & Goals
+
+NIRVANA is a real-time, multi-modal conversational AI interface designed to provide a rich, dynamic, and highly personalized user experience. The core concept revolves around "Personis"—customizable AI entities with unique personalities, visual appearances, voices, and capabilities.
+
+The primary goal is to create an immersive and intuitive platform that showcases the advanced capabilities of the Gemini API suite, including low-latency conversation, tool use, complex reasoning, and multi-modal generation, all wrapped in a visually stunning 3D environment that reacts to the conversation in real-time.
+2. Core Architecture & Technology Stack
+
+The application is a client-side, single-page web application built with modern web technologies.
+
+    Frontend Framework: Lit - A lightweight library for building fast, lightweight web components. It's used for the main application structure, UI components (side panels, modals), and state management.
+
+    3D Rendering: Three.js - The foundational library for all 3D visuals. It is used to create the scene, camera, lights, and the central Personi objects.
+
+    Post-Processing: postprocessing - An extension for Three.js used to implement advanced cinematic effects like Bloom, Screen Space Ambient Occlusion (SSAO), God Rays, and FXAA.
+
+    AI/Language Model API: @google/genai (Gemini API) - The core of the application's intelligence. This SDK is used for:
+
+        Live API (gemini-2.5-flash-native-audio-preview-09-2025): Real-time, bidirectional audio conversation and transcription.
+
+        TTS (gemini-2.5-flash-preview-tts): Generating AI voice responses (now primarily handled by Live API).
+
+        Transcription (gemini-2.5-flash): Used for transcribing audio in "Thinking Mode".
+
+        Complex Reasoning (gemini-2.5-pro): Used for "Thinking Mode" with a high thinking budget.
+
+        Image Editing (gemini-2.5-flash-image): Powering the image editing tool.
+
+        Embeddings (text-embedding-004): For the conversational memory system.
+
+    Language: TypeScript - For type safety, improved developer experience, and code maintainability.
+
+    Styling: CSS (within Lit components) - Standard CSS for styling all UI elements.
+
+    Build/Dev Environment: A modern frontend setup using an import map (as seen in index.html) is assumed, suitable for development with tools like Vite or a simple static server.
+
+3. Key Features & Functionality (Detailed Breakdown)
+3.1. Real-Time Conversational Core (Live API)
+
+    Functionality: Enables fluid, low-latency, real-time voice conversations. This is the primary mode of interaction.
+
+    Implementation:
+
+        On startup, the app establishes a persistent connection to the Gemini Live API.
+
+        User's microphone audio is continuously streamed to the model.
+
+        The model processes the audio and provides two streams back to the client:
+
+            Live Transcription Stream: Text of the user's and the AI's speech appears in the UI as it's spoken.
+
+            AI Audio Stream: The Personi's voice is streamed back as raw audio data and played seamlessly.
+
+        The system handles interruptions gracefully; if the user speaks while the AI is responding, the AI's audio output is cut off.
+
+3.2. Personi Management System
+
+    Functionality: Users can create, edit, delete, and switch between multiple AI "Personis."
+
+    Implementation:
+
+        CRUD Operations: A "Personis" side panel allows full management of Personi configurations.
+
+        Template-Based Creation: New Personis are created by selecting from a list of predefined templates (NIRVANA, ATHENA, ADAM, etc.).
+
+        Deep Customization: The "Edit Personi" form allows modification of:
+
+            Identity: Name, Tagline, System Instruction.
+
+            AI Model: Voice (Zephyr, Kore, etc.) and the underlying model for reasoning (gemini-2.5-flash, gemini-2.5-pro).
+
+            Visuals: 3D Shape, Accent Color, Surface Texture, and Idle Animation.
+
+            Capabilities: A checklist of enabled "Connectors" (tools).
+
+        Persistence: All Personi configurations are saved to the browser's localStorage.
+
+        Active Personi Switching: Users can switch between Personis via the carousel. The switch is accompanied by a spoken handoff and a unique introduction from the new Personi.
+
+3.3. Dynamic 3D Visualization
+
+    Functionality: A central 3D object represents the active Personi, reacting to its state (speaking, idle, listening) and matching its configured appearance.
+
+    Implementation (visual-3d.ts):
+
+        Scene Setup: A Three.js scene containing a camera, a circular floor plane for shadows, and a sophisticated lighting rig.
+
+        Lighting:
+
+            Key Light: A DirectionalLight parented to the camera to ensure consistent lighting and a clean shadow.
+
+            Ambient Light: Provides soft, global illumination.
+
+            Accent Lights: Three colored PointLights orbit the object, matching the Personi's accent color and pulsing in intensity based on the AI's speech volume.
+
+        Central Object: A THREE.Mesh whose geometry and material are dynamically updated based on the active Personi's visuals config.
+
+            Geometry: Can be an Icosahedron, TorusKnot, or Box.
+
+            Material: A MeshPhysicalMaterial that supports textures, reflections, and transparency. It is re-configured on-the-fly to support different looks (crystal, metallic, lava).
+
+        Textures: Loads a library of textures and applies them with shape-specific UV tiling to prevent stretching.
+
+        Idle Animations: When no one is speaking, a state machine triggers a unique animation:
+
+            glow: Emissive intensity pulses based on time and ambient microphone input.
+
+            particles: A THREE.Points system swirls around the object.
+
+            code: A scrolling code texture is dynamically generated on a canvas and applied as an emissive map.
+
+        Post-Processing: An EffectComposer applies a chain of effects: SSAO (for contact shadows), God Rays (emanating from the object), Bloom (for a glowing aura), and FXAA (for anti-aliasing).
+
+3.4. Connector & Tool Use Framework
+
+    Functionality: Allows Personis to interact with external services (e.g., YouTube, Google Drive) to perform tasks.
+
+    Implementation:
+
+        Connector Management: A "Connectors" side panel allows the user to globally enable or disable available tools.
+
+        Function Calling: The system leverages Gemini's function calling capabilities.
+
+        When processing a user's request, the app passes the list of the active Personi's enabled connectors to the model as FunctionDeclaration tools.
+
+        If the model determines a tool is needed, it returns a FunctionCall object in its response.
+
+        The handleFunctionCall method in index.tsx acts as a router, simulating the execution of the requested tool (e.g., "Fetching YouTube transcript...") and providing a spoken confirmation to the user.
+
+3.5. Advanced AI Capabilities
+
+    "Thinking Mode":
+
+        Functionality: A special mode for handling complex queries that require deep reasoning.
+
+        Implementation: When enabled for a Personi, a "Thinking Mode" button appears. When activated, the app temporarily disconnects from the Live API and reverts to a Voice Activity Detector (VAD) pipeline. The user's query is recorded, transcribed, and sent to gemini-2.5-pro with thinkingBudget set to its maximum value. The comprehensive text response is then spoken via TTS.
+
+    AI-Powered Image Editing:
+
+        Functionality: Allows users to upload an image and give verbal commands to edit it.
+
+        Implementation:
+
+            An "Image" connector and tool is available.
+
+            The UI provides a file upload button. Once an image is loaded, it's displayed in an overlay.
+
+            The user's subsequent voice command (e.g., "add a retro filter") is sent to the AI.
+
+            The handleFunctionCall for editImage takes the prompt and the base64-encoded image and sends them to the gemini-2.5-flash-image model.
+
+            The newly generated image is then displayed in the overlay.
+
+3.6. UI/UX Components
+
+    Transcription Log: A scrollable view at the top of the screen displays the conversation history, with color-coded entries for the user, the AI (using its accent color), and the system.
+
+    Status Display: A dynamic text area at the bottom provides real-time feedback (e.g., "Listening...", "Thinking...", "Speaking...").
+
+    Controls: A main control cluster for Mute/Unmute and Interrupt.
+
+    Settings FAB: A floating action button provides access to the Personis and Connectors side panels.
+
+3.7. Conversational Memory
+
+    Functionality: A system to provide the AI with long-term context about past conversations.
+
+    Implementation (memory.ts):
+
+        Persistence: Conversation fragments are stored in localStorage.
+
+        Vector Embeddings: Each fragment is converted into a vector embedding using the text-embedding-004 model.
+
+        Retrieval: When retrieving context, a new query is embedded, and a cosine similarity search is performed against all stored memories to find the most relevant historical fragments.
+
+4. Component Breakdown (Module-by-Module)
+
+    index.tsx (gdm-live-audio): The Application Core
+
+        Responsibilities: Main Lit component, renders all UI, manages application state (@state), orchestrates all other modules.
+
+        Handles: User input (clicks, etc.), Live API session management, VAD/Recorder logic for Thinking Mode, side panel visibility, and processing API responses (including text, audio, and function calls).
+
+    visual-3d.ts (gdm-live-audio-visuals-3d): The 3D Engine
+
+        Responsibilities: Encapsulates all Three.js logic.
+
+        Handles: Scene setup, camera animation, lighting, object creation/updating, material/texture management, idle animations, post-processing stack, and the main rendering loop. Receives properties like visuals from index.tsx.
+
+    personas.ts: Data Models & Constants
+
+        Responsibilities: Defines the core data structures and interfaces (PersoniConfig, Connector, PersonaTemplate).
+
+        Contains: The list of AVAILABLE_CONNECTORS with their FunctionDeclaration schemas and the default personaTemplates.
+
+    memory.ts: Long-Term Memory System
+
+        Responsibilities: Manages the lifecycle of conversational memories.
+
+        Handles: Adding new fragments, generating embeddings, performing vector similarity searches, and persisting data to localStorage.
+
+    textures.ts: Visual Assets
+
+        Responsibilities: A simple module that exports a dictionary of base64-encoded texture strings, keeping assets self-contained and easy to import.
+
+    utils.ts: General Utilities
+
+        Responsibilities: Provides reusable helper classes and functions.
+
+        Contains: AudioRecorder, VoiceActivityDetector (for Thinking Mode), audio decoding functions, and blobToBase64 converter.
+
+5. Implementation Roadmap (Step-by-Step)
+
+An engineer building this from scratch should follow this logical progression:
+
+    Phase 1: Foundation & UI Shell
+
+        Set up the project with Lit, TypeScript, and a dev server.
+
+        Build the main gdm-live-audio component in index.tsx.
+
+        Implement the static HTML/CSS for all UI elements: transcription log, status area, controls, settings FAB, and side panels (initially hidden).
+
+    Phase 2: Basic 3D Scene
+
+        Create the gdm-live-audio-visuals-3d component.
+
+        Set up a basic Three.js scene with a camera, a simple object (e.g., Icosahedron), and basic lighting.
+
+        Implement the rendering loop and post-processing composer with Bloom and FXAA.
+
+    Phase 3: Core Conversational Loop (VAD/TTS)
+
+        Implement the initial audio pipeline using utils.ts: request microphone access, use VoiceActivityDetector to record speech with AudioRecorder.
+
+        Integrate Gemini for transcription (gemini-2.5-flash) and TTS (gemini-2.5-flash-preview-tts).
+
+        Create the basic conversational loop: Listen -> Transcribe -> Get AI Text Response -> Speak Response.
+
+    Phase 4: Personification
+
+        Implement the personas.ts data models.
+
+        Build the Personi management UI and logic (CRUD operations, localStorage persistence).
+
+        Link the active Personi's config to the 3D visualizer, making the shape and color dynamic.
+
+        Add the carousel for switching Personis.
+
+    Phase 5: Advanced Visuals & Live API
+
+        Enhance the 3D scene with the full lighting rig, shadows, textures, and all idle animations.
+
+        Crucially, refactor the core conversational loop to use the Gemini Live API, replacing the VAD/TTS pipeline for the primary interaction mode. Keep the VAD pipeline available for "Thinking Mode."
+
+    Phase 6: Extensibility with Connectors
+
+        Build the Connectors management UI.
+
+        Integrate function calling into the API requests, passing the active Personi's enabled tools.
+
+        Implement the handleFunctionCall router to simulate tool execution.
+
+    Phase 7: Power Features
+
+        Implement the "Thinking Mode" logic, which re-uses the old VAD pipeline but calls the gemini-2.5-pro model.
+
+        Implement the Image Editing UI and functionality, connecting it to the gemini-2.5-flash-image model.
+
+    Phase 8: Refinement & Polish
+
+        Integrate the memory.ts module to provide conversation history.
+
+        Thoroughly test all features, fix bugs, and optimize rendering performance. Ensure all state transitions are smooth.

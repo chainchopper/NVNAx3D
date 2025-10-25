@@ -1,0 +1,13 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #100c14; /* Match scene background to prevent white flash */
+}
+
+body {
+  display: block; /* Ensure body is not flex, which can interfere with absolute positioning */
+}
