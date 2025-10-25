@@ -1050,6 +1050,9 @@ export class GdmLiveAudio extends LitElement {
       
       console.log('[Routines] Initializing pattern detector...');
       await routinePatternDetector.initialize();
+      routinePatternDetector.onPatternDetected((pattern) => {
+        console.log('[Routines] Pattern detected:', pattern);
+      });
       console.log('[Routines] ✅ Pattern detector initialized');
     } catch (error) {
       console.error('[RAG] ❌ Failed to initialize:', error);
