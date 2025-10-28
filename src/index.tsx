@@ -28,6 +28,7 @@ import './components/notes-panel';
 import './components/tasks-panel';
 import './components/memory-panel';
 import './components/routines-panel';
+import './components/connector-config-panel';
 import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
@@ -117,7 +118,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectors' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines';
+type ActiveSidePanel = 'none' | 'personis' | 'connectorConfig' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -2167,6 +2168,12 @@ export class GdmLiveAudio extends LitElement {
       case 'getCalendarEvents':
         result = await connectorHandlers.handleGoogleCalendar(fc.args as any);
         break;
+      case 'readGoogleDoc':
+        result = await connectorHandlers.handleGoogleDocs(fc.args as any);
+        break;
+      case 'readGoogleSheet':
+        result = await connectorHandlers.handleGoogleSheets(fc.args as any);
+        break;
       case 'searchNotionPages':
         result = await connectorHandlers.handleNotion(fc.args as any);
         break;
@@ -2179,17 +2186,8 @@ export class GdmLiveAudio extends LitElement {
       case 'getGithubRepoDetails':
         result = await connectorHandlers.handleGitHub(fc.args as any);
         break;
-      case 'readFileFromGoogleDrive':
-        result = await connectorHandlers.handleGoogleDrive(fc.args as any);
-        break;
-      case 'readGoogleDoc':
-        result = await connectorHandlers.handleGoogleDocs(fc.args as any);
-        break;
-      case 'readGoogleSheet':
-        result = await connectorHandlers.handleGoogleSheets(fc.args as any);
-        break;
-      case 'getYoutubeVideoDetails':
-        result = await connectorHandlers.handleYouTube(fc.args as any);
+      case 'searchOutlookEmails':
+        result = await connectorHandlers.handleOutlook(fc.args as any);
         break;
       case 'searchJiraIssues':
         result = await connectorHandlers.handleJira(fc.args as any);
@@ -2200,38 +2198,29 @@ export class GdmLiveAudio extends LitElement {
       case 'searchConfluencePages':
         result = await connectorHandlers.handleConfluence(fc.args as any);
         break;
-      case 'getHubSpotContacts':
-        result = await connectorHandlers.handleHubSpot(fc.args as any);
+      case 'getHomeAssistantDevices':
+        result = await connectorHandlers.handleHomeassistant(fc.args as any);
         break;
-      case 'readDropboxFile':
-        result = await connectorHandlers.handleDropbox(fc.args as any);
+      case 'getHomeAssistantState':
+        result = await connectorHandlers.handleHomeassistantState(fc.args as any);
         break;
-      case 'readBoxFile':
-        result = await connectorHandlers.handleBox(fc.args as any);
+      case 'controlHomeAssistantDevice':
+        result = await connectorHandlers.handleHomeassistantControl(fc.args as any);
         break;
-      case 'readOneDriveFile':
-        result = await connectorHandlers.handleOneDrive(fc.args as any);
+      case 'getFrigateEvents':
+        result = await connectorHandlers.handleFrigateEvents(fc.args as any);
         break;
-      case 'readSharePointFile':
-        result = await connectorHandlers.handleSharePoint(fc.args as any);
+      case 'getFrigateSnapshot':
+        result = await connectorHandlers.handleFrigateSnapshot(fc.args as any);
         break;
-      case 'sendDiscordMessage':
-        result = await connectorHandlers.handleDiscord(fc.args as any);
+      case 'getFrigateCameraState':
+        result = await connectorHandlers.handleFrigateCameraState(fc.args as any);
         break;
-      case 'getCurrentSpotifyTrack':
-        result = await connectorHandlers.handleSpotify(fc.args as any);
+      case 'detectObjectsCodeProjectAI':
+        result = await connectorHandlers.handleCodeprojectaiDetect(fc.args as any);
         break;
-      case 'searchOutlookEmails':
-        result = await connectorHandlers.handleOutlook(fc.args as any);
-        break;
-      case 'sendTwilioSMS':
-        result = await connectorHandlers.handleTwilio(fc.args as any);
-        break;
-      case 'sendEmailViaSendGrid':
-        result = await connectorHandlers.handleSendGrid(fc.args as any);
-        break;
-      case 'sendEmailViaResend':
-        result = await connectorHandlers.handleResend(fc.args as any);
+      case 'detectObjectsYOLO':
+        result = await connectorHandlers.handleYoloDetect(fc.args as any);
         break;
       default:
         await this.speakText(
@@ -2991,6 +2980,23 @@ export class GdmLiveAudio extends LitElement {
     `;
   }
 
+  private getVerifiedConnectors(): Connector[] {
+    try {
+      const configsJson = localStorage.getItem('connectorConfigs');
+      if (!configsJson) return [];
+      
+      const configs = JSON.parse(configsJson);
+      const verifiedIds = configs
+        .filter((c: any) => c.verified)
+        .map((c: any) => c.id);
+      
+      return AVAILABLE_CONNECTORS.filter(conn => verifiedIds.includes(conn.id));
+    } catch (error) {
+      console.error('[PersonI] Failed to load verified connectors:', error);
+      return AVAILABLE_CONNECTORS; // Fallback to all connectors if there's an error
+    }
+  }
+
   private getConnectorStatusIndicator(connectorId: string): string {
     const connectorIntegrationMap: Record<string, string> = {
       'gmail': 'Google Mail',
@@ -3029,96 +3035,16 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private renderConnectorsPanel() {
-    const toggleConnectorForPersoni = (personiId: string, connectorId: string, enabled: boolean) => {
-      const personi = this.personis.find(p => p.id === personiId);
-      if (!personi) return;
-      
-      if (enabled) {
-        if (!personi.enabledConnectors.includes(connectorId)) {
-          personi.enabledConnectors = [...personi.enabledConnectors, connectorId];
-        }
-      } else {
-        personi.enabledConnectors = personi.enabledConnectors.filter(id => id !== connectorId);
-      }
-      
-      this.savePersonis();
-      this.requestUpdate();
-    };
-
     return html`
-      <div class="side-panel ${this.activeSidePanel === 'connectors' ? 'visible' : ''}">
-        <div class="panel-header">
-          <span>Connectors</span>
-          <button @click=${this.closeSidePanel}>&times;</button>
-        </div>
-        <div class="panel-content">
-          <h3>Configure PersonI Connectors</h3>
-          <p style="font-size: 14px; opacity: 0.8; margin-bottom: 20px;">
-            Enable specific connectors for each PersonI. Only enabled connectors will be available as tools during conversations.
-          </p>
-          
-          ${this.personis.length === 0 ? html`
-            <p style="opacity: 0.6;">No PersonI available. Create a PersonI first to configure connectors.</p>
-          ` : html`
-            ${this.personis.map(personi => html`
-              <div style="margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                <h4 style="margin-bottom: 12px; color: ${personi.visuals.accentColor};">
-                  ${personi.name}
-                  ${personi.id === this.activePersoni?.id ? html`<span style="font-size: 12px; opacity: 0.7;"> (Active)</span>` : ''}
-                </h4>
-                <p style="font-size: 12px; opacity: 0.6; margin-bottom: 12px;">
-                  ${personi.enabledConnectors.length} connector${personi.enabledConnectors.length !== 1 ? 's' : ''} enabled
-                </p>
-                
-                <div class="connector-grid">
-                  ${AVAILABLE_CONNECTORS.map(connector => {
-                    const isEnabled = personi.enabledConnectors.includes(connector.id);
-                    const statusIndicator = this.getConnectorStatusIndicator(connector.id);
-                    const isImplemented = statusIndicator === '✓';
-                    return html`
-                      <label 
-                        class="connector-checkbox-item" 
-                        title="${connector.description}${isImplemented ? ' (Backend implemented)' : ' (Setup required - check backend)'}"
-                        style="opacity: ${isImplemented ? '1' : '0.7'}">
-                        <input
-                          type="checkbox"
-                          .checked=${isEnabled}
-                          @change=${(e: Event) => {
-                            toggleConnectorForPersoni(
-                              personi.id,
-                              connector.id,
-                              (e.target as HTMLInputElement).checked
-                            );
-                          }}
-                        />
-                        <span class="connector-name">
-                          ${connector.name}
-                          <span style="margin-left: 4px; font-size: 10px; ${isImplemented ? 'color: #4CAF50;' : 'color: #FFA726;'}">
-                            ${statusIndicator}
-                          </span>
-                        </span>
-                      </label>
-                    `;
-                  })}
-                </div>
-              </div>
-            `)}
-          `}
-          
-          <div style="margin-top: 24px; padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px;">
-            <h4 style="margin-bottom: 8px; font-size: 14px;">ℹ️ Setup Instructions</h4>
-            <p style="font-size: 12px; opacity: 0.8; line-height: 1.5; margin-bottom: 8px;">
-              To use connectors, you need to set up Replit integrations in the Connectors panel of your Replit workspace. 
-              The backend server will use these integrations to access external services.
-            </p>
-            <p style="font-size: 11px; opacity: 0.6; line-height: 1.4;">
-              <strong>Status Indicators:</strong><br/>
-              <span style="color: #4CAF50;">✓</span> = Backend handler implemented<br/>
-              <span style="color: #FFA726;">⚠</span> = Setup required (connector defined but handler not yet implemented)
-            </p>
+      ${this.activeSidePanel === 'connectorConfig' ? html`
+        <div class="side-panel visible">
+          <div class="panel-header">
+            <span>Connector Configuration</span>
+            <button @click=${this.closeSidePanel}>&times;</button>
           </div>
+          <connector-config-panel></connector-config-panel>
         </div>
-      </div>
+      ` : ''}
     `;
   }
 
@@ -3503,10 +3429,13 @@ export class GdmLiveAudio extends LitElement {
       <div class="form-group">
         <label>Connectors</label>
         <p style="font-size: 12px; opacity: 0.7; margin-bottom: 8px;">
-          Select which connectors this PersonI can use during conversations.
+          Select which verified connectors this PersonI can use during conversations.
+          ${this.getVerifiedConnectors().length === 0 ? html`
+            <br/><span style="color: #FFA726;">⚠️ No verified connectors. Configure connectors in the Connector Configuration panel.</span>
+          ` : ''}
         </p>
         <div class="capabilities-grid">
-          ${AVAILABLE_CONNECTORS.map(
+          ${this.getVerifiedConnectors().map(
             (c) => html`
               <div class="capability-item">
                 <input
@@ -3516,7 +3445,7 @@ export class GdmLiveAudio extends LitElement {
                     c.id,
                   )}
                   @change=${(e: Event) => handleCapabilityToggle(e, c.id)} />
-                <label for="conn-${c.id}">${c.name}</label>
+                <label for="conn-${c.id}">✅ ${c.name}</label>
               </div>
             `,
           )}
@@ -3754,15 +3683,15 @@ export class GdmLiveAudio extends LitElement {
           </div>
           <div
             class="menu-item group-ai"
-            title="Connectors - Enable external service integrations"
+            title="Connectors - Configure API credentials for external services"
             aria-label="Connectors Configuration"
             role="button"
             tabindex="0"
-            @click=${() => this.openSidePanel('connectors')}
+            @click=${() => this.openSidePanel('connectorConfig')}
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                this.openSidePanel('connectors');
+                this.openSidePanel('connectorConfig');
               }
             }}>
             <svg

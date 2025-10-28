@@ -68,11 +68,351 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+const CONNECTOR_SECRETS = {
+  gmail: { GOOGLE_ACCESS_TOKEN: 'Your Google OAuth token with Gmail API access' },
+  google_calendar: { GOOGLE_ACCESS_TOKEN: 'Your Google OAuth token with Calendar API access' },
+  google_docs: { GOOGLE_ACCESS_TOKEN: 'Your Google OAuth token with Docs API access' },
+  google_sheets: { GOOGLE_ACCESS_TOKEN: 'Your Google OAuth token with Sheets API access' },
+  github: { GITHUB_TOKEN: 'Your GitHub Personal Access Token' },
+  notion: { NOTION_TOKEN: 'Your Notion Integration Token' },
+  linear: { LINEAR_API_KEY: 'Your Linear API Key' },
+  slack: { SLACK_BOT_TOKEN: 'Your Slack Bot Token with chat:write scope' },
+  outlook: { OUTLOOK_TOKEN: 'Your Microsoft Graph API token' },
+  jira: { JIRA_TOKEN: 'Your Jira API Token', JIRA_DOMAIN: 'Your Jira domain (e.g., company.atlassian.net)', JIRA_EMAIL: 'Your Jira email address' },
+  asana: { ASANA_TOKEN: 'Your Asana Personal Access Token' },
+  confluence: { CONFLUENCE_TOKEN: 'Your Confluence API Token', CONFLUENCE_DOMAIN: 'Your Confluence domain', CONFLUENCE_EMAIL: 'Your Confluence email address' },
+  homeassistant: { HOME_ASSISTANT_URL: 'Your HA URL', HOME_ASSISTANT_TOKEN: 'Your HA Long-Lived Access Token' },
+  homeassistant_state: { HOME_ASSISTANT_URL: 'Your HA URL', HOME_ASSISTANT_TOKEN: 'Your HA Long-Lived Access Token' },
+  homeassistant_control: { HOME_ASSISTANT_URL: 'Your HA URL', HOME_ASSISTANT_TOKEN: 'Your HA Long-Lived Access Token' },
+  frigate_events: { FRIGATE_URL: 'Your Frigate NVR URL', FRIGATE_API_KEY: 'Your Frigate API Key (optional)' },
+  frigate_snapshot: { FRIGATE_URL: 'Your Frigate NVR URL', FRIGATE_API_KEY: 'Your Frigate API Key (optional)' },
+  frigate_camera_state: { FRIGATE_URL: 'Your Frigate NVR URL', FRIGATE_API_KEY: 'Your Frigate API Key (optional)' },
+  codeprojectai_detect: { CODEPROJECT_AI_URL: 'Your CodeProject.AI server URL' },
+  yolo_detect: { YOLO_API_URL: 'Your YOLO API URL' }
+};
+
+const allowedOrigins = [
+  'http://localhost:5000',
+  process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : ''
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
+
+async function verifyGmailCredentials() {
+  const token = process.env.GOOGLE_ACCESS_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyGoogleCalendarCredentials() {
+  const token = process.env.GOOGLE_ACCESS_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyGitHubCredentials() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyNotionCredentials() {
+  const token = process.env.NOTION_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://api.notion.com/v1/users/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Notion-Version': '2022-06-28'
+      }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyLinearCredentials() {
+  const token = process.env.LINEAR_API_KEY;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://api.linear.app/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ query: '{ viewer { id } }' })
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifySlackCredentials() {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://slack.com/api/auth.test', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const data = await response.json();
+    return data.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyOutlookCredentials() {
+  const token = process.env.OUTLOOK_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyJiraCredentials() {
+  const token = process.env.JIRA_TOKEN;
+  const domain = process.env.JIRA_DOMAIN;
+  if (!token || !domain) return false;
+  try {
+    const response = await fetch(
+      `https://${domain}/rest/api/3/myself`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyAsanaCredentials() {
+  const token = process.env.ASANA_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch('https://app.asana.com/api/1.0/users/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyConfluenceCredentials() {
+  const token = process.env.CONFLUENCE_TOKEN;
+  const domain = process.env.CONFLUENCE_DOMAIN;
+  if (!token || !domain) return false;
+  try {
+    const response = await fetch(
+      `https://${domain}/wiki/rest/api/user/current`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyHomeAssistantCredentials() {
+  const url = process.env.HOME_ASSISTANT_URL;
+  const token = process.env.HOME_ASSISTANT_TOKEN;
+  if (!url || !token) return false;
+  try {
+    const response = await fetch(`${url.replace(/\/$/, '')}/api/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyFrigateCredentials() {
+  const url = process.env.FRIGATE_URL;
+  if (!url) return false;
+  try {
+    const headers = {};
+    const apiKey = process.env.FRIGATE_API_KEY;
+    if (apiKey) {
+      headers['X-Frigate-API-Key'] = apiKey;
+    }
+    const response = await fetch(`${url.replace(/\/$/, '')}/api/config`, {
+      headers
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyCodeProjectAICredentials() {
+  const url = process.env.CODEPROJECT_AI_URL;
+  if (!url) return false;
+  try {
+    const response = await fetch(`${url.replace(/\/$/, '')}/v1/status`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyYoloCredentials() {
+  const url = process.env.YOLO_API_URL;
+  if (!url) return false;
+  try {
+    const response = await fetch(`${url.replace(/\/$/, '')}/health`);
+    return response.ok || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
+async function verifyConnectorCredentials(connectorId) {
+  switch (connectorId) {
+    case 'gmail':
+      return verifyGmailCredentials();
+    case 'google_calendar':
+      return verifyGoogleCalendarCredentials();
+    case 'google_docs':
+      return verifyGmailCredentials();
+    case 'google_sheets':
+      return verifyGmailCredentials();
+    case 'github':
+      return verifyGitHubCredentials();
+    case 'notion':
+      return verifyNotionCredentials();
+    case 'linear':
+      return verifyLinearCredentials();
+    case 'slack':
+      return verifySlackCredentials();
+    case 'outlook':
+      return verifyOutlookCredentials();
+    case 'jira':
+      return verifyJiraCredentials();
+    case 'asana':
+      return verifyAsanaCredentials();
+    case 'confluence':
+      return verifyConfluenceCredentials();
+    case 'homeassistant':
+    case 'homeassistant_state':
+    case 'homeassistant_control':
+      return verifyHomeAssistantCredentials();
+    case 'frigate_events':
+    case 'frigate_snapshot':
+    case 'frigate_camera_state':
+      return verifyFrigateCredentials();
+    case 'codeprojectai_detect':
+      return verifyCodeProjectAICredentials();
+    case 'yolo_detect':
+      return verifyYoloCredentials();
+    default:
+      return true;
+  }
+}
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.post('/api/connectors/verify', async (req, res) => {
+  try {
+    const { connectorId } = req.body;
+
+    if (!connectorId) {
+      return res.status(400).json({
+        success: false,
+        error: 'connectorId is required'
+      });
+    }
+
+    const secrets = CONNECTOR_SECRETS[connectorId];
+    if (!secrets) {
+      return res.status(400).json({
+        success: false,
+        error: `Unknown connector: ${connectorId}`
+      });
+    }
+
+    const missingSecrets = Object.keys(secrets).filter(key => !process.env[key]);
+    const configured = missingSecrets.length === 0;
+
+    if (!configured) {
+      return res.json({
+        success: false,
+        configured: false,
+        missingSecrets,
+        setupInstructions: `Add the following to Replit Secrets: ${missingSecrets.join(', ')}`
+      });
+    }
+
+    const verified = await verifyConnectorCredentials(connectorId);
+
+    res.json({
+      success: true,
+      configured: true,
+      verified,
+      message: verified 
+        ? `${connectorId} is properly configured and verified` 
+        : `${connectorId} secrets are present but verification failed. Check your credentials.`
+    });
+  } catch (error) {
+    console.error('[Connector Verify Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
 
 app.post('/api/connectors/gmail/search', async (req, res) => {
@@ -84,7 +424,7 @@ app.post('/api/connectors/gmail/search', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Gmail integration not configured. Please set up Gmail access in the Connectors panel.'
+        setupInstructions: 'Add GOOGLE_ACCESS_TOKEN to Replit Secrets panel.'
       });
     }
 
@@ -102,7 +442,7 @@ app.post('/api/connectors/gmail/search', async (req, res) => {
         return res.status(401).json({
           success: false,
           requiresSetup: true,
-          setupInstructions: 'Gmail integration not configured. Please set up Gmail access in the Connectors panel.',
+          setupInstructions: 'Gmail credentials invalid or expired. Please update your credentials in the Connector Configuration panel.',
         });
       }
       throw new Error(`Gmail API error: ${response.statusText}`);
@@ -157,7 +497,7 @@ app.post('/api/connectors/calendar/events', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Google Calendar integration not configured. Please set up Calendar access in the Connectors panel.'
+        setupInstructions: 'Add GOOGLE_ACCESS_TOKEN to Replit Secrets panel.'
       });
     }
 
@@ -178,7 +518,7 @@ app.post('/api/connectors/calendar/events', async (req, res) => {
         return res.status(401).json({
           success: false,
           requiresSetup: true,
-          setupInstructions: 'Google Calendar integration not configured. Please set up Calendar access in the Connectors panel.',
+          setupInstructions: 'Google Calendar credentials invalid or expired. Please update your credentials in the Connector Configuration panel.',
         });
       }
       throw new Error(`Calendar API error: ${response.statusText}`);
@@ -221,7 +561,7 @@ app.post('/api/connectors/notion/search', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Notion integration not configured. Please set up Notion access in the Connectors panel.'
+        setupInstructions: 'Add NOTION_TOKEN to Replit Secrets panel.'
       });
     }
 
@@ -287,7 +627,7 @@ app.post('/api/connectors/linear/issues', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Linear integration not configured. Please set up Linear access in the Connectors panel.'
+        setupInstructions: 'Add LINEAR_API_KEY to Replit Secrets panel.'
       });
     }
 
@@ -369,7 +709,7 @@ app.post('/api/connectors/slack/send', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Slack Bot Token not configured. Please add SLACK_BOT_TOKEN to your secrets.'
+        setupInstructions: 'Add SLACK_BOT_TOKEN to Replit Secrets panel.'
       });
     }
 
@@ -426,7 +766,7 @@ app.post('/api/connectors/github/repo', async (req, res) => {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'GitHub integration not configured. Please set up GitHub access in the Connectors panel.'
+        setupInstructions: 'Add GITHUB_TOKEN to Replit Secrets panel.'
       });
     }
 
@@ -489,20 +829,458 @@ app.post('/api/connectors/github/repo', async (req, res) => {
   }
 });
 
+app.post('/api/connectors/googledocs/read', async (req, res) => {
+  try {
+    const { documentId } = req.body;
+    
+    if (!documentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'documentId is required',
+      });
+    }
+    
+    const token = process.env.GOOGLE_ACCESS_TOKEN;
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Add GOOGLE_ACCESS_TOKEN to Replit Secrets panel.'
+      });
+    }
+
+    const docId = documentId.includes('docs.google.com') 
+      ? documentId.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1] || documentId
+      : documentId;
+
+    const response = await fetch(
+      `https://docs.googleapis.com/v1/documents/${docId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Google Docs integration not configured. Please set up Google Docs access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Google Docs API error: ${response.statusText}`);
+    }
+
+    const doc = await response.json();
+    
+    let textContent = '';
+    if (doc.body && doc.body.content) {
+      for (const element of doc.body.content) {
+        if (element.paragraph) {
+          for (const textElement of element.paragraph.elements || []) {
+            if (textElement.textRun) {
+              textContent += textElement.textRun.content;
+            }
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        documentId: doc.documentId,
+        title: doc.title,
+        textContent: textContent.trim(),
+        revisionId: doc.revisionId,
+      },
+    });
+  } catch (error) {
+    console.error('[Google Docs API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Google Docs integration required. Please configure Google Docs access to read documents.',
+    });
+  }
+});
+
+app.post('/api/connectors/googlesheets/read', async (req, res) => {
+  try {
+    const { spreadsheetId, range } = req.body;
+    
+    if (!spreadsheetId) {
+      return res.status(400).json({
+        success: false,
+        error: 'spreadsheetId is required',
+      });
+    }
+    
+    const credentials = getConnectorCredentials('google_sheets');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Google Sheets not configured. Please configure in Connector Settings.'
+      });
+    }
+    
+    const token = credentials.googleAccessToken;
+
+    const sheetId = spreadsheetId.includes('docs.google.com') 
+      ? spreadsheetId.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1] || spreadsheetId
+      : spreadsheetId;
+
+    const requestRange = range || 'A1:Z1000';
+    const response = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(requestRange)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Google Sheets integration not configured. Please set up Google Sheets access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Google Sheets API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    res.json({
+      success: true,
+      data: {
+        spreadsheetId: sheetId,
+        range: data.range,
+        values: data.values || [],
+        rowCount: data.values?.length || 0,
+      },
+    });
+  } catch (error) {
+    console.error('[Google Sheets API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Google Sheets integration required. Please configure Google Sheets access to read spreadsheets.',
+    });
+  }
+});
+
+app.post('/api/connectors/outlook/search', async (req, res) => {
+  try {
+    const { query, maxResults = 10 } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'query is required',
+      });
+    }
+    
+    const credentials = getConnectorCredentials('outlook');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Outlook not configured. Please configure in Connector Settings.'
+      });
+    }
+    
+    const token = credentials.outlookToken;
+
+    const response = await fetch(
+      `https://graph.microsoft.com/v1.0/me/messages?$search="${encodeURIComponent(query)}"&$top=${maxResults}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Outlook integration not configured. Please set up Outlook access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Outlook API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const emails = (data.value || []).map((msg) => ({
+      id: msg.id,
+      subject: msg.subject || '(No Subject)',
+      from: msg.from?.emailAddress?.address || 'Unknown',
+      receivedDateTime: msg.receivedDateTime,
+      bodyPreview: msg.bodyPreview,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        query,
+        resultCount: emails.length,
+        emails,
+      },
+    });
+  } catch (error) {
+    console.error('[Outlook API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Outlook integration required. Please configure Outlook access to search emails.',
+    });
+  }
+});
+
+app.post('/api/connectors/jira/search', async (req, res) => {
+  try {
+    const { jql, maxResults = 50 } = req.body;
+    
+    if (!jql) {
+      return res.status(400).json({
+        success: false,
+        error: 'jql query is required',
+      });
+    }
+    
+    const credentials = getConnectorCredentials('jira');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Jira not configured. Please configure in Connector Settings.'
+      });
+    }
+    
+    const token = credentials.jiraToken;
+    const domain = credentials.jiraDomain;
+
+    const response = await fetch(
+      `https://${domain}.atlassian.net/rest/api/3/search`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jql,
+          maxResults,
+          fields: ['summary', 'status', 'assignee', 'priority', 'created'],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Jira integration not configured. Please set up Jira access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Jira API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const issues = (data.issues || []).map((issue) => ({
+      key: issue.key,
+      summary: issue.fields?.summary || '(No summary)',
+      status: issue.fields?.status?.name || 'Unknown',
+      assignee: issue.fields?.assignee?.displayName || 'Unassigned',
+      priority: issue.fields?.priority?.name || 'None',
+      created: issue.fields?.created,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        jql,
+        issueCount: issues.length,
+        total: data.total,
+        issues,
+      },
+    });
+  } catch (error) {
+    console.error('[Jira API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Jira integration required. Please configure Jira access and set JIRA_DOMAIN to search issues.',
+    });
+  }
+});
+
+app.post('/api/connectors/asana/tasks', async (req, res) => {
+  try {
+    const { projectId, assignee } = req.body;
+    
+    const credentials = getConnectorCredentials('asana');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Asana not configured. Please configure in Connector Settings.'
+      });
+    }
+    
+    const token = credentials.asanaToken;
+
+    let url = 'https://app.asana.com/api/1.0/tasks';
+    const params = new URLSearchParams();
+    
+    if (projectId) {
+      params.append('project', projectId);
+    }
+    if (assignee) {
+      params.append('assignee', assignee === 'me' ? 'me' : assignee);
+    }
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Asana integration not configured. Please set up Asana access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Asana API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const tasks = (data.data || []).map((task) => ({
+      gid: task.gid,
+      name: task.name,
+      completed: task.completed,
+      assignee: task.assignee?.name || 'Unassigned',
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        projectId: projectId || 'all',
+        taskCount: tasks.length,
+        tasks,
+      },
+    });
+  } catch (error) {
+    console.error('[Asana API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Asana integration required. Please configure Asana access to view tasks.',
+    });
+  }
+});
+
+app.post('/api/connectors/confluence/search', async (req, res) => {
+  try {
+    const { query, limit = 25 } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'query is required',
+      });
+    }
+    
+    const credentials = getConnectorCredentials('confluence');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Confluence not configured. Please configure in Connector Settings.'
+      });
+    }
+    
+    const token = credentials.confluenceToken;
+    const domain = credentials.confluenceDomain;
+
+    const response = await fetch(
+      `https://${domain}.atlassian.net/wiki/rest/api/content/search?cql=${encodeURIComponent(`text ~ "${query}"`)}&limit=${limit}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Confluence integration not configured. Please set up Confluence access in the Connectors panel.',
+        });
+      }
+      throw new Error(`Confluence API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const pages = (data.results || []).map((page) => ({
+      id: page.id,
+      title: page.title,
+      type: page.type,
+      url: page._links?.webui ? `https://${domain}.atlassian.net/wiki${page._links.webui}` : '',
+      lastModified: page.history?.lastUpdated?.when,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        query,
+        pageCount: pages.length,
+        pages,
+      },
+    });
+  } catch (error) {
+    console.error('[Confluence API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Confluence integration required. Please configure Confluence access and set CONFLUENCE_DOMAIN to search pages.',
+    });
+  }
+});
+
 app.post('/api/connectors/homeassistant/devices', async (req, res) => {
   try {
     const { domain } = req.body;
     
-    const haUrl = process.env.HOME_ASSISTANT_URL;
-    const token = process.env.HOME_ASSISTANT_TOKEN;
-    
-    if (!haUrl || !token) {
+    const credentials = getConnectorCredentials('homeassistant');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+        setupInstructions: 'Home Assistant not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const haUrl = credentials.haUrl;
+    const token = credentials.haToken;
 
     const url = `${haUrl.replace(/\/$/, '')}/api/states`;
     const response = await fetch(url, {
@@ -568,16 +1346,17 @@ app.post('/api/connectors/homeassistant/state', async (req, res) => {
       });
     }
 
-    const haUrl = process.env.HOME_ASSISTANT_URL;
-    const token = process.env.HOME_ASSISTANT_TOKEN;
-    
-    if (!haUrl || !token) {
+    const credentials = getConnectorCredentials('homeassistant');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+        setupInstructions: 'Home Assistant not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const haUrl = credentials.haUrl;
+    const token = credentials.haToken;
 
     const url = `${haUrl.replace(/\/$/, '')}/api/states/${entityId}`;
     const response = await fetch(url, {
@@ -639,16 +1418,17 @@ app.post('/api/connectors/homeassistant/control', async (req, res) => {
       });
     }
 
-    const haUrl = process.env.HOME_ASSISTANT_URL;
-    const token = process.env.HOME_ASSISTANT_TOKEN;
-    
-    if (!haUrl || !token) {
+    const credentials = getConnectorCredentials('homeassistant');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Home Assistant not configured. Please set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN environment variables.',
+        setupInstructions: 'Home Assistant not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const haUrl = credentials.haUrl;
+    const token = credentials.haToken;
 
     const url = `${haUrl.replace(/\/$/, '')}/api/services/${domain}/${service}`;
     
@@ -721,15 +1501,17 @@ app.post('/api/connectors/frigate/events', async (req, res) => {
       });
     }
 
-    const frigateUrl = process.env.FRIGATE_URL;
-    
-    if (!frigateUrl) {
+    const credentials = getConnectorCredentials('frigate_events');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable (e.g., "http://frigate.local:5000").',
+        setupInstructions: 'Frigate not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const frigateUrl = credentials.frigateUrl;
+    const frigateApiKey = credentials.frigateApiKey;
 
     let url = `${frigateUrl.replace(/\/$/, '')}/api/events?camera=${encodeURIComponent(camera)}&limit=${limit}`;
     if (objectType) {
@@ -737,8 +1519,8 @@ app.post('/api/connectors/frigate/events', async (req, res) => {
     }
 
     const response = await fetch(url, {
-      headers: process.env.FRIGATE_API_KEY ? {
-        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      headers: frigateApiKey ? {
+        'X-Frigate-API-Key': frigateApiKey,
       } : {},
     });
 
@@ -795,15 +1577,17 @@ app.post('/api/connectors/frigate/snapshot', async (req, res) => {
       });
     }
 
-    const frigateUrl = process.env.FRIGATE_URL;
-    
-    if (!frigateUrl) {
+    const credentials = getConnectorCredentials('frigate_snapshot');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable.',
+        setupInstructions: 'Frigate not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const frigateUrl = credentials.frigateUrl;
+    const frigateApiKey = credentials.frigateApiKey;
 
     let url;
     if (eventId) {
@@ -813,8 +1597,8 @@ app.post('/api/connectors/frigate/snapshot', async (req, res) => {
     }
 
     const response = await fetch(url, {
-      headers: process.env.FRIGATE_API_KEY ? {
-        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      headers: frigateApiKey ? {
+        'X-Frigate-API-Key': frigateApiKey,
       } : {},
     });
 
@@ -855,19 +1639,21 @@ app.post('/api/connectors/frigate/camera-state', async (req, res) => {
       });
     }
 
-    const frigateUrl = process.env.FRIGATE_URL;
-    
-    if (!frigateUrl) {
+    const credentials = getConnectorCredentials('frigate_camera_state');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'Frigate not configured. Please set FRIGATE_URL environment variable.',
+        setupInstructions: 'Frigate not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const frigateUrl = credentials.frigateUrl;
+    const frigateApiKey = credentials.frigateApiKey;
 
     const configResponse = await fetch(`${frigateUrl.replace(/\/$/, '')}/api/config`, {
-      headers: process.env.FRIGATE_API_KEY ? {
-        'X-Frigate-API-Key': process.env.FRIGATE_API_KEY,
+      headers: frigateApiKey ? {
+        'X-Frigate-API-Key': frigateApiKey,
       } : {},
     });
 
@@ -918,15 +1704,16 @@ app.post('/api/connectors/codeprojectai/detect', async (req, res) => {
       });
     }
 
-    const codeProjectAIUrl = process.env.CODEPROJECT_AI_URL;
-    
-    if (!codeProjectAIUrl) {
+    const credentials = getConnectorCredentials('codeprojectai_detect');
+    if (!credentials) {
       return res.status(401).json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'CodeProject.AI not configured. Please set CODEPROJECT_AI_URL environment variable (e.g., "http://localhost:32168").',
+        setupInstructions: 'CodeProject.AI not configured. Please configure in Connector Settings.',
       });
     }
+    
+    const codeProjectAIUrl = credentials.codeprojectaiUrl;
 
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
@@ -989,16 +1776,17 @@ app.post('/api/connectors/yolo/detect', async (req, res) => {
       });
     }
 
-    const yoloApiUrl = process.env.YOLO_API_URL;
-    
-    if (!yoloApiUrl) {
+    const credentials = getConnectorCredentials('yolo_detect');
+    if (!credentials) {
       return res.json({
         success: false,
         requiresSetup: true,
-        setupInstructions: 'YOLO API not configured. You can either set YOLO_API_URL for server-side detection, or use browser-based YOLO with TensorFlow.js (recommended).',
+        setupInstructions: 'YOLO not configured. Please configure in Connector Settings.',
         useBrowserYOLO: true,
       });
     }
+    
+    const yoloApiUrl = credentials.yoloApiUrl;
 
     const response = await fetch(`${yoloApiUrl.replace(/\/$/, '')}/detect`, {
       method: 'POST',

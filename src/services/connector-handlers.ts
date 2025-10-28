@@ -56,6 +56,21 @@ export class ConnectorHandlers {
     return this.callBackend('/api/connectors/calendar/events', params);
   }
 
+  async handleGoogleDocs(params: {
+    documentId: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Google Docs', 'readGoogleDoc', params);
+    return this.callBackend('/api/connectors/googledocs/read', params);
+  }
+
+  async handleGoogleSheets(params: {
+    spreadsheetId: string;
+    range?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Google Sheets', 'readGoogleSheet', params);
+    return this.callBackend('/api/connectors/googlesheets/read', params);
+  }
+
   async handleNotion(params: { query: string }): Promise<ConnectorResult> {
     this.logOperation('Notion', 'searchNotionPages', params);
     return this.callBackend('/api/connectors/notion/search', params);
@@ -83,51 +98,12 @@ export class ConnectorHandlers {
     return this.callBackend('/api/connectors/github/repo', params);
   }
 
-  async handleGoogleDrive(params: {
-    fileName: string;
+  async handleOutlook(params: {
+    query: string;
+    maxResults?: number;
   }): Promise<ConnectorResult> {
-    this.logOperation('Google Drive', 'readFileFromGoogleDrive', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Google Drive handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleGoogleDocs(params: {
-    documentId: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Google Docs', 'readGoogleDoc', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Google Docs handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleGoogleSheets(params: {
-    spreadsheetId: string;
-    range?: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Google Sheets', 'readGoogleSheet', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Google Sheets handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleYouTube(params: { url: string }): Promise<ConnectorResult> {
-    this.logOperation('YouTube', 'getYoutubeVideoDetails', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'YouTube handler not yet fully implemented. Integration coming soon.',
-    };
+    this.logOperation('Outlook', 'searchOutlookEmails', params);
+    return this.callBackend('/api/connectors/outlook/search', params);
   }
 
   async handleJira(params: {
@@ -135,12 +111,7 @@ export class ConnectorHandlers {
     maxResults?: number;
   }): Promise<ConnectorResult> {
     this.logOperation('Jira', 'searchJiraIssues', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Jira handler not yet fully implemented. Integration coming soon.',
-    };
+    return this.callBackend('/api/connectors/jira/search', params);
   }
 
   async handleAsana(params: {
@@ -148,12 +119,7 @@ export class ConnectorHandlers {
     assignee?: string;
   }): Promise<ConnectorResult> {
     this.logOperation('Asana', 'getAsanaTasks', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Asana handler not yet fully implemented. Integration coming soon.',
-    };
+    return this.callBackend('/api/connectors/asana/tasks', params);
   }
 
   async handleConfluence(params: {
@@ -161,147 +127,7 @@ export class ConnectorHandlers {
     limit?: number;
   }): Promise<ConnectorResult> {
     this.logOperation('Confluence', 'searchConfluencePages', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Confluence handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleHubSpot(params: {
-    searchQuery?: string;
-    limit?: number;
-  }): Promise<ConnectorResult> {
-    this.logOperation('HubSpot', 'getHubSpotContacts', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'HubSpot handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleDropbox(params: { filePath: string }): Promise<ConnectorResult> {
-    this.logOperation('Dropbox', 'readDropboxFile', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Dropbox handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleBox(params: { fileId: string }): Promise<ConnectorResult> {
-    this.logOperation('Box', 'readBoxFile', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Box handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleOneDrive(params: {
-    filePath: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('OneDrive', 'readOneDriveFile', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'OneDrive handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleSharePoint(params: {
-    siteUrl: string;
-    filePath: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('SharePoint', 'readSharePointFile', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'SharePoint handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleDiscord(params: {
-    channelId: string;
-    message: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Discord', 'sendDiscordMessage', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Discord handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleSpotify(params: {}): Promise<ConnectorResult> {
-    this.logOperation('Spotify', 'getCurrentSpotifyTrack', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Spotify handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleOutlook(params: {
-    query: string;
-    maxResults?: number;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Outlook', 'searchOutlookEmails', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Outlook handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleTwilio(params: {
-    to: string;
-    message: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Twilio', 'sendTwilioSMS', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Twilio handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleSendGrid(params: {
-    to: string;
-    subject: string;
-    body: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('SendGrid', 'sendEmailViaSendGrid', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'SendGrid handler not yet fully implemented. Integration coming soon.',
-    };
-  }
-
-  async handleResend(params: {
-    to: string;
-    subject: string;
-    body: string;
-  }): Promise<ConnectorResult> {
-    this.logOperation('Resend', 'sendEmailViaResend', params);
-    return {
-      success: false,
-      requiresSetup: true,
-      setupInstructions:
-        'Resend handler not yet fully implemented. Integration coming soon.',
-    };
+    return this.callBackend('/api/connectors/confluence/search', params);
   }
 
   async handleHomeassistant(params: {
