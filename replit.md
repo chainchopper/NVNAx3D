@@ -3,6 +3,49 @@
 ## Overview
 Nirvana is an advanced AI companion system featuring multiple AI personas (PersonI - Personified Intelligence) with unique personalities, voices, and capabilities. The system integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. Its core purpose is to provide highly customizable and engaging AI companions, offering a modular and extensible platform for personalized AI experiences. The project aims to be local-first, multi-provider, and capable of integrating with various external services, positioning itself as a versatile personal AI ecosystem.
 
+## Recent Changes (October 30, 2025)
+
+### Environmental Memory System ✅
+- **Memory Types Expanded**: 8 → 16 memory types for comprehensive environmental data capture
+- **New Types**: audio_recording, camera_observation, email_summary, call_log, text_message, agent_task, system_status, voice_clone
+- **Audio Recording Manager**: Created service for storing/retrieving voice recordings with metadata
+  - Automatic duration calculation
+  - Type categorization (user_voice, ai_voice, environment, phone_call)
+  - Full RAG memory integration for context-aware recall
+  - Semantic search across all audio data
+
+### Chatterbox-TTS Integration ✅
+- **Custom TTS API Support**: Configurable endpoint and optional API key
+- **Voice Synthesis**: Text-to-speech with 100-entry cache for performance
+- **Voice Cloning**: Upload audio samples to create custom voices
+  - FormData upload for voice samples
+  - Automatic storage in RAG memory with high importance (5/10)
+  - Voice management UI with real-time updates
+- **Configuration UI**: Full settings panel (chatterbox-settings component)
+  - Endpoint configuration
+  - Voice selection dropdown
+  - Voice cloning interface with file upload
+  - Save/load from localStorage
+- **Memory Integration**: All synthesized audio and voice clones stored automatically in RAG memory
+- **Services Created**:
+  - `src/services/chatterbox-tts.ts`: Main TTS service
+  - `src/services/audio-recording-manager.ts`: Audio storage manager
+  - `src/components/chatterbox-settings.ts`: Configuration UI
+
+### 3D Avatar Animations Enhanced ✅
+- **Hourly Time Indication**: Jiggle animation triggers on hour changes
+- **Shader Uniforms**: Updated across all animation modes (idle, listening, speaking, music)
+- **Multi-axis Wobble**: Idle animations with smooth geometry deformation
+- **Fixed Missing Uniforms**: inputData uniform properly initialized
+
+### Security & Configuration ✅
+- **CORS/CSP Configurable**: Environment-based configuration
+  - `.env` variables: CORS_ALLOWED_ORIGINS, CSP_DIRECTIVES
+  - Development defaults: * (permissive for testing)
+  - Production defaults: Specific origins for security
+  - Server-side header injection with smart fallbacks
+- **HTML Comments**: CSP directives documented in index.html
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
