@@ -1035,6 +1035,14 @@ export class GdmLiveAudio extends LitElement {
     } else {
       console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
     }
+    
+    // Initialize reminder notification checks
+    reminderManager.startNotificationChecks((message) => {
+      this.speakText(message);
+    });
+    
+    // Request notification permission for reminders
+    reminderManager.requestNotificationPermission();
   }
 
   protected updated(
@@ -1714,6 +1722,42 @@ export class GdmLiveAudio extends LitElement {
   private handleCloseSongBubble() {
     this.showSongBubble = false;
     songIdentificationService.clearCurrent();
+  }
+
+  private handleCameraPermissions(e: CustomEvent) {
+    this.cameraEnabled = true;
+    console.log('[Camera] Permissions granted, camera enabled');
+    
+    if (this.cameraEnabled && this.activePersoni) {
+      const provider = this.getProviderForPersoni(this.activePersoni);
+      if (provider) {
+        environmentalObserver.start(
+          () => this.cameraManager?.captureFrame() || null,
+          provider,
+          this.activePersoni.name,
+          (text) => this.speakText(text)
+        );
+      }
+    }
+  }
+
+  private handleFrameCaptured(e: CustomEvent) {
+    console.log('[Camera] Frame captured:', e.detail);
+  }
+
+  private handleModeChange(e: CustomEvent) {
+    this.inputMode = e.detail.mode;
+    console.log('[InputMode] Mode changed to:', this.inputMode);
+  }
+
+  private async handleTextSubmit(e: CustomEvent) {
+    const text = e.detail.text;
+    console.log('[TextInput] Text submitted:', text);
+    
+    if (text && text.trim()) {
+      this.textInput = '';
+      await this.processTranscript(text);
+    }
   }
 
   private updateNirvanaGradient() {
