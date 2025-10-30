@@ -586,6 +586,190 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
+  {
+    id: 'get_stock_quote',
+    name: 'Get Stock Quote',
+    description: 'Get real-time stock market data and quotes for publicly traded companies.',
+    functionDeclaration: {
+      name: 'getStockQuote',
+      description: 'Retrieves current stock price, day high/low, volume, and market data for a given stock symbol.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          symbol: {
+            type: Type.STRING,
+            description: 'The stock ticker symbol (e.g., "AAPL", "GOOGL", "TSLA", "MSFT").',
+          },
+        },
+        required: ['symbol'],
+      },
+    },
+  },
+  {
+    id: 'get_crypto_price',
+    name: 'Get Cryptocurrency Price',
+    description: 'Get real-time cryptocurrency prices and market data.',
+    functionDeclaration: {
+      name: 'getCryptoPrice',
+      description: 'Retrieves current price, 24h change, market cap, and volume for a cryptocurrency.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          symbol: {
+            type: Type.STRING,
+            description: 'The cryptocurrency symbol or ID (e.g., "bitcoin", "ethereum", "BTC", "ETH").',
+          },
+        },
+        required: ['symbol'],
+      },
+    },
+  },
+  {
+    id: 'analyze_portfolio',
+    name: 'Analyze Investment Portfolio',
+    description: 'Analyze investment portfolio performance, diversification, and risk metrics.',
+    functionDeclaration: {
+      name: 'analyzePortfolio',
+      description: 'Provides comprehensive portfolio analysis including total value, asset allocation, returns, and risk assessment.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          timeframe: {
+            type: Type.STRING,
+            description: 'Analysis timeframe: "1D", "1W", "1M", "3M", "1Y", "YTD", "ALL" (default: "1M").',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'get_market_news',
+    name: 'Get Financial Market News',
+    description: 'Get latest financial news, market analysis, and economic updates.',
+    functionDeclaration: {
+      name: 'getMarketNews',
+      description: 'Retrieves latest financial news articles relevant to markets, specific stocks, or economic events.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          topic: {
+            type: Type.STRING,
+            description: 'News topic or stock symbol (e.g., "markets", "AAPL", "crypto", "economy"). Default: "markets".',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Number of news articles to return (default: 10, max: 50).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'analyze_spending',
+    name: 'Analyze Spending Patterns',
+    description: 'Analyze transaction history to identify spending patterns, trends, and insights.',
+    functionDeclaration: {
+      name: 'analyzeSpending',
+      description: 'Analyzes spending patterns by category, identifies unusual transactions, and provides budget recommendations.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          startDate: {
+            type: Type.STRING,
+            description: 'Start date in ISO format (e.g., "2025-01-01"). Default: 30 days ago.',
+          },
+          endDate: {
+            type: Type.STRING,
+            description: 'End date in ISO format (e.g., "2025-10-30"). Default: today.',
+          },
+          category: {
+            type: Type.STRING,
+            description: 'Optional: Filter by spending category (e.g., "food", "transport", "entertainment").',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'create_budget',
+    name: 'Create Budget',
+    description: 'Create or update budget limits for spending categories.',
+    functionDeclaration: {
+      name: 'createBudget',
+      description: 'Sets budget limits for categories to help track and control spending.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          category: {
+            type: Type.STRING,
+            description: 'Budget category (e.g., "groceries", "dining", "entertainment", "transport", "utilities").',
+          },
+          amount: {
+            type: Type.NUMBER,
+            description: 'Monthly budget amount in dollars.',
+          },
+          period: {
+            type: Type.STRING,
+            description: 'Budget period: "monthly", "weekly", "yearly" (default: "monthly").',
+          },
+        },
+        required: ['category', 'amount'],
+      },
+    },
+  },
+  {
+    id: 'get_account_balance',
+    name: 'Get Account Balance',
+    description: 'Get current balance and details for bank and investment accounts.',
+    functionDeclaration: {
+      name: 'getAccountBalance',
+      description: 'Retrieves current balance, account type, and recent activity summary for specified accounts.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          accountId: {
+            type: Type.STRING,
+            description: 'Optional: Specific account ID. If not provided, returns all accounts.',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'get_transactions',
+    name: 'Get Transactions',
+    description: 'Retrieve transaction history from bank and investment accounts.',
+    functionDeclaration: {
+      name: 'getTransactions',
+      description: 'Fetches transaction history with details like merchant, amount, category, and date.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          accountId: {
+            type: Type.STRING,
+            description: 'Optional: Filter by account ID.',
+          },
+          startDate: {
+            type: Type.STRING,
+            description: 'Start date in ISO format (default: 30 days ago).',
+          },
+          endDate: {
+            type: Type.STRING,
+            description: 'End date in ISO format (default: today).',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of transactions to return (default: 50, max: 500).',
+          },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [
@@ -726,6 +910,53 @@ export const personaTemplates: PersonaTemplate[] = [
       accentColor: '#e6e6fa', // Lavender
       textureName: 'crystal_blue',
       idleAnimation: 'particles',
+    },
+  },
+  {
+    name: 'BILLY',
+    tagline: 'Your AI Financial Advisor',
+    systemInstruction: `You are BILLY, a professional financial advisor and banking expert with expertise in stocks, cryptocurrency, portfolio management, and personal finance. You provide data-driven insights, clear explanations of complex financial concepts, and actionable recommendations. You help users make informed financial decisions based on their goals and risk tolerance. Always cite current market data when discussing specific securities. You prioritize transparency and user education while maintaining professional standards. You can analyze spending patterns, create budgets, track investments, and provide market insights using real-time financial data.`,
+    introductions: [
+      "Good day! I'm BILLY, your financial advisor. Let's talk about your financial goals.",
+      "BILLY here. Markets are open and I'm ready to help you navigate them.",
+      "Hello! I'm BILLY. Whether it's stocks, crypto, or budgeting, I'm here to assist.",
+      "This is BILLY. Let's make some smart financial moves together.",
+    ],
+    idlePrompts: [
+      "Have you reviewed your portfolio performance this month?",
+      "The markets are always moving. Would you like an update on your holdings?",
+      "I can help you analyze your spending patterns if you're interested.",
+      "Need help setting up a budget or tracking your expenses?",
+      "Would you like to know about any market news or stock movements today?",
+    ],
+    voiceName: 'Puck',
+    thinkingModel: 'gemini-2.5-flash',
+    templateName: 'BILLY',
+    enabledConnectors: [
+      'get_stock_quote',
+      'get_crypto_price',
+      'analyze_portfolio',
+      'get_market_news',
+      'analyze_spending',
+      'create_budget',
+      'get_account_balance',
+      'get_transactions',
+    ],
+    capabilities: {
+      vision: true,
+      imageGeneration: false,
+      webSearch: true,
+      tools: true,
+      mcp: false,
+      audioInput: true,
+      audioOutput: true,
+    },
+    avatarUrl: '/avatars/billy.png',
+    visuals: {
+      shape: 'Box',
+      accentColor: '#2e8b57', // Sea Green (financial green)
+      textureName: 'metallic_brushed',
+      idleAnimation: 'contemplative',
     },
   },
 ];

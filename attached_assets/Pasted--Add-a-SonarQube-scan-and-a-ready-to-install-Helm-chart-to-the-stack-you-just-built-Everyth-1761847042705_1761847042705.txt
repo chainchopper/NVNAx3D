@@ -1,0 +1,333 @@
+**Add a *SonarQube* scan and a ready‑to‑install Helm chart to the stack you just built**
+
+> *Everything below is copy‑paste ready – drop it into your repo, commit it and you’ll have a single CI job that runs SonarCloud scans, plus a full Helm chart that can be installed on any Kubernetes cluster.*  
+
+---  
+
+## 1️⃣ GitHub‑Actions workflow that also runs **SonarQube**
+
+> *The workflow below extends the one we already created (`.github/workflows/ci.yml`).  
+> *It adds a SonarCloud job after the tests finish – it uploads coverage, code‑coverage, and test results to SonarQube.*  
+
+```yaml
+# .github/workflows/ci-scan.yml
+name: "CI + SonarQube scan"
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - README.md
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # ---- 1️⃣ Checkout & Docker Build ------------------------------------
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          context: default
+          builder: mybuilder
+          file: docker-compose.yml
+          push: true
+          tags: "adamstockbot/full-stack:${{ github.sha }}"
+      # ---- 2️⃣ Spin the stack ------------------------------------
+      - name: Run compose up
+        run: |
+          docker compose --file docker-compose.yml up -d
+      # ---- 3️⃣ Run tests --------------------------------------------------
+      - name: Run backend unit tests
+        run: |
+          docker compose exec api go test ./internal/... -coverprofile=coverage.out
+      - name: Run orchestrator & agent tests
+        run: |
+          docker compose exec orchestrator go test ./internal/orchestrator/... -covermode=count
+          docker compose exec agent go test ./internal/agent/... -covermode=count
+      # ---- 4️⃣ SonarQube scan ------------------------------------------
+      - uses: sonarsource/sonarqube-action@v1.0.1
+        with:
+          organizationKey: ${{ secrets.SONAR_ORGANIZATION_KEY }}
+          projectKey: tradebot-stack
+          sourceBranch: main
+          coverageReportPaths: ./coverage.out
+          sonarCloudToken: ${{ secrets.SONARCLOUD_TOKEN }}
+      # ---- 5️⃣ Shut down the stack ----------------------------------
+      - name: Stop containers
+        run: docker compose down
+```
+
+> *The only thing you need to add to your repo is a **SonarQube** organization key and a project key (`tradebot-stack`).  
+> *Store `SONARCLOUD_TOKEN` and `SONAR_ORGANIZATION_KEY` as GitHub secrets.*  
+
+---  
+
+## 2️⃣ Helm chart – deploy the whole stack on Kubernetes
+
+### 2.1 Folder layout
+
+```
+charts/
+└── tradebot/
+    ├─ Chart.yaml
+    ├─ values.yaml
+    └─ templates/
+        ├─ deployment.yaml
+        ├─ service.yaml
+        ├─ ingress.yaml
+        └─ hpa.yaml
+```
+
+### 2.2 `charts/tradebot/Chart.yaml`
+
+```yaml
+apiVersion: v2.1.0
+name: tradebot
+description: "Full stack – API, orchestrator, agent, postgres, redis, nginx & front‑end"
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: ^1.25.0-0
+```
+
+### 2.3 `charts/tradebot/values.yaml`
+
+```yaml
+replicaCount: 1
+
+postgres:
+  image: postgres:15-alpine
+  port: 5432
+  env:
+    POSTGRES_DB: tradebot
+    POSTGRES_USER: trader
+    POSTGRES_PASSWORD: secret
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: standard
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+
+api:
+  image: adamstockbot/backend:latest
+  port: 8080
+
+orchestrator:
+  image: adamstockbot/orchestrator:latest
+  port: 8081
+
+agent:
+  image: adamstockbot/agent:latest
+  port: 8082
+
+frontend:
+  image: adamstockbot/frontend:latest
+  port: 3000
+
+nginx:
+  image: nginx:1.27-alpine
+  port: 80
+
+ingress:
+  className: traeflow
+
+```
+
+### 2.4 `charts/tradebot/templates/deployment.yaml`
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tradebot.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "tradebot.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "tradebot.fullname" . }}
+    spec:
+      containers:
+        - name: postgres
+          image: "{{ .Values.postgres.image }}"
+          envFrom:
+            - configMapRef:
+                name: tradebot-config
+          ports:
+            - containerPort: {{ .Values.postgres.port }}
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: db-data
+        - name: redis
+          image: "{{ .Values.redis.image }}"
+          envFrom:
+            - configMapRef:
+                name: tradebot-config
+          ports:
+            - containerPort: {{ .Values.redis.port }}
+        - name: api
+          image: "{{ .Values.api.image }}"
+          envFrom:
+            - secretRef:
+                name: tradebot-secret
+          ports:
+            - containerPort: {{ .Values.api.port }}
+        - name: orchestrator
+          image: "{{ .Values.orchestrator.image }}"
+          envFrom:
+            - secretRef:
+                name: tradebot-secret
+          ports:
+            - containerPort: {{ .Values.orchestrator.port }}
+        - name: agent
+          image: "{{ .Values.agent.image }}"
+          envFrom:
+            - secretRef:
+                name: tradebot-secret
+          ports:
+            - containerPort: {{ .Values.agent.port }}
+        - name: frontend
+          image: "{{ .Values.frontend.image }}"
+          envFrom:
+            - configMapRef:
+                name: tradebot-config
+          ports:
+            - containerPort: {{ .Values.frontend.port }}
+        - name: nginx
+          image: "{{ .Values.nginx.image }}"
+          envFrom:
+            - configMapRef:
+                name: tradebot-config
+          ports:
+            - containerPort: {{ .Values.nginx.port }}
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: tradebot-pvc
+```
+
+### 2.5 `charts/tradebot/templates/service.yaml`
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tradebot.fullname" . }}
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: {{ include "tradebot.fullname" . }}
+  ports:
+    - name: postgres
+      port: {{ .Values.postgres.port }}
+      targetPort: {{ .Values.postgres.port }}
+    - name: redis
+      port: {{ .Values.redis.port }}
+      targetPort: {{ .Values.redis.port }}
+    - name: api
+      port: {{ .Values.api.port }}
+      targetPort: {{ .Values.api.port }}
+    - name: orchestrator
+      port: {{ .Values.orchestrator.port }}
+      targetPort: {{ .Values.orchestrator.port }}
+    - name: agent
+      port: {{ .Values.agent.port }}
+      targetPort: {{ .Values.agent.port }}
+    - name: frontend
+      port: {{ .Values.frontend.port }}
+      targetPort: {{ .Values.frontend.port }}
+    - name: nginx
+      port: {{ .Values.nginx.port }}
+      targetPort: {{ .Values.nginx.port }}
+```
+
+### 2.6 `charts/tradebot/templates/ingress.yaml`
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tradebot-ingress
+spec:
+  ingressClassName: traeflow
+  rules:
+    - host: "tradebot.local"
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: {{ include "tradebot.fullname" . }}
+                port:
+                  number: {{ .Values.nginx.port }}
+```
+
+### 2.7 `charts/tradebot/templates/hpa.yaml`
+
+```yaml
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: tradebot-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "tradebot.fullname" . }}
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        targetAverageUtilization: 50
+```
+
+---  
+
+## 3️⃣ How to install the chart
+
+```bash
+# 1) Install Helm (if you haven’t already)
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm.sh | bash
+# 2) Add the repo
+helm repo add tradebot-repo https://github.com/adamstockbot/tradebot-charts
+helm repo update
+# 3) Install the chart
+helm install tb-demo tradebot-repo/tradebot \
+   --set postgres.image=postgres:15-alpine \
+   --set redis.image=redis:7-alpine \
+   --set api.image=adamstockbot/backend:latest \
+   --set orchestrator.image=adamstockbot/orchestrator:latest \
+   --set agent.image=adamstockbot/agent:latest \
+   --set frontend.image=adamstockbot/frontend:latest \
+   --set nginx.image=nginx:1.27-alpine
+```
+
+---  
+
+### Quick sanity‑check
+
+```bash
+# 1) Run the full stack locally (you can also use Minikube)
+helm install tb-demo tradebot-repo/tradebot
+# 2) Verify services are reachable
+curl http://localhost/api/auth/login   # → should return a JSON payload
+```
+
+---  
+
+**That’s it – you now have:**
+
+1. A **SonarQube** job that runs after every push, uploads test coverage and code‑coverage back to SonarCloud.  
+2. A **Helm chart** that can be deployed on any cluster in a single `helm install …` command.  
+
+Let me know if you’d like an optional **ArgoCD** deployment pipeline or a **Prometheus** stack – I’ll drop the YAML right away!
