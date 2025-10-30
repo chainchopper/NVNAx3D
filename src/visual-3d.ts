@@ -542,6 +542,18 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       case 'code':
         this.updateCodeScrawlAnimation(time);
         break;
+      case 'subtle_breath':
+        this.updateSubtleBreathAnimation(time, dt);
+        break;
+      case 'contemplative':
+        this.updateContemplativeAnimation(time, dt);
+        break;
+      case 'energetic':
+        this.updateEnergeticAnimation(time, dt);
+        break;
+      case 'meditative':
+        this.updateMeditativeAnimation(time, dt);
+        break;
     }
   }
 
@@ -727,6 +739,150 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     
     ctx.shadowBlur = 0;
     this.codeTexture!.needsUpdate = true;
+  }
+
+  private updateSubtleBreathAnimation(time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    this.idleAnimationPhase += dt * 0.0005;
+    
+    const breathScale = 1.0 + Math.sin(this.idleAnimationPhase * 0.2) * 0.015;
+    this.centralObject.scale.set(breathScale, breathScale, breathScale);
+    
+    const baseIntensity = this.visuals?.textureName === 'lava' ? 0.5 : 0.1;
+    const gentlePulse = Math.sin(this.idleAnimationPhase * 0.15) * 0.03;
+    this.targetEmissiveIntensity = baseIntensity + gentlePulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.05;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      const subtleWarp = Math.sin(this.idleAnimationPhase * 0.1) * 0.1;
+      shaderUniforms.outputData.value.set(
+        subtleWarp,
+        Math.cos(this.idleAnimationPhase * 0.08) * 0.08,
+        Math.sin(this.idleAnimationPhase * 0.12) * 0.1,
+        time
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity;
+    }
+  }
+
+  private updateContemplativeAnimation(time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    this.idleAnimationPhase += dt * 0.0008;
+    
+    const breathScale = 1.0 + Math.sin(this.idleAnimationPhase * 0.25) * 0.025;
+    this.centralObject.scale.set(breathScale, breathScale, breathScale);
+    
+    this.centralObject.rotation.y += dt * 0.0003;
+    this.centralObject.rotation.x = Math.sin(this.idleAnimationPhase * 0.1) * 0.1;
+    
+    const hue = (this.idleAnimationPhase * 0.02) % 1.0;
+    const contemplativeColor = new THREE.Color().setHSL(hue, 0.6, 0.5);
+    this.sphereMaterial.emissive.lerp(contemplativeColor, 0.02);
+    
+    const baseIntensity = this.visuals?.textureName === 'lava' ? 0.5 : 0.1;
+    const colorPulse = Math.sin(this.idleAnimationPhase * 0.2) * 0.1;
+    this.targetEmissiveIntensity = baseIntensity + 0.15 + colorPulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.06;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.outputData.value.set(
+        Math.sin(this.idleAnimationPhase * 0.15) * 0.2,
+        Math.cos(this.idleAnimationPhase * 0.18) * 0.15,
+        Math.sin(this.idleAnimationPhase * 0.22) * 0.25,
+        time
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity;
+    }
+  }
+
+  private updateEnergeticAnimation(time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    this.idleAnimationPhase += dt * 0.002;
+    
+    const energyScale = 1.0 + Math.sin(this.idleAnimationPhase * 1.2) * 0.08;
+    this.centralObject.scale.set(energyScale, energyScale, energyScale);
+    
+    this.centralObject.rotation.y += dt * 0.002;
+    this.centralObject.rotation.x += dt * 0.001;
+    this.centralObject.rotation.z = Math.sin(this.idleAnimationPhase * 0.9) * 0.15;
+    
+    const floatY = Math.sin(this.idleAnimationPhase * 0.8) * 0.2;
+    this.centralObject.position.y = floatY;
+    
+    const baseIntensity = this.visuals?.textureName === 'lava' ? 0.5 : 0.1;
+    const energyPulse = Math.sin(this.idleAnimationPhase * 1.5) * 0.25;
+    this.targetEmissiveIntensity = baseIntensity + 0.3 + energyPulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.12;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    const opacityPulse = Math.sin(this.idleAnimationPhase * 0.9) * 0.15;
+    if (this.sphereMaterial.transmission > 0.5) {
+      this.sphereMaterial.opacity = this.baseOpacity + opacityPulse;
+    } else {
+      this.sphereMaterial.opacity = 0.85 + opacityPulse * 0.5;
+    }
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.outputData.value.set(
+        Math.sin(this.idleAnimationPhase * 1.0) * 0.8,
+        Math.cos(this.idleAnimationPhase * 1.2) * 0.6,
+        Math.sin(this.idleAnimationPhase * 1.4) * 0.7,
+        time
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity + 0.2;
+    }
+  }
+
+  private updateMeditativeAnimation(time: number, dt: number) {
+    if (!this.centralObject) return;
+    
+    this.idleAnimationPhase += dt * 0.0003;
+    
+    const zenBreath = 1.0 + Math.sin(this.idleAnimationPhase * 0.08) * 0.01;
+    this.centralObject.scale.set(zenBreath, zenBreath, zenBreath);
+    
+    this.centralObject.rotation.y += dt * 0.00015;
+    this.centralObject.position.y = Math.sin(this.idleAnimationPhase * 0.05) * 0.05;
+    
+    const calmColor = new THREE.Color(0x4a90e2);
+    this.sphereMaterial.emissive.lerp(calmColor, 0.01);
+    
+    const baseIntensity = this.visuals?.textureName === 'lava' ? 0.5 : 0.1;
+    const zenPulse = Math.sin(this.idleAnimationPhase * 0.06) * 0.02;
+    this.targetEmissiveIntensity = baseIntensity + 0.05 + zenPulse;
+    
+    this.previousEmissiveIntensity += 
+      (this.targetEmissiveIntensity - this.previousEmissiveIntensity) * 0.03;
+    this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    if (this.sphereMaterial.transmission > 0.5) {
+      this.sphereMaterial.opacity = 0.75 + Math.sin(this.idleAnimationPhase * 0.04) * 0.05;
+    }
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.outputData.value.set(
+        Math.sin(this.idleAnimationPhase * 0.05) * 0.05,
+        Math.cos(this.idleAnimationPhase * 0.04) * 0.04,
+        Math.sin(this.idleAnimationPhase * 0.06) * 0.06,
+        time
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity;
+    }
   }
   
   private updateListeningVisuals(audioLevel: number) {

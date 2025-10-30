@@ -16,7 +16,7 @@ export type TextureName =
   | 'metallic_brushed'
   | 'crystal_blue'
   | 'organic_glow';
-export type IdleAnimation = 'none' | 'glow' | 'particles' | 'code';
+export type IdleAnimation = 'none' | 'glow' | 'particles' | 'code' | 'subtle_breath' | 'contemplative' | 'energetic' | 'meditative';
 
 export interface Connector {
   id: string;
