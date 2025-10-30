@@ -1928,8 +1928,9 @@ export class GdmLiveAudio extends LitElement {
 
       await ragMemoryManager.addMemory(
         content,
-        this.activePersoni.name,
+        'user',
         'file_upload',
+        this.activePersoni.name,
         7,
         metadata
       );
