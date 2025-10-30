@@ -25,22 +25,31 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Main Component**: Manages audio I/O, Gemini AI streaming, PersonI switching, and voice activity detection.
 - **Connector Backend Proxy**: Secure Express.js server for external service integrations (e.g., Gmail, Google Calendar, GitHub, Linear, Notion, Slack, financial APIs), handling OAuth tokens and API keys server-side.
 - **Model Provider System**: Manages configuration and integration of multiple AI providers (OpenAI, Google, custom endpoints) and their models.
-- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model. Supports 17 memory types (conversations, financial, files, etc.) with semantic search, temporal queries, and speaker management. Includes a RAG memory toggle for user control.
+- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model. Supports 17 memory types (conversations, financial, files, etc.) with semantic search, temporal queries, and speaker management. Includes a RAG memory toggle for user control (minimalist brain emoji 🧠 design).
 - **User Profile System**: Stores user-specific information for context.
 - **Local Speech-to-Text (STT)**: Integration of browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
 - **Enhanced Audio System**: SharedMicrophoneManager for concurrent audio consumers, audio recording manager, and real-time music detection system with BPM estimation and beat-synchronized 3D visuals.
 - **Song Identification System**: Soundhound-style song recognition via AudD API with lyrics (Genius API), UI display, and RAG memory integration.
-- **Environmental Awareness Suite**: Real-time camera-based contextual observation. Includes a Camera Manager component, Camera-as-3D-Background, Vision-Enhanced Idle Speech (analyzing live camera frames), and an Environmental Observer Service for continuous monitoring and proactive assistance. Features a multi-format file upload system with RAG integration for analyzed content and metadata.
+- **Environmental Awareness Suite**: Real-time camera-based contextual observation. Includes a Camera Manager component with minimalist controls (👁️ preview toggle, 📷 camera toggle), Camera-as-3D-Background, Vision-Enhanced Idle Speech (analyzing live camera frames), and an Environmental Observer Service for continuous monitoring and proactive assistance. Features a multi-format file upload system with RAG integration for analyzed content and metadata.
+- **Object Recognition System**: Real-time object detection using TensorFlow.js and COCO-SSD model. Detects 80 object classes with confidence scores, bounding boxes, FPS tracking, and visual overlay with proper video scaling.
+- **Voice Command System**: Hands-free control with 20+ natural language commands (PersonI switching, camera control, panel management, volume, object detection, notes/tasks, etc.). Pattern-based matching with parameter extraction and structured return values.
+- **Dual PersonI Manager**: Multi-AI collaboration system with 4 modes (collaborative, debate, teaching, single). Features turn management, conversation history, intelligent switching logic, and primary persona preservation.
+- **Calendar System**: Visual calendar component with month/week/day/agenda views, natural language event creation ("Meeting with John tomorrow at 2pm"), and integration-ready Google Calendar backend support.
 - **CSP Security Hardening**: Implemented Content Security Policy for secure content delivery.
 - **Chatterbox-TTS Integration**: Custom TTS API support with configurable endpoint, voice synthesis, voice cloning capabilities, and a dedicated configuration UI.
 
 ### UI/UX Decisions
-- Intuitive settings for AI providers and PersonI capabilities.
-- Visual indicators for provider status and PersonI selection.
-- Unique AI-generated liquid-themed avatars for each PersonI.
-- Comprehensive panels for Notes, Tasks, and Memory Management with semantic search, filtering, and visual cues.
-- User profile panel for personal data management.
-- Glass-morphism design elements across various UI components (e.g., financial dashboard, camera controls, RAG toggle).
+- **Minimalist Design Philosophy**: Clean, uncluttered interfaces with essential controls only
+- **Camera Controls**: Minimalist 2-icon design (👁️ preview toggle, 📷 camera on/off) - no permission banners (browser handles natively)
+- **RAG Toggle**: Compact brain emoji (🧠) design with memory count badge, clean top-left positioning
+- **Glass-morphism**: Consistent design across panels (notes, tasks, memory, financial, calendar, object detection)
+- **Intuitive settings**: AI providers and PersonI capabilities configuration
+- **Visual indicators**: Provider status, PersonI selection, detection stats, FPS counters
+- **Unique AI-generated avatars**: Liquid-themed avatars for each PersonI
+- **Comprehensive panels**: Notes, Tasks, Memory Management with semantic search, filtering, visual cues
+- **User profile panel**: Personal data management
+- **Object Detection Overlay**: Green bounding boxes with class labels and confidence percentages
+- **Calendar Views**: Month grid, week, day, and agenda views with natural language quick-add
 
 ## External Dependencies
 - **Google Gemini API**: Primary AI provider for conversational AI and embeddings.
@@ -49,6 +58,8 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Vite**: Build tool.
 - **@google/genai**: Google Gemini API client library.
 - **@xenova/transformers**: For local Whisper STT integration.
+- **TensorFlow.js**: Machine learning framework for browser-based inference.
+- **@tensorflow-models/coco-ssd**: Pre-trained object detection model (80 classes).
 - **Express**: Backend server for secure connector API proxy.
 - **CORS**: Cross-origin resource sharing for backend API.
 - **ChromaDB**: For vector database integration in the RAG system.
@@ -59,3 +70,17 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Genius API**: For song lyrics.
 - **Plaid/Yodlee (planned)**: For financial transaction and account data.
 - **NewsAPI/Finnhub (planned)**: For financial news.
+
+## Recent Development (October 30, 2025)
+### UI/UX Cleanup Sprint
+- Simplified camera controls to minimalist 2-icon design (👁️ preview, 📷 camera)
+- Removed redundant permission banner (browser handles natively)
+- Redesigned RAG toggle to compact brain emoji (🧠) with memory count badge
+- All UI changes preserve full functionality while reducing visual clutter
+
+### Advanced Features Sprint
+- **Object Recognition**: TensorFlow.js COCO-SSD integration with 80-class detection, bounding boxes, confidence scores, FPS tracking, proper video scaling
+- **Voice Commands**: 20+ natural language commands for hands-free control (PersonI, camera, panels, volume, detection, notes, tasks)
+- **Dual PersonI**: Multi-AI collaboration with 4 modes (collaborative, debate, teaching, single), turn management, conversation history
+- **Calendar**: Month/week/day/agenda views with natural language event creation, Google Calendar integration-ready
+- **Bug Fixes**: Bounding box scaling, parameter propagation, primary persona restoration - all architect-reviewed and production-ready
