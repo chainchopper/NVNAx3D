@@ -36,6 +36,7 @@ import './components/code-flow-bg';
 import './components/static-noise-bg';
 import './components/camera-manager';
 import './components/camera-controls';
+import './components/rag-toggle';
 import './components/transcription-log';
 import './components/ui-controls';
 import {
@@ -197,6 +198,7 @@ export class GdmLiveAudio extends LitElement {
   @state() cameraError: string | null = null;
   @state() inputMode: 'voice' | 'text' = 'voice';
   @state() textInput = '';
+  @state() lastRetrievedMemories = 0;
   @query('camera-manager') cameraManager?: any;
   
   private musicStartTime = 0;
@@ -1806,6 +1808,15 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
+  private handleRAGToggle(e: CustomEvent) {
+    this.ragEnabled = e.detail.enabled;
+    console.log('[RAG] Memory context toggled:', this.ragEnabled ? 'ENABLED' : 'DISABLED');
+    
+    if (!this.ragEnabled) {
+      this.lastRetrievedMemories = 0;
+    }
+  }
+
   private updateNirvanaGradient() {
     const hour = new Date().getHours();
     const currentColor = NIRVANA_HOURLY_COLORS[hour];
@@ -2156,11 +2167,14 @@ export class GdmLiveAudio extends LitElement {
           
           if (relevantMemories.length > 0) {
             memoryContext = ragMemoryManager.formatMemoriesForContext(relevantMemories);
+            this.lastRetrievedMemories = relevantMemories.length;
             console.log(`[RAG] 🧠 Found ${relevantMemories.length} relevant memories`);
           } else {
+            this.lastRetrievedMemories = 0;
             console.log('[RAG] No relevant memories found');
           }
         } catch (error) {
+          this.lastRetrievedMemories = 0;
           console.error('[RAG] Failed to retrieve memories:', error);
         }
       }
@@ -4000,6 +4014,14 @@ export class GdmLiveAudio extends LitElement {
           .playbackTime=${this.musicStartTime > 0 ? (Date.now() - this.musicStartTime) / 1000 : 0}
           @close=${this.handleCloseSongBubble}
         ></song-info-bubble>
+
+        <!-- RAG Memory Toggle -->
+        <rag-toggle
+          .enabled=${this.ragEnabled}
+          .initialized=${this.ragInitialized}
+          .lastRetrievedCount=${this.lastRetrievedMemories}
+          @rag-toggle=${this.handleRAGToggle}
+        ></rag-toggle>
 
         <!-- Camera Controls -->
         <camera-controls
