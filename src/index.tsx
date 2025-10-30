@@ -60,6 +60,7 @@ import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences
 import { userProfileManager } from './services/user-profile-manager';
 import { UserProfile } from './types/user-profile';
 import { ragMemoryManager } from './services/memory/rag-memory-manager';
+import { MemoryType } from './types/memory';
 import { IdleSpeechManager } from './services/idle-speech-manager';
 import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
 import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
@@ -1801,7 +1802,7 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private async handleRequestCameraPermission() {
-    console.log('[Camera] Requesting camera permission...');
+    console.log('[Camera] Browser will request permission automatically');
     if (this.cameraManager) {
       const granted = await this.cameraManager.requestPermissions();
       if (granted) {
@@ -1926,9 +1927,9 @@ export class GdmLiveAudio extends LitElement {
       }
 
       await ragMemoryManager.addMemory(
-        'file_upload',
         content,
         this.activePersoni.name,
+        'file_upload',
         7,
         metadata
       );
@@ -4345,7 +4346,6 @@ export class GdmLiveAudio extends LitElement {
           .isActive=${this.cameraEnabled}
           .showPreview=${this.cameraShowPreview}
           .error=${this.cameraError}
-          @request-permission=${this.handleRequestCameraPermission}
           @toggle-camera=${this.handleToggleCameraControl}
           @toggle-preview=${this.handleToggleCameraPreview}
         ></camera-controls>

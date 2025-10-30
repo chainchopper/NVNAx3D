@@ -228,12 +228,6 @@ export class CameraManager extends LitElement {
         ${this.error ? html`
           <div class="error-message">${this.error}</div>
         ` : ''}
-        
-        ${!this.hasPermission && !this.error ? html`
-          <div class="permission-prompt">
-            Camera access required for environmental awareness features
-          </div>
-        ` : ''}
       </div>
     `;
   }
