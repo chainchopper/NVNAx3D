@@ -48,6 +48,15 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
   - Configurable delay, API provider selection, and PersonI commentary toggle
 - **Dynamic Backgrounds**: Persona-specific animated backgrounds (e.g., Game of Life for ADAM, Constellation map for ATHENA) with smooth transitions.
 - **Enhanced Audio-Reactive Animations**: Dynamic visual feedback during listening and speaking modes, driven by audio frequencies and amplitude. Music mode features dramatic reactions with beat synchronization, full-spectrum frequency response, and multi-axis rotation.
+- **Environmental Awareness Suite**: Real-time camera-based contextual observation and intelligent assistance system. Features include:
+  - **Camera Manager Component**: Handles camera permissions, streaming, and frame capture with configurable quality/intervals
+  - **Camera-as-3D-Background**: Live camera feed rendered as textured background plane behind 3D orb visualization
+  - **Vision-Enhanced Idle Speech**: AI generates contextual idle prompts by analyzing live camera frames with multimodal vision models
+  - **Environmental Observer Service**: Continuous monitoring system that captures frames at configurable intervals, analyzes environment using vision AI, stores observations in RAG memory, creates contextual notes, and triggers proactive assistance based on detected events (package delivery, safety concerns, user emotions, etc.)
+  - **Reminders System**: Natural language reminder management with browser notifications, RAG memory storage, and AI function calling integration (set/list/complete/delete)
+  - **Keyboard Input Mode**: Toggle between voice and text input with mode-aware UI controls
+  - **Multimodal Provider Support**: BaseProvider and GoogleProvider updated to support ContentPart interface for text + inline image data in vision API calls
+  - Integrated into main component (index.tsx) with event handlers, reminder function routing, and camera permission management
 - **CSP Security Hardening**: Implemented Content Security Policy to allow necessary external resources while blocking unsafe-eval.
 
 ### UI/UX Decisions
