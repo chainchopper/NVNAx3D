@@ -91,21 +91,93 @@ const CONNECTOR_SECRETS = {
   yolo_detect: { YOLO_API_URL: 'Your YOLO API URL' }
 };
 
-const allowedOrigins = [
-  'http://localhost:5000',
-  process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : ''
-].filter(Boolean);
+// CORS Configuration - read from environment or default based on NODE_ENV
+const isDevelopment = process.env.NODE_ENV !== 'production';
+let allowedOrigins = [];
+
+if (process.env.CORS_ALLOWED_ORIGINS) {
+  // Use environment variable if set
+  if (process.env.CORS_ALLOWED_ORIGINS === '*') {
+    // Allow all origins in development
+    allowedOrigins = ['*'];
+  } else {
+    // Parse comma-separated list
+    allowedOrigins = process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean);
+  }
+} else if (isDevelopment) {
+  // Default to * in development for easy testing
+  allowedOrigins = ['*'];
+  console.log('[CORS] Development mode: allowing all origins (*)');
+} else {
+  // Default to specific origins in production
+  allowedOrigins = [
+    'http://localhost:5000',
+    process.env.REPL_SLUG ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : ''
+  ].filter(Boolean);
+}
+
+console.log('[CORS] Allowed origins:', allowedOrigins);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Check if origin is allowed
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
     }
   },
   credentials: true
 }));
+
+// CSP Configuration - read from environment or default based on NODE_ENV
+let cspDirectives = '';
+
+if (process.env.CSP_DIRECTIVES) {
+  // Use custom CSP from environment
+  cspDirectives = process.env.CSP_DIRECTIVES;
+} else if (isDevelopment) {
+  // Permissive CSP for development - allow testing of all endpoints
+  cspDirectives = "default-src 'self'; " +
+    "script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'; " +
+    "script-src-elem 'self' https://esm.sh 'unsafe-inline'; " +
+    "connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss: *; " +
+    "worker-src 'self' blob:; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: https: *; " +
+    "font-src 'self' data:; " +
+    "object-src 'none'; " +
+    "base-uri 'self';";
+  console.log('[CSP] Development mode: permissive CSP to allow all testing');
+} else {
+  // Strict CSP for production
+  cspDirectives = "default-src 'self'; " +
+    "script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'; " +
+    "script-src-elem 'self' https://esm.sh 'unsafe-inline'; " +
+    "connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:; " +
+    "worker-src 'self' blob:; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob: https://raw.githubusercontent.com https://cdn.jsdelivr.net; " +
+    "font-src 'self' data:; " +
+    "object-src 'none'; " +
+    "base-uri 'self';";
+}
+
+console.log('[CSP] Content Security Policy:', cspDirectives);
+
+// Add CSP header middleware
+app.use((req, res, next) => {
+  if (cspDirectives) {
+    res.setHeader('Content-Security-Policy', cspDirectives);
+  }
+  next();
+});
+
 app.use(express.json());
 
 async function verifyGmailCredentials() {

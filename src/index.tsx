@@ -29,6 +29,7 @@ import './components/tasks-panel';
 import './components/memory-panel';
 import './components/routines-panel';
 import './components/connector-config-panel';
+import './components/chatterbox-settings';
 import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
@@ -66,6 +67,8 @@ import { routinePatternDetector } from './services/routine-pattern-detector';
 import type { RoutinePattern } from './types/routine-types';
 import { reminderManager } from './services/reminder-manager';
 import { environmentalObserver } from './services/environmental-observer';
+import { chatterboxTTS } from './services/chatterbox-tts';
+import { audioRecordingManager } from './services/audio-recording-manager';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -1070,6 +1073,10 @@ export class GdmLiveAudio extends LitElement {
       this.ragInitialized = true;
       const storageInfo = ragMemoryManager.getStorageInfo();
       console.log(`[RAG] ✅ Initialized with ${storageInfo.type} storage and ${storageInfo.embeddingType} embeddings`);
+      
+      console.log('[ChatterboxTTS] Initializing...');
+      await chatterboxTTS.loadConfig();
+      console.log('[ChatterboxTTS] ✅ Service initialized');
       
       console.log('[Routines] Initializing routine executor...');
       await routineExecutor.initialize();

@@ -77,6 +77,10 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private lastBeatTime = 0;
   private musicIntensitySmoothed = 0;
 
+  // Hourly time indication state
+  private lastHour = -1;
+  private hourlyJiggleIntensity = 0;
+
   // Camera background support
   private cameraBackgroundPlane: THREE.Mesh | null = null;
   private cameraVideoTexture: THREE.VideoTexture | null = null;
@@ -427,6 +431,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.sphereMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.time = {value: 0};
       shader.uniforms.idleTime = {value: 0};
+      shader.uniforms.inputData = {value: new THREE.Vector4()};
       shader.uniforms.outputData = {value: new THREE.Vector4()};
       shader.uniforms.jiggleIntensity = {value: 0};
       shader.vertexShader = sphereVS;
@@ -618,8 +623,13 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     const breathScale = 1.0 + Math.sin(this.idleAnimationPhase * 0.5) * 0.05;
     this.centralObject.scale.set(breathScale, breathScale, breathScale);
     
-    this.centralObject.rotation.y += 0.002 * dt;
-    this.centralObject.rotation.x += 0.001 * dt;
+    const wobbleX = Math.sin(this.idleAnimationPhase * 0.7) * 0.02;
+    const wobbleY = Math.cos(this.idleAnimationPhase * 0.5) * 0.02;
+    const wobbleZ = Math.sin(this.idleAnimationPhase * 0.9) * 0.015;
+
+    this.centralObject.rotation.y += (0.002 + wobbleY) * dt;
+    this.centralObject.rotation.x += (0.001 + wobbleX) * dt;
+    this.centralObject.rotation.z += wobbleZ * dt;
     
     const floatY = Math.sin(this.idleAnimationPhase * 0.3) * 0.15;
     this.centralObject.position.y = floatY;
@@ -637,6 +647,18 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.sphereMaterial.opacity = this.baseOpacity + opacityPulse;
     } else {
       this.sphereMaterial.opacity = 0.85 + opacityPulse * 0.5;
+    }
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      const idleWarp = Math.sin(this.idleAnimationPhase * 0.3) * 0.5;
+      shaderUniforms.outputData.value.set(
+        idleWarp,
+        Math.cos(this.idleAnimationPhase * 0.4) * 0.3,
+        Math.sin(this.idleAnimationPhase * 0.5) * 0.4,
+        time
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity;
     }
   }
 
@@ -714,6 +736,17 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     
     this.sphereMaterial.emissive.lerp(this.listeningGlowColor, 0.1);
     this.sphereMaterial.emissiveIntensity = this.previousEmissiveIntensity;
+    
+    if (this.sphereMaterial.userData.shader) {
+      const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
+      shaderUniforms.inputData.value.set(
+        audioLevel * 2,
+        audioLevel * 1.5,
+        audioLevel * 2.5,
+        0
+      );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity + (audioLevel * 0.3);
+    }
   }
   
   private updateSpeakingVisuals(audioData: Uint8Array, time: number, dt: number) {
@@ -751,10 +784,11 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       const shaderUniforms = this.sphereMaterial.userData.shader.uniforms;
       shaderUniforms.outputData.value.set(
         bassFreq * 3,
-        midFreq * 2,
-        highFreq * 5,
-        avgAmp
+        midFreq * 2.5,
+        highFreq * 4,
+        time
       );
+      shaderUniforms.jiggleIntensity.value = this.hourlyJiggleIntensity + (bassFreq * 0.5);
     }
   }
   
@@ -843,6 +877,13 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     const t = performance.now();
     const dt = (t - this.prevTime) / (1000 / 60);
     this.prevTime = t;
+
+    const currentHour = new Date().getHours();
+    if (currentHour !== this.lastHour && this.lastHour !== -1) {
+      this.hourlyJiggleIntensity = 3.0;
+    }
+    this.lastHour = currentHour;
+    this.hourlyJiggleIntensity = Math.max(0, this.hourlyJiggleIntensity - dt * 0.05);
 
     if (this.isSwitchingPersona) {
       this.accentColor.setHSL((t / 2000) % 1.0, 0.8, 0.6);
@@ -958,6 +999,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   }
 
   protected firstUpdated() {
+    this.lastHour = new Date().getHours();
     this.init();
   }
 
