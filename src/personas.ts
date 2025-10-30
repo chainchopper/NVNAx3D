@@ -498,6 +498,94 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
+  {
+    id: 'set_reminder',
+    name: 'Set Reminder',
+    description: 'Create a reminder with notification times. Built-in NIRVANA capability.',
+    functionDeclaration: {
+      name: 'setReminder',
+      description: 'Sets a reminder for the user with customizable notification times.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          title: {
+            type: Type.STRING,
+            description: 'Brief title for the reminder (e.g., "Call mom", "Project deadline").',
+          },
+          dueDate: {
+            type: Type.STRING,
+            description: 'Due date in ISO 8601 format (e.g., "2025-10-31T15:00:00Z").',
+          },
+          notificationTimes: {
+            type: Type.STRING,
+            description: 'JSON array of minutes before due to notify (e.g., "[30, 60, 1440]" for 30min, 1hr, 1 day before).',
+          },
+          description: {
+            type: Type.STRING,
+            description: 'Optional detailed description of the reminder.',
+          },
+        },
+        required: ['title', 'dueDate', 'notificationTimes'],
+      },
+    },
+  },
+  {
+    id: 'list_reminders',
+    name: 'List Reminders',
+    description: 'List active or all reminders. Built-in NIRVANA capability.',
+    functionDeclaration: {
+      name: 'listReminders',
+      description: 'Lists reminders, optionally including completed ones.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          showCompleted: {
+            type: Type.STRING,
+            description: 'Whether to include completed reminders. "true" or "false" (default: "false").',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    id: 'complete_reminder',
+    name: 'Complete Reminder',
+    description: 'Mark a reminder as completed. Built-in NIRVANA capability.',
+    functionDeclaration: {
+      name: 'completeReminder',
+      description: 'Marks a reminder as completed.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          reminderId: {
+            type: Type.STRING,
+            description: 'The ID of the reminder to mark as completed.',
+          },
+        },
+        required: ['reminderId'],
+      },
+    },
+  },
+  {
+    id: 'delete_reminder',
+    name: 'Delete Reminder',
+    description: 'Delete a reminder. Built-in NIRVANA capability.',
+    functionDeclaration: {
+      name: 'deleteReminder',
+      description: 'Deletes a reminder permanently.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          reminderId: {
+            type: Type.STRING,
+            description: 'The ID of the reminder to delete.',
+          },
+        },
+        required: ['reminderId'],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [

@@ -193,6 +193,132 @@ export class ConnectorHandlers {
     this.logOperation('YOLO', 'detectObjectsYOLO', params);
     return this.callBackend('/api/connectors/yolo/detect', params);
   }
+
+  async handleSetReminder(params: {
+    title: string;
+    dueDate: string;
+    notificationTimes: string;
+    description?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Reminder', 'setReminder', params);
+    
+    try {
+      const { reminderManager } = await import('./reminder-manager');
+      const notifyTimes = JSON.parse(params.notificationTimes);
+      const reminderId = await reminderManager.setReminder(
+        params.title,
+        new Date(params.dueDate),
+        notifyTimes,
+        params.description,
+        'AI'
+      );
+
+      return {
+        success: true,
+        data: {
+          reminderId,
+          message: `Reminder "${params.title}" set for ${new Date(params.dueDate).toLocaleString()}`,
+        },
+      };
+    } catch (error: any) {
+      console.error('[Reminder Error]', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async handleListReminders(params: {
+    showCompleted?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Reminder', 'listReminders', params);
+    
+    try {
+      const { reminderManager } = await import('./reminder-manager');
+      const showCompleted = params.showCompleted === 'true';
+      const reminders = reminderManager.listReminders(showCompleted);
+
+      return {
+        success: true,
+        data: {
+          count: reminders.length,
+          reminders: reminders.map(r => ({
+            id: r.id,
+            title: r.title,
+            description: r.description,
+            dueDate: r.dueDate.toISOString(),
+            completed: r.completed,
+            createdBy: r.createdBy,
+          })),
+        },
+      };
+    } catch (error: any) {
+      console.error('[Reminder Error]', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async handleCompleteReminder(params: {
+    reminderId: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Reminder', 'completeReminder', params);
+    
+    try {
+      const { reminderManager } = await import('./reminder-manager');
+      const success = await reminderManager.completeReminder(params.reminderId);
+
+      if (success) {
+        return {
+          success: true,
+          data: { message: `Reminder ${params.reminderId} marked as completed` },
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Reminder not found',
+        };
+      }
+    } catch (error: any) {
+      console.error('[Reminder Error]', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  async handleDeleteReminder(params: {
+    reminderId: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Reminder', 'deleteReminder', params);
+    
+    try {
+      const { reminderManager } = await import('./reminder-manager');
+      const success = await reminderManager.deleteReminder(params.reminderId);
+
+      if (success) {
+        return {
+          success: true,
+          data: { message: `Reminder ${params.reminderId} deleted` },
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Reminder not found',
+        };
+      }
+    } catch (error: any) {
+      console.error('[Reminder Error]', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
 }
 
 export const connectorHandlers = new ConnectorHandlers();

@@ -1,12 +1,13 @@
 /**
  * Idle Speech Manager
- * Generates contextual idle speech using LLM and RAG memory
+ * Generates contextual idle speech using LLM, RAG memory, and camera vision
  */
 
 import { IdleSpeechConfig, DEFAULT_IDLE_SPEECH_CONFIG } from '../types/idle-speech';
 import { ragMemoryManager } from './memory/rag-memory-manager';
 import { PersoniConfig } from '../personas';
 import { BaseProvider } from '../providers/base-provider';
+import type { CameraFrame } from '../components/camera-manager';
 
 const IDLE_SPEECH_CONFIG_KEY = 'idle-speech-config';
 
@@ -14,6 +15,8 @@ export class IdleSpeechManager {
   private timer: number | null = null;
   private config: IdleSpeechConfig;
   private isActive: boolean = false;
+  private captureFrameCallback: (() => CameraFrame | null) | null = null;
+  private cameraVisionEnabled: boolean = false;
 
   constructor() {
     this.config = this.loadConfig();
@@ -52,7 +55,8 @@ export class IdleSpeechManager {
   start(
     personi: PersoniConfig,
     provider: BaseProvider | null,
-    onSpeechGenerated: (text: string) => void
+    onSpeechGenerated: (text: string) => void,
+    captureFrame?: () => CameraFrame | null
   ): void {
     if (!this.config.enabled) {
       console.log('[IdleSpeech] Idle speech is disabled');
@@ -64,7 +68,10 @@ export class IdleSpeechManager {
       return;
     }
 
-    console.log(`[IdleSpeech] Starting idle speech for ${personi.name}`);
+    this.captureFrameCallback = captureFrame || null;
+    this.cameraVisionEnabled = !!captureFrame;
+
+    console.log(`[IdleSpeech] Starting idle speech for ${personi.name} (camera vision: ${this.cameraVisionEnabled})`);
     this.isActive = true;
     this.scheduleNext(personi, provider, onSpeechGenerated);
   }
@@ -88,8 +95,13 @@ export class IdleSpeechManager {
   resume(
     personi: PersoniConfig,
     provider: BaseProvider | null,
-    onSpeechGenerated: (text: string) => void
+    onSpeechGenerated: (text: string) => void,
+    captureFrame?: () => CameraFrame | null
   ): void {
+    if (captureFrame) {
+      this.captureFrameCallback = captureFrame;
+      this.cameraVisionEnabled = true;
+    }
     if (this.isActive && this.timer === null) {
       this.scheduleNext(personi, provider, onSpeechGenerated);
     }
@@ -184,21 +196,38 @@ export class IdleSpeechManager {
         memoryContext = 'No recent conversation history found.';
       }
 
+      // Capture camera frame for vision-based idle speech
+      let cameraContext = '';
+      if (this.cameraVisionEnabled && this.captureFrameCallback) {
+        const frame = this.captureFrameCallback();
+        if (frame) {
+          console.log('[IdleSpeech] Using camera vision for contextual idle speech');
+          cameraContext = `\n\nCamera observation available: I can see the current environment through the camera feed. Generate an idle observation based on what might be visible in the user's environment. Examples:
+- "I notice you have a coffee mug - would you like me to remind you to stay hydrated?"
+- "I see you're working at your desk. Shall I help you organize your tasks?"
+- "The lighting seems dim. Would you like suggestions for better workspace lighting?"
+- "It looks like you've been at your computer for a while. Time for a break?"
+
+Be natural and observant, as if you're actually seeing the environment.`;
+        }
+      }
+
       const systemPrompt = `You are ${personi.name}. ${personi.systemInstruction}
 
-It's currently ${timeOfDay}. Based on our recent conversation history, make a brief, contextual observation or comment that shows you remember what we discussed and are thoughtfully considering it.
+It's currently ${timeOfDay}. ${cameraContext ? 'Using camera vision and recent conversation history' : 'Based on our recent conversation history'}, make a brief, contextual observation or comment that shows awareness and thoughtfulness.
 
 Guidelines:
 - Keep it under ${this.config.maxWords} words
 - Be natural and conversational
 - Don't repeat what was already said verbatim
 - Show awareness and thoughtfulness
+${cameraContext ? '- Use environmental observations from camera when relevant' : ''}
 - If no recent context exists, make a general observation related to your personality
 - Don't ask questions unless very natural to your thought
 - Sound like you're thinking out loud
 
 Recent conversation context:
-${memoryContext}`;
+${memoryContext}${cameraContext}`;
 
       const userPrompt = 'Generate a brief contextual idle observation.';
 
@@ -212,6 +241,20 @@ ${memoryContext}`;
       const cleanedResponse = response.trim().replace(/^["']|["']$/g, '');
 
       console.log(`[IdleSpeech] Generated: "${cleanedResponse}"`);
+
+      // Store idle speech in RAG memory
+      try {
+        await ragMemoryManager.addMemory(
+          cleanedResponse,
+          personi.name,
+          'conversation',
+          personi.name,
+          3,
+          { idleSpeech: true, cameraVision: this.cameraVisionEnabled }
+        );
+      } catch (error) {
+        console.error('[IdleSpeech] Failed to store idle speech in RAG:', error);
+      }
 
       return cleanedResponse;
     } catch (error) {
