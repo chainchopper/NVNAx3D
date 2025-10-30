@@ -385,37 +385,7 @@ export class ConnectorHandlers {
     const topic = params.topic || 'general';
     const limit = params.limit || 5;
     
-    return {
-      success: true,
-      data: {
-        topic,
-        articles: [
-          {
-            title: 'Markets Rally on Strong Economic Data',
-            source: 'Financial Times',
-            summary: 'Stock markets reached new highs following better-than-expected employment figures.',
-            timestamp: new Date().toISOString(),
-            sentiment: 'positive',
-          },
-          {
-            title: 'Tech Sector Shows Continued Growth',
-            source: 'Bloomberg',
-            summary: 'Technology stocks continue their upward trend amid AI innovation.',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            sentiment: 'positive',
-          },
-          {
-            title: 'Federal Reserve Maintains Interest Rates',
-            source: 'Reuters',
-            summary: 'The Fed kept rates steady, signaling confidence in economic stability.',
-            timestamp: new Date(Date.now() - 7200000).toISOString(),
-            sentiment: 'neutral',
-          },
-        ].slice(0, limit),
-        requiresSetup: true,
-        setupInstructions: 'Market news is currently using mock data. Connect a real news API (e.g., NewsAPI, Finnhub) for live market news.',
-      },
-    };
+    return this.callBackendGet(`/api/financial/news?category=${topic}&limit=${limit}`);
   }
 
   async handleAnalyzeSpending(params: {

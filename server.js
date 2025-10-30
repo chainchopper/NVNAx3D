@@ -67,6 +67,7 @@ import cors from 'cors';
 import { stockDataService } from './src/services/financial/stock-data-service.js';
 import { cryptoDataService } from './src/services/financial/crypto-data-service.js';
 import { portfolioManager } from './src/services/financial/portfolio-manager.js';
+import { marketNewsService } from './src/services/financial/market-news-service.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -2146,6 +2147,37 @@ app.get('/api/financial/transactions', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to retrieve transactions',
+    });
+  }
+});
+
+app.get('/api/financial/news', async (req, res) => {
+  try {
+    const category = req.query.category || 'general';
+    const limit = parseInt(req.query.limit) || 10;
+    const symbol = req.query.symbol;
+    
+    let newsData;
+    
+    if (symbol) {
+      newsData = await marketNewsService.getCompanyNews(symbol, limit);
+    } else {
+      newsData = await marketNewsService.getMarketNews(category, limit);
+    }
+    
+    const hasFinnhubKey = !!process.env.FINNHUB_API_KEY;
+    
+    res.json({
+      success: true,
+      news: newsData,
+      requiresSetup: !hasFinnhubKey,
+      setupInstructions: hasFinnhubKey ? null : 'Market news is using mock data. Add a FINNHUB_API_KEY secret for real-time financial news from Finnhub.io (free tier available).',
+    });
+  } catch (error) {
+    console.error('[Financial API - News Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to retrieve market news',
     });
   }
 });
