@@ -2059,6 +2059,97 @@ app.delete('/api/financial/portfolio/holding/:symbol/:type', async (req, res) =>
   }
 });
 
+app.get('/api/financial/accounts', async (req, res) => {
+  try {
+    const accounts = [
+      { id: 'checking_001', name: 'Primary Checking', type: 'checking', balance: 12543.28, currency: 'USD' },
+      { id: 'savings_001', name: 'High Yield Savings', type: 'savings', balance: 45230.50, currency: 'USD' },
+      { id: 'credit_001', name: 'Rewards Credit Card', type: 'credit', balance: -1245.67, currency: 'USD' },
+    ];
+
+    res.json({
+      success: true,
+      accounts,
+      requiresSetup: true,
+      setupInstructions: 'Account balances are using mock data. Connect your bank via Plaid, Yodlee, or direct bank API for real account information.',
+    });
+  } catch (error) {
+    console.error('[Financial API - Accounts Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to retrieve accounts',
+    });
+  }
+});
+
+app.get('/api/financial/transactions', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const transactions = [
+      {
+        id: 'txn_001',
+        date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        description: 'Grocery Store',
+        amount: -87.43,
+        category: 'Groceries',
+        merchant: 'Whole Foods',
+      },
+      {
+        id: 'txn_002',
+        date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        description: 'Online Purchase',
+        amount: -45.99,
+        category: 'Shopping',
+        merchant: 'Amazon',
+      },
+      {
+        id: 'txn_003',
+        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        description: 'Salary Deposit',
+        amount: 3500.00,
+        category: 'Income',
+        merchant: 'Employer Inc.',
+      },
+      {
+        id: 'txn_004',
+        date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        description: 'Electric Bill',
+        amount: -125.50,
+        category: 'Utilities',
+        merchant: 'Power Company',
+      },
+      {
+        id: 'txn_005',
+        date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        description: 'Restaurant',
+        amount: -67.80,
+        category: 'Dining',
+        merchant: 'Italian Bistro',
+      },
+    ];
+    
+    const totalDebits = transactions.filter(t => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const totalCredits = transactions.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+    
+    res.json({
+      success: true,
+      count: transactions.length,
+      transactions: transactions.slice(0, limit),
+      totalDebits,
+      totalCredits,
+      requiresSetup: true,
+      setupInstructions: 'Transactions are using mock data. Connect your bank via Plaid, Yodlee, or direct bank API for real transaction history.',
+    });
+  } catch (error) {
+    console.error('[Financial API - Transactions Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to retrieve transactions',
+    });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);
