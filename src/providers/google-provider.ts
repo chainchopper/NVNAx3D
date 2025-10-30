@@ -87,11 +87,21 @@ export class GoogleProvider extends BaseProvider {
       throw new Error('Provider not initialized');
     }
 
-    // Convert messages to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    }));
+    const contents = messages.map(msg => {
+      const role = msg.role === 'assistant' ? 'model' : 'user';
+      
+      if (typeof msg.content === 'string') {
+        return {
+          role,
+          parts: [{ text: msg.content }],
+        };
+      } else {
+        return {
+          role,
+          parts: msg.content,
+        };
+      }
+    });
 
     const response = await this.client.models.generateContent({
       model: this.config.model,

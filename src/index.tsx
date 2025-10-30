@@ -10,7 +10,7 @@ import {
   Modality,
 } from '@google/genai';
 import {LitElement, css, html, nothing, PropertyValueMap} from 'lit';
-import {customElement, state} from 'lit/decorators.js';
+import {customElement, state, query} from 'lit/decorators.js';
 import {
   AudioRecorder,
   VoiceActivityDetector,
@@ -33,6 +33,9 @@ import './components/game-of-life-bg';
 import './components/constellation-map-bg';
 import './components/code-flow-bg';
 import './components/static-noise-bg';
+import './components/camera-manager';
+import './components/transcription-log';
+import './components/ui-controls';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -61,6 +64,8 @@ import { connectorHandlers, ConnectorResult } from './services/connector-handler
 import { routineExecutor } from './services/routine-executor';
 import { routinePatternDetector } from './services/routine-pattern-detector';
 import type { RoutinePattern } from './types/routine-types';
+import { reminderManager } from './services/reminder-manager';
+import { environmentalObserver } from './services/environmental-observer';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -180,6 +185,12 @@ export class GdmLiveAudio extends LitElement {
   @state() currentLyrics: LyricsInfo | null = null;
   @state() showSongBubble = false;
   @state() songIdentificationConfig: SongIdentificationConfig;
+  
+  // Camera and input mode state
+  @state() cameraEnabled = false;
+  @state() inputMode: 'voice' | 'text' = 'voice';
+  @state() textInput = '';
+  @query('camera-manager') cameraManager?: any;
   
   private musicStartTime = 0;
   private identificationTimeout: number | undefined;
@@ -1024,6 +1035,14 @@ export class GdmLiveAudio extends LitElement {
     } else {
       console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
     }
+    
+    // Initialize reminder notification checks
+    reminderManager.startNotificationChecks((message) => {
+      this.speakText(message);
+    });
+    
+    // Request notification permission for reminders
+    reminderManager.requestNotificationPermission();
   }
 
   protected updated(
@@ -1705,6 +1724,42 @@ export class GdmLiveAudio extends LitElement {
     songIdentificationService.clearCurrent();
   }
 
+  private handleCameraPermissions(e: CustomEvent) {
+    this.cameraEnabled = true;
+    console.log('[Camera] Permissions granted, camera enabled');
+    
+    if (this.cameraEnabled && this.activePersoni) {
+      const provider = this.getProviderForPersoni(this.activePersoni);
+      if (provider) {
+        environmentalObserver.start(
+          () => this.cameraManager?.captureFrame() || null,
+          provider,
+          this.activePersoni.name,
+          (text) => this.speakText(text)
+        );
+      }
+    }
+  }
+
+  private handleFrameCaptured(e: CustomEvent) {
+    console.log('[Camera] Frame captured:', e.detail);
+  }
+
+  private handleModeChange(e: CustomEvent) {
+    this.inputMode = e.detail.mode;
+    console.log('[InputMode] Mode changed to:', this.inputMode);
+  }
+
+  private async handleTextSubmit(e: CustomEvent) {
+    const text = e.detail.text;
+    console.log('[TextInput] Text submitted:', text);
+    
+    if (text && text.trim()) {
+      this.textInput = '';
+      await this.processTranscript(text);
+    }
+  }
+
   private updateNirvanaGradient() {
     const hour = new Date().getHours();
     const currentColor = NIRVANA_HOURLY_COLORS[hour];
@@ -2221,6 +2276,18 @@ export class GdmLiveAudio extends LitElement {
         break;
       case 'detectObjectsYOLO':
         result = await connectorHandlers.handleYoloDetect(fc.args as any);
+        break;
+      case 'setReminder':
+        result = await connectorHandlers.handleSetReminder(fc.args as any);
+        break;
+      case 'listReminders':
+        result = await connectorHandlers.handleListReminders(fc.args as any);
+        break;
+      case 'completeReminder':
+        result = await connectorHandlers.handleCompleteReminder(fc.args as any);
+        break;
+      case 'deleteReminder':
+        result = await connectorHandlers.handleDeleteReminder(fc.args as any);
         break;
       default:
         await this.speakText(

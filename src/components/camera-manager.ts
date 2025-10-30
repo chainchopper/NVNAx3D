@@ -1,0 +1,246 @@
+/**
+ * Camera Manager Component
+ * Manages camera access, video streaming, and frame capture
+ */
+
+import { LitElement, css, html } from 'lit';
+import { customElement, property, state, query } from 'lit/decorators.js';
+
+export interface CameraFrame {
+  dataUrl: string;
+  timestamp: number;
+  width: number;
+  height: number;
+}
+
+@customElement('camera-manager')
+export class CameraManager extends LitElement {
+  @property({ type: Boolean }) enabled = false;
+  @property({ type: Boolean }) showPreview = false;
+  
+  @state() private hasPermission = false;
+  @state() private isActive = false;
+  @state() private error: string | null = null;
+  
+  @query('video') private videoElement!: HTMLVideoElement;
+  @query('canvas') private canvasElement!: HTMLCanvasElement;
+  
+  private mediaStream: MediaStream | null = null;
+  private captureInterval: number | null = null;
+
+  static styles = css`
+    :host {
+      display: block;
+      position: relative;
+    }
+
+    .camera-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    video {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    video.preview {
+      display: block;
+    }
+
+    canvas {
+      display: none;
+    }
+
+    .error-message {
+      color: #ff4444;
+      padding: 8px;
+      font-size: 12px;
+    }
+
+    .permission-prompt {
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      color: white;
+      text-align: center;
+    }
+  `;
+
+  async requestPermissions(): Promise<boolean> {
+    try {
+      console.log('[CameraManager] Requesting camera permissions...');
+      
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        }
+      });
+
+      this.mediaStream = stream;
+      this.hasPermission = true;
+      this.error = null;
+      
+      console.log('[CameraManager] Camera permissions granted');
+      this.dispatchEvent(new CustomEvent('permissions-granted'));
+      
+      return true;
+    } catch (err) {
+      console.error('[CameraManager] Camera permission denied:', err);
+      this.error = 'Camera access denied. Please allow camera permissions.';
+      this.hasPermission = false;
+      this.dispatchEvent(new CustomEvent('permissions-denied', { detail: { error: err } }));
+      return false;
+    }
+  }
+
+  async start(): Promise<boolean> {
+    if (this.isActive) {
+      console.log('[CameraManager] Already active');
+      return true;
+    }
+
+    if (!this.hasPermission) {
+      const granted = await this.requestPermissions();
+      if (!granted) return false;
+    }
+
+    try {
+      if (this.videoElement && this.mediaStream) {
+        this.videoElement.srcObject = this.mediaStream;
+        await this.videoElement.play();
+        this.isActive = true;
+        
+        console.log('[CameraManager] Camera started');
+        this.dispatchEvent(new CustomEvent('camera-started'));
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('[CameraManager] Failed to start camera:', err);
+      this.error = 'Failed to start camera';
+      return false;
+    }
+  }
+
+  stop(): void {
+    if (!this.isActive) return;
+
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+      this.captureInterval = null;
+    }
+
+    if (this.videoElement) {
+      this.videoElement.pause();
+      this.videoElement.srcObject = null;
+    }
+
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+
+    this.isActive = false;
+    this.hasPermission = false;
+    
+    console.log('[CameraManager] Camera stopped');
+    this.dispatchEvent(new CustomEvent('camera-stopped'));
+  }
+
+  captureFrame(): CameraFrame | null {
+    if (!this.isActive || !this.videoElement || !this.canvasElement) {
+      console.warn('[CameraManager] Cannot capture frame - camera not active');
+      return null;
+    }
+
+    try {
+      const video = this.videoElement;
+      const canvas = this.canvasElement;
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) {
+        console.error('[CameraManager] Failed to get canvas context');
+        return null;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+      const frame: CameraFrame = {
+        dataUrl,
+        timestamp: Date.now(),
+        width: canvas.width,
+        height: canvas.height
+      };
+
+      this.dispatchEvent(new CustomEvent('frame-captured', { detail: frame }));
+      return frame;
+    } catch (err) {
+      console.error('[CameraManager] Failed to capture frame:', err);
+      return null;
+    }
+  }
+
+  getVideoElement(): HTMLVideoElement | null {
+    return this.videoElement || null;
+  }
+
+  isReady(): boolean {
+    return this.isActive && this.hasPermission;
+  }
+
+  protected updated(changedProps: Map<string, any>) {
+    if (changedProps.has('enabled')) {
+      if (this.enabled) {
+        this.start();
+      } else {
+        this.stop();
+      }
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.stop();
+  }
+
+  render() {
+    return html`
+      <div class="camera-container">
+        <video 
+          class="${this.showPreview ? 'preview' : ''}"
+          autoplay 
+          playsinline 
+          muted
+        ></video>
+        <canvas></canvas>
+        
+        ${this.error ? html`
+          <div class="error-message">${this.error}</div>
+        ` : ''}
+        
+        ${!this.hasPermission && !this.error ? html`
+          <div class="permission-prompt">
+            Camera access required for environmental awareness features
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'camera-manager': CameraManager;
+  }
+}

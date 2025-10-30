@@ -1,12 +1,13 @@
 /**
  * Idle Speech Manager
- * Generates contextual idle speech using LLM and RAG memory
+ * Generates contextual idle speech using LLM, RAG memory, and camera vision
  */
 
 import { IdleSpeechConfig, DEFAULT_IDLE_SPEECH_CONFIG } from '../types/idle-speech';
 import { ragMemoryManager } from './memory/rag-memory-manager';
 import { PersoniConfig } from '../personas';
 import { BaseProvider } from '../providers/base-provider';
+import type { CameraFrame } from '../components/camera-manager';
 
 const IDLE_SPEECH_CONFIG_KEY = 'idle-speech-config';
 
@@ -14,6 +15,8 @@ export class IdleSpeechManager {
   private timer: number | null = null;
   private config: IdleSpeechConfig;
   private isActive: boolean = false;
+  private captureFrameCallback: (() => CameraFrame | null) | null = null;
+  private cameraVisionEnabled: boolean = false;
 
   constructor() {
     this.config = this.loadConfig();
@@ -52,7 +55,8 @@ export class IdleSpeechManager {
   start(
     personi: PersoniConfig,
     provider: BaseProvider | null,
-    onSpeechGenerated: (text: string) => void
+    onSpeechGenerated: (text: string) => void,
+    captureFrame?: () => CameraFrame | null
   ): void {
     if (!this.config.enabled) {
       console.log('[IdleSpeech] Idle speech is disabled');
@@ -64,7 +68,10 @@ export class IdleSpeechManager {
       return;
     }
 
-    console.log(`[IdleSpeech] Starting idle speech for ${personi.name}`);
+    this.captureFrameCallback = captureFrame || null;
+    this.cameraVisionEnabled = !!captureFrame;
+
+    console.log(`[IdleSpeech] Starting idle speech for ${personi.name} (camera vision: ${this.cameraVisionEnabled})`);
     this.isActive = true;
     this.scheduleNext(personi, provider, onSpeechGenerated);
   }
@@ -88,8 +95,13 @@ export class IdleSpeechManager {
   resume(
     personi: PersoniConfig,
     provider: BaseProvider | null,
-    onSpeechGenerated: (text: string) => void
+    onSpeechGenerated: (text: string) => void,
+    captureFrame?: () => CameraFrame | null
   ): void {
+    if (captureFrame) {
+      this.captureFrameCallback = captureFrame;
+      this.cameraVisionEnabled = true;
+    }
     if (this.isActive && this.timer === null) {
       this.scheduleNext(personi, provider, onSpeechGenerated);
     }
@@ -184,15 +196,24 @@ export class IdleSpeechManager {
         memoryContext = 'No recent conversation history found.';
       }
 
+      let cameraFrame: CameraFrame | null = null;
+      if (this.cameraVisionEnabled && this.captureFrameCallback) {
+        cameraFrame = this.captureFrameCallback();
+        if (cameraFrame) {
+          console.log('[IdleSpeech] Using camera vision for contextual idle speech');
+        }
+      }
+
       const systemPrompt = `You are ${personi.name}. ${personi.systemInstruction}
 
-It's currently ${timeOfDay}. Based on our recent conversation history, make a brief, contextual observation or comment that shows you remember what we discussed and are thoughtfully considering it.
+It's currently ${timeOfDay}. ${cameraFrame ? 'Using camera vision and recent conversation history' : 'Based on our recent conversation history'}, make a brief, contextual observation or comment that shows awareness and thoughtfulness.
 
 Guidelines:
 - Keep it under ${this.config.maxWords} words
 - Be natural and conversational
 - Don't repeat what was already said verbatim
 - Show awareness and thoughtfulness
+${cameraFrame ? '- Use environmental observations from the camera view when relevant' : ''}
 - If no recent context exists, make a general observation related to your personality
 - Don't ask questions unless very natural to your thought
 - Sound like you're thinking out loud
@@ -200,18 +221,45 @@ Guidelines:
 Recent conversation context:
 ${memoryContext}`;
 
-      const userPrompt = 'Generate a brief contextual idle observation.';
-
-      const messages = [
-        { role: 'system' as const, content: systemPrompt },
-        { role: 'user' as const, content: userPrompt },
+      const messages: any[] = [
+        { role: 'system' as const, content: systemPrompt }
       ];
+
+      if (cameraFrame) {
+        const imageData = cameraFrame.dataUrl.split(',')[1];
+        messages.push({
+          role: 'user' as const,
+          content: [
+            { text: 'Generate a brief contextual idle observation based on what you see in the camera and our conversation history.' },
+            { inlineData: { mimeType: 'image/jpeg', data: imageData } }
+          ]
+        });
+      } else {
+        messages.push({
+          role: 'user' as const,
+          content: 'Generate a brief contextual idle observation.'
+        });
+      }
 
       const response = await provider.sendMessage(messages);
 
       const cleanedResponse = response.trim().replace(/^["']|["']$/g, '');
 
       console.log(`[IdleSpeech] Generated: "${cleanedResponse}"`);
+
+      // Store idle speech in RAG memory
+      try {
+        await ragMemoryManager.addMemory(
+          cleanedResponse,
+          personi.name,
+          'conversation',
+          personi.name,
+          3,
+          { idleSpeech: true, cameraVision: this.cameraVisionEnabled }
+        );
+      } catch (error) {
+        console.error('[IdleSpeech] Failed to store idle speech in RAG:', error);
+      }
 
       return cleanedResponse;
     } catch (error) {

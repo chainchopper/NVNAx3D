@@ -77,6 +77,10 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private lastBeatTime = 0;
   private musicIntensitySmoothed = 0;
 
+  // Camera background support
+  private cameraBackgroundPlane: THREE.Mesh | null = null;
+  private cameraVideoTexture: THREE.VideoTexture | null = null;
+
   @property({type: Boolean}) isSwitchingPersona = false;
   @property({type: Boolean}) isListening = false;
   @property({type: Boolean}) isAiSpeaking = false;
@@ -85,6 +89,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   @property({type: Number}) musicBpm = 0;
   @property({type: Boolean}) musicBeatDetected = false;
   @property({type: Number}) musicConfidence = 0;
+  @property({type: Object}) cameraVideoElement: HTMLVideoElement | null = null;
 
   private _outputNode!: AudioNode;
   private _inputNode!: AudioNode;
@@ -136,6 +141,53 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.accentColor.set(this.visuals.accentColor);
       this.recreateCentralObject();
       this.updateMaterialForVisuals();
+    }
+    
+    if (changedProperties.has('cameraVideoElement')) {
+      this.updateCameraBackground();
+    }
+  }
+
+  private updateCameraBackground(): void {
+    // Remove existing camera background
+    if (this.cameraBackgroundPlane) {
+      this.scene?.remove(this.cameraBackgroundPlane);
+      this.cameraBackgroundPlane = null;
+    }
+    
+    if (this.cameraVideoTexture) {
+      this.cameraVideoTexture.dispose();
+      this.cameraVideoTexture = null;
+    }
+
+    // Add new camera background if video element is provided
+    if (this.cameraVideoElement && this.scene) {
+      try {
+        console.log('[Visual3D] Creating camera background from video element');
+        
+        // Create video texture
+        this.cameraVideoTexture = new THREE.VideoTexture(this.cameraVideoElement);
+        this.cameraVideoTexture.minFilter = THREE.LinearFilter;
+        this.cameraVideoTexture.magFilter = THREE.LinearFilter;
+        this.cameraVideoTexture.format = THREE.RGBFormat;
+
+        // Create background plane
+        const aspect = window.innerWidth / window.innerHeight;
+        const planeGeometry = new THREE.PlaneGeometry(10 * aspect, 10);
+        const planeMaterial = new THREE.MeshBasicMaterial({
+          map: this.cameraVideoTexture,
+          side: THREE.DoubleSide,
+          transparent: false,
+        });
+
+        this.cameraBackgroundPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+        this.cameraBackgroundPlane.position.z = -5; // Behind the orb
+        this.scene.add(this.cameraBackgroundPlane);
+
+        console.log('[Visual3D] Camera background added to scene');
+      } catch (error) {
+        console.error('[Visual3D] Failed to create camera background:', error);
+      }
     }
   }
 
