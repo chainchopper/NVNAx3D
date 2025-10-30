@@ -66,7 +66,6 @@ export interface PersoniConfig {
 }
 
 // Base template for creating a Personi
-// FIX: Add `introductions` and `idlePrompts` to correctly type the templates.
 export interface PersonaTemplate extends Omit<PersoniConfig, 'id'> {
   introductions: string[];
   idlePrompts: string[];
