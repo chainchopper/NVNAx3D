@@ -74,6 +74,11 @@ import { reminderManager } from './services/reminder-manager';
 import { environmentalObserver } from './services/environmental-observer';
 import { chatterboxTTS } from './services/chatterbox-tts';
 import { audioRecordingManager } from './services/audio-recording-manager';
+import { objectRecognitionService, DetectionResult } from './services/object-recognition';
+import { voiceCommandSystem } from './services/voice-command-system';
+import { dualPersonIManager } from './services/dual-personi-manager';
+import './components/object-detection-overlay';
+import './components/calendar-view';
 
 const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
@@ -205,7 +210,16 @@ export class GdmLiveAudio extends LitElement {
   @state() inputMode: 'voice' | 'text' = 'voice';
   @state() textInput = '';
   @state() lastRetrievedMemories = 0;
+  
+  // Object detection state
+  @state() objectDetectionEnabled = false;
+  @state() currentDetections: DetectionResult | null = null;
+  
+  // Calendar state
+  @state() showCalendar = false;
+  
   @query('camera-manager') cameraManager?: any;
+  @query('object-detection-overlay') objectDetectionOverlay?: any;
   
   private musicStartTime = 0;
   private identificationTimeout: number | undefined;
@@ -1058,6 +1072,9 @@ export class GdmLiveAudio extends LitElement {
     // Initialize music detector
     this.musicDetectorConfig = musicDetector.getConfig();
     this.setupMusicDetector();
+    
+    // Initialize voice command system
+    this.initializeVoiceCommands();
   }
 
   disconnectedCallback() {
@@ -1831,6 +1848,82 @@ export class GdmLiveAudio extends LitElement {
     console.log('[Camera] Frame captured:', e.detail);
   }
 
+  private async handleToggleObjectDetection(e: CustomEvent) {
+    this.objectDetectionEnabled = !this.objectDetectionEnabled;
+    console.log('[ObjectDetection] Toggled:', this.objectDetectionEnabled ? 'ENABLED' : 'DISABLED');
+    
+    if (this.objectDetectionEnabled) {
+      await this.startObjectDetection();
+    } else {
+      this.stopObjectDetection();
+    }
+  }
+
+  private async startObjectDetection() {
+    if (!this.cameraManager?.videoElement) {
+      console.warn('[ObjectDetection] No video element available');
+      return;
+    }
+
+    try {
+      await objectRecognitionService.initialize();
+      
+      objectRecognitionService.startContinuousDetection(
+        this.cameraManager.videoElement,
+        async (result) => {
+          this.currentDetections = result;
+          
+          if (this.objectDetectionOverlay) {
+            const videoEl = this.cameraManager.videoElement;
+            this.objectDetectionOverlay.videoWidth = videoEl.videoWidth;
+            this.objectDetectionOverlay.videoHeight = videoEl.videoHeight;
+            this.objectDetectionOverlay.updateDetections(result);
+          }
+          
+          if (this.ragEnabled && this.ragInitialized && this.activePersoni && result.objects.length > 0) {
+            const objectsList = result.objects
+              .map(obj => `${obj.class} (${Math.round(obj.score * 100)}%)`)
+              .join(', ');
+            
+            try {
+              await ragMemoryManager.addMemory(
+                `Detected objects in camera view: ${objectsList}`,
+                this.activePersoni.name,
+                'camera_observation',
+                this.activePersoni.name,
+                3,
+                { 
+                  detectionTimestamp: result.timestamp,
+                  fps: result.fps,
+                  objectCount: result.objects.length
+                }
+              );
+            } catch (error) {
+              console.error('[ObjectDetection] Failed to store detection in RAG:', error);
+            }
+          }
+        },
+        500
+      );
+      
+      console.log('[ObjectDetection] Started continuous detection');
+    } catch (error) {
+      console.error('[ObjectDetection] Failed to start:', error);
+      this.objectDetectionEnabled = false;
+    }
+  }
+
+  private stopObjectDetection() {
+    objectRecognitionService.stopContinuousDetection();
+    this.currentDetections = null;
+    
+    if (this.objectDetectionOverlay) {
+      this.objectDetectionOverlay.clearDetections();
+    }
+    
+    console.log('[ObjectDetection] Stopped continuous detection');
+  }
+
   private handleModeChange(e: CustomEvent) {
     this.inputMode = e.detail.mode;
     console.log('[InputMode] Mode changed to:', this.inputMode);
@@ -2230,6 +2323,14 @@ export class GdmLiveAudio extends LitElement {
 
   private async processTranscript(transcript: string) {
     if (!this.activePersoni) return;
+    
+    // Check for voice commands first
+    const commandResult = voiceCommandSystem.processTranscript(transcript);
+    if (commandResult.matched) {
+      console.log('[VoiceCommand] Command executed:', commandResult.action, commandResult.params);
+      // Voice command was handled, don't process as regular transcript
+      return;
+    }
     
     const provider = this.getProviderForPersoni(this.activePersoni);
     const isProviderMode = !!provider;
@@ -3066,6 +3167,186 @@ export class GdmLiveAudio extends LitElement {
     this.musicBpm = result.bpm;
     
     // Beat detection is handled by event listener for immediate feedback
+  }
+
+  private initializeVoiceCommands() {
+    voiceCommandSystem.startListening((action, params) => {
+      console.log('[VoiceCommand] Executing:', action, params);
+      
+      // PersonI switching
+      if (action === 'switch_personi' && params.personiName) {
+        const target = this.personis.find(p => p.name.toLowerCase() === params.personiName.toLowerCase());
+        if (target) {
+          this.requestPersoniSwitch(target);
+        } else {
+          this.speakText(`I don't recognize a PersonI named ${params.personiName}`);
+        }
+      }
+      
+      // Camera controls
+      if (action === 'toggle_camera') {
+        if (params.state !== undefined) {
+          this.cameraEnabled = params.state;
+        } else {
+          this.cameraEnabled = !this.cameraEnabled;
+        }
+        this.speakText(`Camera ${this.cameraEnabled ? 'enabled' : 'disabled'}`);
+      }
+      if (action === 'toggle_preview') {
+        if (params.state !== undefined) {
+          this.cameraShowPreview = params.state;
+        } else {
+          this.cameraShowPreview = !this.cameraShowPreview;
+        }
+        this.speakText(`Preview ${this.cameraShowPreview ? 'visible' : 'hidden'}`);
+      }
+      
+      // Object detection
+      if (action === 'toggle_detection') {
+        this.objectDetectionEnabled = !this.objectDetectionEnabled;
+        if (this.objectDetectionEnabled) {
+          this.startObjectDetection();
+          this.speakText('Starting object detection');
+        } else {
+          this.stopObjectDetection();
+          this.speakText('Stopping object detection');
+        }
+      }
+      
+      // Panel management
+      if (action === 'open_panel' && params.panelName) {
+        const panelMap: Record<string, ActiveSidePanel> = {
+          'notes': 'notes',
+          'tasks': 'tasks',
+          'memory': 'memory',
+          'settings': 'models',
+          'financial': 'personis', // Financial is shown when BILLY is active
+          'routines': 'routines',
+          'profile': 'userProfile'
+        };
+        const panel = panelMap[params.panelName];
+        if (panel) {
+          this.activeSidePanel = panel;
+          this.speakText(`Opening ${params.panelName} panel`);
+        }
+      }
+      if (action === 'close_panels') {
+        this.activeSidePanel = 'none';
+        this.speakText('Closing panels');
+      }
+      
+      // RAG memory
+      if (action === 'toggle_rag') {
+        if (params.state !== undefined) {
+          this.ragEnabled = params.state;
+        } else {
+          this.ragEnabled = !this.ragEnabled;
+        }
+        this.speakText(`Memory context ${this.ragEnabled ? 'enabled' : 'disabled'}`);
+      }
+      
+      // Volume control
+      if (action === 'adjust_volume') {
+        if (params.direction === 'up') {
+          this.outputNode.gain.value = Math.min(1, this.outputNode.gain.value + 0.1);
+        } else if (params.direction === 'down') {
+          this.outputNode.gain.value = Math.max(0, this.outputNode.gain.value - 0.1);
+        }
+      }
+      
+      // Vision requests
+      if (action === 'analyze_vision') {
+        if (this.cameraManager && this.activePersoni?.capabilities?.vision) {
+          const frame = this.cameraManager.captureFrame();
+          if (frame) {
+            this.processVisionRequest(frame);
+          }
+        }
+      }
+      
+      // Photo capture
+      if (action === 'take_photo') {
+        if (this.cameraManager) {
+          const frame = this.cameraManager.captureFrame();
+          if (frame) {
+            this.speakText('Photo captured!');
+            // Could trigger download or storage
+          }
+        }
+      }
+      
+      // Audio recording is handled via voice activity detection automatically
+      // Voice commands can trigger manual captures if needed
+      
+      // Notes and tasks
+      if (action === 'create_note' && params.content) {
+        this.activeSidePanel = 'notes';
+        // Note creation would be handled by the notes panel
+      }
+      if (action === 'create_task' && params.content) {
+        this.activeSidePanel = 'tasks';
+        // Task creation would be handled by the tasks panel
+      }
+      
+      // Song identification (automatic - no public API to trigger manually)
+      if (action === 'identify_song') {
+        this.speakText('Song identification runs automatically when I detect music playing. Just let me listen for a few seconds.');
+      }
+      
+      // Routine execution
+      if (action === 'execute_routine' && params.routineName) {
+        routineExecutor.getRoutines().then(routines => {
+          const routine = routines.find(r => 
+            r.name.toLowerCase() === params.routineName.toLowerCase()
+          );
+          if (routine) {
+            routineExecutor.executeRoutine(routine.id, true);
+            this.speakText(`Executing routine: ${routine.name}`);
+          } else {
+            this.speakText(`I couldn't find a routine named ${params.routineName}`);
+          }
+        });
+      }
+      
+      // Mute toggle
+      if (action === 'toggle_mute') {
+        this.toggleMute();
+      }
+      
+      // Calendar
+      if (action === 'open_calendar') {
+        this.showCalendar = !this.showCalendar;
+      }
+      
+      // Financial dashboard
+      if (action === 'open_financial') {
+        this.showFinancialDashboard = !this.showFinancialDashboard;
+      }
+    });
+    
+    console.log('[VoiceCommands] System initialized with command handlers');
+  }
+
+  private async processVisionRequest(frame: any) {
+    if (!this.activePersoni?.capabilities?.vision) return;
+    
+    const provider = this.getProviderForPersoni(this.activePersoni);
+    if (!provider) return;
+    
+    try {
+      const analysisPrompt = `Analyze this image and describe what you see in detail.`;
+      const messages = [
+        { role: 'system' as const, content: 'You are a helpful visual assistant.' },
+        { role: 'user' as const, content: [
+          { type: 'text' as const, text: analysisPrompt },
+          { type: 'image' as const, data: frame.dataUrl }
+        ]}
+      ];
+      const analysis = await provider.sendMessage(messages);
+      await this.speakText(analysis);
+    } catch (error) {
+      console.error('[Vision] Analysis failed:', error);
+    }
   }
 
   private setupVadListeners() {
@@ -4358,6 +4639,12 @@ export class GdmLiveAudio extends LitElement {
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
         ></camera-manager>
+
+        <!-- Object Detection Overlay -->
+        <object-detection-overlay
+          .enabled=${this.objectDetectionEnabled}
+          @toggle-detection=${this.handleToggleObjectDetection}
+        ></object-detection-overlay>
 
         <!-- File Upload -->
         <file-upload
