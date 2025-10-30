@@ -5,16 +5,69 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 
 ## Recent Changes (October 30, 2025)
 
-### Environmental Memory System ✅
-- **Memory Types Expanded**: 8 → 16 memory types for comprehensive environmental data capture
-- **New Types**: audio_recording, camera_observation, email_summary, call_log, text_message, agent_task, system_status, voice_clone
+### Camera UI Controls ✅
+- **Permission Management**: Dedicated UI for camera permission requests
+- **Toggle Controls**: On/off camera switch and show/hide preview toggle
+- **Status Indicators**: Visual feedback for camera state (active, error, disabled)
+- **Component**: `src/components/camera-controls.ts` (~280 lines)
+  - Glass-morphism design matching existing UI
+  - Error message display
+  - Permission flow with proper state management
+
+### Enhanced Idle Animations ✅
+- **New Animation Modes**: 4 additional modes for varied PersonI expressions
+  - `subtle_breath`: Very gentle breathing (1.5% scale, minimal emissive pulse)
+  - `contemplative`: Slow rotation with HSL color shifting through spectrum
+  - `energetic`: Fast pulsing (8% scale), active rotation, strong shader morphing
+  - `meditative`: Zen-like calm (1% scale, ultra-slow movement, calm blue)
+- **Total Modes**: 8 (none, glow, particles, code, subtle_breath, contemplative, energetic, meditative)
+- **Implementation**: `src/visual-3d.ts` (~150 lines of new animation functions)
+- **Personality-Appropriate**: Each mode creates distinct aesthetic for PersonI
+
+### RAG Memory Toggle ✅
+- **User Control**: Toggle button to enable/disable RAG context injection in conversations
+- **Visual Feedback**: Brain emoji (🧠) when enabled, prohibition (🚫) when disabled
+- **Memory Counter**: Displays count of last retrieved memories
+- **Component**: `src/components/rag-toggle.ts` (~125 lines)
+  - Position: Fixed top-left (70px top, 20px left)
+  - Glass-morphism design
+  - Disabled state when RAG not initialized
+- **Integration**: Conditional memory retrieval gated by toggle state
+- **Benefits**: Privacy control, performance optimization, transparency in AI context
+
+### Multi-Format File Upload System ✅
+- **Universal File Support**: Images, Videos, Audio, PDFs, JSON, CSV, Text, Markdown, XML
+- **Drag-and-Drop**: Full-screen drop zone with visual feedback
+- **File Picker**: Multi-file selection support
+- **Component**: `src/components/file-upload.ts` (~460 lines)
+  - Floating upload button (bottom-right)
+  - File list panel with icons and sizes
+  - Processing overlay with status
+  - Remove file buttons
+- **File Processing** (`src/index.tsx` ~85 lines):
+  - **Images**: Vision AI analysis when PersonI has vision capability
+  - **JSON**: Parse and pretty-print with error handling
+  - **CSV**: Extract first 50 rows + row count
+  - **Text/Markdown**: Full text content extraction
+  - **Audio/Video**: Metadata capture (extensible for transcription)
+  - **PDF**: Metadata (extensible for text extraction)
+- **RAG Integration**: All files stored in RAG memory with:
+  - Processed/analyzed content
+  - Rich metadata (filename, type, size, timestamp, analysis, parsed data)
+  - Importance: 7/10
+  - Searchable via semantic search
+- **Memory Type**: Added `file_upload` to MemoryType (total: 17 types)
+
+### Environmental Memory System (Previous) ✅
+- **Memory Types Expanded**: 8 → 17 memory types for comprehensive environmental data capture
+- **Types**: audio_recording, camera_observation, email_summary, call_log, text_message, agent_task, system_status, voice_clone, file_upload
 - **Audio Recording Manager**: Created service for storing/retrieving voice recordings with metadata
   - Automatic duration calculation
   - Type categorization (user_voice, ai_voice, environment, phone_call)
   - Full RAG memory integration for context-aware recall
   - Semantic search across all audio data
 
-### Chatterbox-TTS Integration ✅
+### Chatterbox-TTS Integration (Previous) ✅
 - **Custom TTS API Support**: Configurable endpoint and optional API key
 - **Voice Synthesis**: Text-to-speech with 100-entry cache for performance
 - **Voice Cloning**: Upload audio samples to create custom voices
@@ -32,13 +85,13 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
   - `src/services/audio-recording-manager.ts`: Audio storage manager
   - `src/components/chatterbox-settings.ts`: Configuration UI
 
-### 3D Avatar Animations Enhanced ✅
+### 3D Avatar Animations Enhanced (Previous) ✅
 - **Hourly Time Indication**: Jiggle animation triggers on hour changes
 - **Shader Uniforms**: Updated across all animation modes (idle, listening, speaking, music)
 - **Multi-axis Wobble**: Idle animations with smooth geometry deformation
 - **Fixed Missing Uniforms**: inputData uniform properly initialized
 
-### Security & Configuration ✅
+### Security & Configuration (Previous) ✅
 - **CORS/CSP Configurable**: Environment-based configuration
   - `.env` variables: CORS_ALLOWED_ORIGINS, CSP_DIRECTIVES
   - Development defaults: * (permissive for testing)
