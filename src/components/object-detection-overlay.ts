@@ -153,16 +153,23 @@ export class ObjectDetectionOverlay extends LitElement {
       `;
     }
 
+    const scaleX = this.videoWidth > 0 ? this.videoWidth / 640 : 1;
+    const scaleY = this.videoHeight > 0 ? this.videoHeight / 480 : 1;
+
     return html`
       <div class="overlay-container">
         ${this.detections.map(obj => {
           const [x, y, width, height] = obj.bbox;
+          const scaledX = x * scaleX;
+          const scaledY = y * scaleY;
+          const scaledWidth = width * scaleX;
+          const scaledHeight = height * scaleY;
           const confidence = Math.round(obj.score * 100);
           
           return html`
             <div 
               class="detection-box"
-              style="left: ${x}px; top: ${y}px; width: ${width}px; height: ${height}px;"
+              style="left: ${scaledX}px; top: ${scaledY}px; width: ${scaledWidth}px; height: ${scaledHeight}px;"
             >
               <div class="detection-label">
                 ${obj.class} ${confidence}%

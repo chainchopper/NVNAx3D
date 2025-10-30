@@ -185,18 +185,18 @@ export class VoiceCommandSystem {
     console.log('[VoiceCommands] Stopped listening for voice commands');
   }
 
-  processTranscript(transcript: string): boolean {
-    if (!this.isListening) return false;
+  processTranscript(transcript: string): { matched: boolean; action?: string; params?: Record<string, any> } {
+    if (!this.isListening) return { matched: false };
     
     const match = this.parseCommand(transcript);
     if (match && this.commandCallback) {
       const params = this.extractParameters(match);
       console.log(`[VoiceCommands] Matched command: ${match.command.action}`, params);
       this.commandCallback(match.command.action, params);
-      return true;
+      return { matched: true, action: match.command.action, params };
     }
     
-    return false;
+    return { matched: false };
   }
 
   getAllCommands(): VoiceCommand[] {

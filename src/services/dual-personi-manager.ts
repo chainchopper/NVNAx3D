@@ -51,15 +51,18 @@ export class DualPersonIManager {
   }
 
   deactivateDualMode(): void {
+    const previousPrimary = this.state.primary;
+    
     this.state = {
-      primary: null,
+      primary: previousPrimary,
       secondary: null,
       mode: 'single',
       isActive: false
     };
     
     this.conversationHistory = [];
-    console.log('[DualPersonI] Deactivated dual mode');
+    this.currentSpeaker = 'primary';
+    console.log('[DualPersonI] Deactivated dual mode, restored primary persona');
   }
 
   switchActiveSlot(): PersonISlot {
@@ -68,7 +71,9 @@ export class DualPersonIManager {
   }
 
   getActivePersonI(): PersoniConfig | null {
-    if (!this.state.isActive) return this.state.primary;
+    if (!this.state.isActive || this.state.mode === 'single') {
+      return this.state.primary;
+    }
     return this.currentSpeaker === 'primary' ? this.state.primary : this.state.secondary;
   }
 
