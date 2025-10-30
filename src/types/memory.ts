@@ -18,7 +18,8 @@ export type MemoryType =
   | 'text_message'
   | 'agent_task'
   | 'system_status'
-  | 'voice_clone';
+  | 'voice_clone'
+  | 'file_upload';
 
 export interface Memory {
   id: string;
