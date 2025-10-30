@@ -3,33 +3,14 @@
  * Fetches real-time cryptocurrency data from CoinGecko API
  */
 
-interface CryptoData {
-  id: string;
-  symbol: string;
-  name: string;
-  price: number;
-  change24h: number;
-  changePercent24h: number;
-  marketCap: number;
-  volume24h: number;
-  high24h: number;
-  low24h: number;
-  timestamp: string;
-}
-
-interface CryptoCache {
-  [id: string]: {
-    data: CryptoData;
-    timestamp: number;
-  };
-}
-
 class CryptoDataService {
-  private cache: CryptoCache = {};
-  private cacheTimeout = 60000; // 1 minute cache
-  private readonly baseUrl = 'https://api.coingecko.com/api/v3';
+  constructor() {
+    this.cache = {};
+    this.cacheTimeout = 60000;
+    this.baseUrl = 'https://api.coingecko.com/api/v3';
+  }
 
-  async getPrice(symbolOrId: string): Promise<CryptoData> {
+  async getPrice(symbolOrId) {
     const id = this.normalizeId(symbolOrId);
     
     const cached = this.cache[id];
@@ -45,7 +26,7 @@ class CryptoDataService {
 
       if (data && data.length > 0) {
         const coin = data[0];
-        const cryptoData: CryptoData = {
+        const cryptoData = {
           id: coin.id,
           symbol: coin.symbol.toUpperCase(),
           name: coin.name,
@@ -74,8 +55,8 @@ class CryptoDataService {
     }
   }
 
-  private normalizeId(input: string): string {
-    const symbolMap: Record<string, string> = {
+  normalizeId(input) {
+    const symbolMap = {
       'BTC': 'bitcoin',
       'ETH': 'ethereum',
       'USDT': 'tether',
@@ -92,8 +73,8 @@ class CryptoDataService {
     return symbolMap[upper] || input.toLowerCase();
   }
 
-  private getMockData(id: string): CryptoData {
-    const mockPrices: Record<string, { price: number; name: string }> = {
+  getMockData(id) {
+    const mockPrices = {
       'bitcoin': { price: 43250.00, name: 'Bitcoin' },
       'ethereum': { price: 2280.50, name: 'Ethereum' },
       'solana': { price: 98.75, name: 'Solana' },
@@ -126,4 +107,3 @@ class CryptoDataService {
 }
 
 export const cryptoDataService = new CryptoDataService();
-export type { CryptoData };
