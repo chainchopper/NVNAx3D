@@ -10,9 +10,17 @@ export interface StreamingResponse {
   done: boolean;
 }
 
+export interface ContentPart {
+  text?: string;
+  inlineData?: {
+    mimeType: string;
+    data: string;
+  };
+}
+
 export interface ProviderMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | ContentPart[];
 }
 
 export interface ProviderConfig {

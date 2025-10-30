@@ -200,13 +200,17 @@ Guidelines:
 
 ${this.lastObservation ? `Previous observation: ${this.lastObservation.description}` : 'This is the first observation.'}`;
 
-      // Note: This would need vision API support
-      // For now, we'll use a simplified text-based analysis
-      const userPrompt = `Analyze this camera frame and provide an observation. Image data: ${frame.dataUrl.substring(0, 100)}...`;
+      const imageData = frame.dataUrl.split(',')[1];
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
-        { role: 'user' as const, content: userPrompt },
+        { 
+          role: 'user' as const, 
+          content: [
+            { text: 'Analyze this camera frame and provide an observation in the JSON format specified above.' },
+            { inlineData: { mimeType: 'image/jpeg', data: imageData } }
+          ]
+        },
       ];
 
       const response = await this.provider.sendMessage(messages);

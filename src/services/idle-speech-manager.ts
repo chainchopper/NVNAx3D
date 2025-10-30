@@ -196,45 +196,50 @@ export class IdleSpeechManager {
         memoryContext = 'No recent conversation history found.';
       }
 
-      // Capture camera frame for vision-based idle speech
-      let cameraContext = '';
+      let cameraFrame: CameraFrame | null = null;
       if (this.cameraVisionEnabled && this.captureFrameCallback) {
-        const frame = this.captureFrameCallback();
-        if (frame) {
+        cameraFrame = this.captureFrameCallback();
+        if (cameraFrame) {
           console.log('[IdleSpeech] Using camera vision for contextual idle speech');
-          cameraContext = `\n\nCamera observation available: I can see the current environment through the camera feed. Generate an idle observation based on what might be visible in the user's environment. Examples:
-- "I notice you have a coffee mug - would you like me to remind you to stay hydrated?"
-- "I see you're working at your desk. Shall I help you organize your tasks?"
-- "The lighting seems dim. Would you like suggestions for better workspace lighting?"
-- "It looks like you've been at your computer for a while. Time for a break?"
-
-Be natural and observant, as if you're actually seeing the environment.`;
         }
       }
 
       const systemPrompt = `You are ${personi.name}. ${personi.systemInstruction}
 
-It's currently ${timeOfDay}. ${cameraContext ? 'Using camera vision and recent conversation history' : 'Based on our recent conversation history'}, make a brief, contextual observation or comment that shows awareness and thoughtfulness.
+It's currently ${timeOfDay}. ${cameraFrame ? 'Using camera vision and recent conversation history' : 'Based on our recent conversation history'}, make a brief, contextual observation or comment that shows awareness and thoughtfulness.
 
 Guidelines:
 - Keep it under ${this.config.maxWords} words
 - Be natural and conversational
 - Don't repeat what was already said verbatim
 - Show awareness and thoughtfulness
-${cameraContext ? '- Use environmental observations from camera when relevant' : ''}
+${cameraFrame ? '- Use environmental observations from the camera view when relevant' : ''}
 - If no recent context exists, make a general observation related to your personality
 - Don't ask questions unless very natural to your thought
 - Sound like you're thinking out loud
 
 Recent conversation context:
-${memoryContext}${cameraContext}`;
+${memoryContext}`;
 
-      const userPrompt = 'Generate a brief contextual idle observation.';
-
-      const messages = [
-        { role: 'system' as const, content: systemPrompt },
-        { role: 'user' as const, content: userPrompt },
+      const messages: any[] = [
+        { role: 'system' as const, content: systemPrompt }
       ];
+
+      if (cameraFrame) {
+        const imageData = cameraFrame.dataUrl.split(',')[1];
+        messages.push({
+          role: 'user' as const,
+          content: [
+            { text: 'Generate a brief contextual idle observation based on what you see in the camera and our conversation history.' },
+            { inlineData: { mimeType: 'image/jpeg', data: imageData } }
+          ]
+        });
+      } else {
+        messages.push({
+          role: 'user' as const,
+          content: 'Generate a brief contextual idle observation.'
+        });
+      }
 
       const response = await provider.sendMessage(messages);
 
