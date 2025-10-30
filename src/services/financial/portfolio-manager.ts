@@ -42,16 +42,26 @@ interface Portfolio {
 }
 
 class PortfolioManager {
-  private portfolio: Portfolio = {
-    holdings: [],
-  };
+  private portfolio: Portfolio | null = null;
+  private initialized = false;
 
   constructor() {
+  }
+
+  private ensureInitialized() {
+    if (this.initialized) return;
+    this.initialized = true;
     this.loadPortfolio();
   }
 
   private loadPortfolio() {
     try {
+      if (typeof localStorage === 'undefined') {
+        console.warn('[Portfolio] localStorage unavailable, using default portfolio');
+        this.portfolio = this.getDefaultPortfolio();
+        return;
+      }
+
       const saved = localStorage.getItem('nirvana-portfolio');
       if (saved) {
         this.portfolio = JSON.parse(saved);
@@ -67,6 +77,11 @@ class PortfolioManager {
 
   private savePortfolio() {
     try {
+      if (typeof localStorage === 'undefined') {
+        console.warn('[Portfolio] localStorage unavailable, cannot persist portfolio');
+        return;
+      }
+
       localStorage.setItem('nirvana-portfolio', JSON.stringify(this.portfolio));
     } catch (error) {
       console.error('[Portfolio] Failed to save portfolio:', error);
@@ -86,6 +101,11 @@ class PortfolioManager {
   }
 
   async getSummary(): Promise<PortfolioSummary> {
+    this.ensureInitialized();
+    if (!this.portfolio) {
+      throw new Error('[Portfolio] Not initialized');
+    }
+
     const holdings: PortfolioHolding[] = [];
     let totalValue = 0;
     let totalCost = 0;
@@ -155,6 +175,11 @@ class PortfolioManager {
   }
 
   addHolding(symbol: string, type: 'stock' | 'crypto', quantity: number, averageCost: number) {
+    this.ensureInitialized();
+    if (!this.portfolio) {
+      throw new Error('[Portfolio] Not initialized');
+    }
+
     const existing = this.portfolio.holdings.find(
       h => h.symbol.toLowerCase() === symbol.toLowerCase() && h.type === type
     );
@@ -172,6 +197,11 @@ class PortfolioManager {
   }
 
   removeHolding(symbol: string, type: 'stock' | 'crypto') {
+    this.ensureInitialized();
+    if (!this.portfolio) {
+      throw new Error('[Portfolio] Not initialized');
+    }
+
     this.portfolio.holdings = this.portfolio.holdings.filter(
       h => !(h.symbol.toLowerCase() === symbol.toLowerCase() && h.type === type)
     );
@@ -179,6 +209,11 @@ class PortfolioManager {
   }
 
   getHoldings() {
+    this.ensureInitialized();
+    if (!this.portfolio) {
+      throw new Error('[Portfolio] Not initialized');
+    }
+
     return [...this.portfolio.holdings];
   }
 }

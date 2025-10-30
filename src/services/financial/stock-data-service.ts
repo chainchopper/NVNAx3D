@@ -30,7 +30,25 @@ class StockDataService {
   private readonly baseUrl = 'https://www.alphavantage.co/query';
 
   constructor() {
-    this.apiKey = process.env.ALPHA_VANTAGE_API_KEY || null;
+    this.apiKey = this.getApiKey();
+  }
+
+  private getApiKey(): string | null {
+    try {
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
+        return import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || null;
+      }
+    } catch (e) {
+    }
+
+    try {
+      if (typeof process !== 'undefined' && process.env) {
+        return process.env.ALPHA_VANTAGE_API_KEY || null;
+      }
+    } catch (e) {
+    }
+
+    return null;
   }
 
   setApiKey(key: string) {
