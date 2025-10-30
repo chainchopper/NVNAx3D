@@ -16,68 +16,64 @@ export class RAGToggle extends LitElement {
     :host {
       display: block;
       position: fixed;
-      top: 70px;
+      top: 20px;
       left: 20px;
-      z-index: 1000;
+      z-index: 900;
     }
 
     .rag-toggle-container {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
+      gap: 8px;
+      padding: 8px 12px;
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(10px);
       border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.15);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
       user-select: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
     .rag-toggle-container:hover {
-      background: rgba(0, 0, 0, 0.8);
-      border-color: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
+      background: rgba(0, 0, 0, 0.85);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+
+    .rag-toggle-container:active {
+      transform: scale(0.98);
     }
 
     .rag-toggle-container.enabled {
-      border-color: rgba(76, 175, 80, 0.5);
+      border-color: rgba(76, 175, 80, 0.4);
     }
 
     .rag-toggle-container.disabled {
-      border-color: rgba(158, 158, 158, 0.3);
+      border-color: rgba(244, 67, 54, 0.4);
     }
 
     .toggle-icon {
-      font-size: 18px;
-      filter: drop-shadow(0 0 4px currentColor);
+      font-size: 16px;
+      line-height: 1;
     }
 
     .toggle-label {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: #fff;
       letter-spacing: 0.3px;
-    }
-
-    .toggle-status {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.6);
-      margin-left: 4px;
-    }
-
-    .toggle-status.active {
-      color: #4CAF50;
     }
 
     .memory-count {
       font-size: 10px;
       padding: 2px 6px;
       background: rgba(76, 175, 80, 0.2);
-      border-radius: 10px;
+      border-radius: 8px;
       color: #4CAF50;
       border: 1px solid rgba(76, 175, 80, 0.3);
+      font-weight: 600;
     }
 
     .not-initialized {
@@ -87,6 +83,28 @@ export class RAGToggle extends LitElement {
 
     .not-initialized:hover {
       transform: none;
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .tooltip {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 8px;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .rag-toggle-container:hover .tooltip {
+      opacity: 1;
     }
   `;
 
@@ -108,16 +126,21 @@ export class RAGToggle extends LitElement {
       !this.initialized ? 'not-initialized' : ''
     ].filter(Boolean).join(' ');
 
+    const tooltipText = !this.initialized 
+      ? 'RAG Memory not initialized' 
+      : this.enabled 
+        ? 'Click to disable contextual memory retrieval' 
+        : 'Click to enable contextual memory retrieval';
+
     return html`
       <div class="${containerClasses}" @click="${this.handleToggle}">
-        <span class="toggle-icon">${this.enabled ? '🧠' : '🚫'}</span>
-        <span class="toggle-label">RAG Memory</span>
-        <span class="toggle-status ${this.enabled ? 'active' : ''}">
-          ${this.enabled ? 'ON' : 'OFF'}
-        </span>
+        <span class="toggle-icon">${this.enabled ? '🧠' : '💤'}</span>
         ${this.enabled && this.lastRetrievedCount > 0 ? html`
           <span class="memory-count">${this.lastRetrievedCount}</span>
-        ` : ''}
+        ` : html`
+          <span class="toggle-label">RAG</span>
+        `}
+        <span class="tooltip">${tooltipText}</span>
       </div>
     `;
   }
