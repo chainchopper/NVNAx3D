@@ -38,6 +38,7 @@ import './components/camera-manager';
 import './components/camera-controls';
 import './components/rag-toggle';
 import './components/file-upload';
+import './components/financial-dashboard';
 import './components/transcription-log';
 import './components/ui-controls';
 import {
@@ -196,6 +197,9 @@ export class GdmLiveAudio extends LitElement {
   @state() cameraEnabled = false;
   @state() cameraShowPreview = false;
   @state() cameraHasPermission = false;
+  
+  // Financial dashboard state
+  @state() showFinancialDashboard = false;
   @state() cameraError: string | null = null;
   @state() inputMode: 'voice' | 'text' = 'voice';
   @state() textInput = '';
@@ -312,6 +316,38 @@ export class GdmLiveAudio extends LitElement {
     @keyframes pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.2); }
+    }
+
+    .financial-dashboard-toggle {
+      position: fixed;
+      top: 120px;
+      left: 20px;
+      z-index: 999;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 1px solid rgba(46, 139, 87, 0.4);
+      background: rgba(46, 139, 87, 0.2);
+      backdrop-filter: blur(10px);
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .financial-dashboard-toggle:hover {
+      transform: scale(1.1);
+      background: rgba(46, 139, 87, 0.3);
+      border-color: rgba(46, 139, 87, 0.6);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .financial-dashboard-toggle:active {
+      transform: scale(0.95);
     }
 
     #status {
@@ -4243,6 +4279,23 @@ export class GdmLiveAudio extends LitElement {
         <file-upload
           @file-uploaded=${this.handleFileUploaded}
         ></file-upload>
+
+        <!-- Financial Dashboard -->
+        <financial-dashboard
+          .visible=${this.showFinancialDashboard}
+          @close=${() => this.showFinancialDashboard = false}
+        ></financial-dashboard>
+
+        <!-- Financial Dashboard Toggle Button -->
+        ${this.activePersoni?.name === 'BILLY' ? html`
+          <button
+            class="financial-dashboard-toggle"
+            @click=${() => this.showFinancialDashboard = !this.showFinancialDashboard}
+            title="Toggle Financial Dashboard"
+          >
+            💰
+          </button>
+        ` : ''}
 
         <div
           id="status"
