@@ -19,7 +19,11 @@ export type MemoryType =
   | 'agent_task'
   | 'system_status'
   | 'voice_clone'
-  | 'file_upload';
+  | 'file_upload'
+  | 'financial_goal'
+  | 'financial_preference'
+  | 'financial_transaction'
+  | 'financial_insight';
 
 export interface Memory {
   id: string;
