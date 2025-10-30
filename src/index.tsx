@@ -2443,6 +2443,30 @@ export class GdmLiveAudio extends LitElement {
       case 'deleteReminder':
         result = await connectorHandlers.handleDeleteReminder(fc.args as any);
         break;
+      case 'getStockQuote':
+        result = await connectorHandlers.handleGetStockQuote(fc.args as any);
+        break;
+      case 'getCryptoPrice':
+        result = await connectorHandlers.handleGetCryptoPrice(fc.args as any);
+        break;
+      case 'analyzePortfolio':
+        result = await connectorHandlers.handleAnalyzePortfolio(fc.args as any);
+        break;
+      case 'getMarketNews':
+        result = await connectorHandlers.handleGetMarketNews(fc.args as any);
+        break;
+      case 'analyzeSpending':
+        result = await connectorHandlers.handleAnalyzeSpending(fc.args as any);
+        break;
+      case 'createBudget':
+        result = await connectorHandlers.handleCreateBudget(fc.args as any);
+        break;
+      case 'getAccountBalance':
+        result = await connectorHandlers.handleGetAccountBalance(fc.args as any);
+        break;
+      case 'getTransactions':
+        result = await connectorHandlers.handleGetTransactions(fc.args as any);
+        break;
       default:
         await this.speakText(
           `I received a request to use the tool "${fc.name}", but I'm not fully equipped to handle that yet.`,
@@ -2532,6 +2556,85 @@ export class GdmLiveAudio extends LitElement {
 
       case 'getGithubRepoDetails':
         return `Repository ${data.fullName}: ${data.description || 'No description'}. It has ${data.stars} stars, ${data.forks} forks, ${data.openIssues} open issues, and ${data.openPullRequests} open pull requests.`;
+
+      case 'getStockQuote':
+        if (data.symbol) {
+          const changeSymbol = data.change >= 0 ? '+' : '';
+          return `${data.symbol} is currently trading at $${data.price.toFixed(2)}, ${changeSymbol}${data.change.toFixed(2)} (${changeSymbol}${data.changePercent.toFixed(2)}%) today. Today's range: $${data.low.toFixed(2)} - $${data.high.toFixed(2)}. Volume: ${(data.volume / 1000000).toFixed(2)}M shares.`;
+        }
+        return 'Unable to retrieve stock quote.';
+
+      case 'getCryptoPrice':
+        if (data.symbol) {
+          const changeSymbol = data.change24h >= 0 ? '+' : '';
+          return `${data.name} (${data.symbol}) is currently at $${data.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}, ${changeSymbol}${data.changePercent24h.toFixed(2)}% in the last 24 hours. Market cap: $${(data.marketCap / 1000000000).toFixed(2)}B. 24h volume: $${(data.volume24h / 1000000000).toFixed(2)}B.`;
+        }
+        return 'Unable to retrieve cryptocurrency price.';
+
+      case 'analyzePortfolio':
+        if (data.holdings) {
+          const gainSymbol = data.totalGainLoss >= 0 ? '+' : '';
+          let response = `Your portfolio is worth $${data.totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} with a total ${gainSymbol}$${Math.abs(data.totalGainLoss).toFixed(2)} (${gainSymbol}${data.totalGainLossPercent.toFixed(2)}%) gain/loss. `;
+          response += `Asset allocation: ${data.assetAllocation.stocks.toFixed(1)}% stocks, ${data.assetAllocation.crypto.toFixed(1)}% crypto. `;
+          
+          if (data.topPerformers && data.topPerformers.length > 0) {
+            const top = data.topPerformers[0];
+            response += `Top performer: ${top.symbol} at +${top.gainLossPercent.toFixed(2)}%.`;
+          }
+          
+          return response;
+        }
+        return 'Unable to analyze portfolio.';
+
+      case 'getMarketNews':
+        if (data.articles && data.articles.length > 0) {
+          const newsList = data.articles.map((article: any, i: number) => 
+            `${i + 1}. "${article.title}" from ${article.source} (${article.sentiment})`
+          ).join('. ');
+          return `Here are the latest market news headlines: ${newsList}`;
+        }
+        return 'No market news available at the moment.';
+
+      case 'analyzeSpending':
+        if (data.breakdown) {
+          let response = `You've spent $${data.totalSpent.toFixed(2)} in the analyzed period. `;
+          response += `Top categories: ${data.breakdown.slice(0, 3).map((c: any) => `${c.category} ($${c.amount.toFixed(2)})`).join(', ')}. `;
+          
+          if (data.trends && data.trends.vsLastPeriod !== undefined) {
+            const trendWord = data.trends.vsLastPeriod > 0 ? 'up' : 'down';
+            response += `Spending is ${trendWord} ${Math.abs(data.trends.vsLastPeriod).toFixed(1)}% compared to the previous period.`;
+          }
+          
+          return response;
+        }
+        return 'Unable to analyze spending.';
+
+      case 'createBudget':
+        if (data.message) {
+          return data.message;
+        }
+        return 'Budget created successfully.';
+
+      case 'getAccountBalance':
+        if (data.accounts) {
+          const totalBalance = data.accounts.reduce((sum: number, acc: any) => sum + acc.balance, 0);
+          let response = `Total across all accounts: $${totalBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}. `;
+          response += data.accounts.map((acc: any) => 
+            `${acc.name}: $${acc.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+          ).join(', ');
+          return response;
+        }
+        return 'Unable to retrieve account balance.';
+
+      case 'getTransactions':
+        if (data.transactions && data.transactions.length > 0) {
+          const txList = data.transactions.slice(0, 5).map((tx: any) => {
+            const amountStr = tx.amount < 0 ? `-$${Math.abs(tx.amount).toFixed(2)}` : `+$${tx.amount.toFixed(2)}`;
+            return `${tx.description} (${amountStr})`;
+          }).join(', ');
+          return `Found ${data.count} recent transactions. Recent ones: ${txList}. Total debits: $${data.totalDebits.toFixed(2)}, credits: $${data.totalCredits.toFixed(2)}.`;
+        }
+        return 'No recent transactions found.';
 
       default:
         return JSON.stringify(data, null, 2);
