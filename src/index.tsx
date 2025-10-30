@@ -37,6 +37,7 @@ import './components/static-noise-bg';
 import './components/camera-manager';
 import './components/camera-controls';
 import './components/rag-toggle';
+import './components/file-upload';
 import './components/transcription-log';
 import './components/ui-controls';
 import {
@@ -1815,6 +1816,99 @@ export class GdmLiveAudio extends LitElement {
     if (!this.ragEnabled) {
       this.lastRetrievedMemories = 0;
     }
+  }
+
+  private async handleFileUploaded(e: CustomEvent) {
+    const { file } = e.detail;
+    console.log('[FileUpload] Processing uploaded file:', file.name, file.type);
+
+    if (!this.ragInitialized || !this.activePersoni) {
+      console.warn('[FileUpload] RAG not initialized or no active PersonI');
+      return;
+    }
+
+    try {
+      let content = '';
+      let metadata: Record<string, any> = {
+        filename: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        uploadedAt: new Date(file.timestamp).toISOString(),
+      };
+
+      if (file.type.startsWith('image/')) {
+        content = `[Image: ${file.name}] Uploaded image file. Size: ${this.formatBytes(file.size)}`;
+        metadata.imageData = file.data;
+        
+        if (this.activePersoni.capabilities?.vision) {
+          const provider = this.getProviderForPersoni(this.activePersoni);
+          if (provider) {
+            try {
+              const analysisPrompt = `Analyze this image and describe what you see in detail. Include objects, people, text, colors, and any notable features.`;
+              const messages = [
+                { role: 'system' as const, content: 'You are a helpful image analysis assistant.' },
+                { role: 'user' as const, content: [
+                  { type: 'text' as const, text: analysisPrompt },
+                  { type: 'image' as const, data: file.data as string }
+                ]}
+              ];
+              const analysis = await provider.sendMessage(messages);
+              content += `\n\nImage Analysis:\n${analysis}`;
+              metadata.analysis = analysis;
+            } catch (error) {
+              console.error('[FileUpload] Image analysis failed:', error);
+            }
+          }
+        }
+      } else if (file.type.startsWith('audio/')) {
+        content = `[Audio: ${file.name}] Uploaded audio file. Size: ${this.formatBytes(file.size)}`;
+        metadata.audioData = file.data;
+      } else if (file.type.startsWith('video/')) {
+        content = `[Video: ${file.name}] Uploaded video file. Size: ${this.formatBytes(file.size)}`;
+        metadata.videoData = file.data;
+      } else if (file.type.includes('pdf')) {
+        content = `[PDF: ${file.name}] Uploaded PDF document. Size: ${this.formatBytes(file.size)}`;
+      } else if (file.type.includes('json')) {
+        try {
+          const jsonData = JSON.parse(file.data as string);
+          content = `[JSON: ${file.name}]\n${JSON.stringify(jsonData, null, 2)}`;
+          metadata.parsedData = jsonData;
+        } catch (error) {
+          content = `[JSON: ${file.name}] ${file.data}`;
+        }
+      } else if (file.type.includes('csv')) {
+        const csvContent = file.data as string;
+        const lines = csvContent.split('\n').slice(0, 50);
+        content = `[CSV: ${file.name}] ${lines.length} rows\n${lines.join('\n')}`;
+        metadata.rowCount = csvContent.split('\n').length;
+      } else if (file.type.includes('text') || file.type.includes('markdown')) {
+        content = `[${file.type.includes('markdown') ? 'Markdown' : 'Text'}: ${file.name}]\n${file.data}`;
+      } else if (file.type.includes('xml')) {
+        content = `[XML: ${file.name}]\n${file.data}`;
+      } else {
+        content = `[File: ${file.name}] Uploaded file of type ${file.type}. Size: ${this.formatBytes(file.size)}`;
+      }
+
+      await ragMemoryManager.addMemory(
+        'file_upload',
+        content,
+        this.activePersoni.name,
+        7,
+        metadata
+      );
+
+      console.log('[FileUpload] File stored in RAG memory:', file.name);
+      await this.speakText(`I've received and analyzed your file: ${file.name}`);
+      
+    } catch (error) {
+      console.error('[FileUpload] Failed to process file:', error);
+    }
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   private updateNirvanaGradient() {
@@ -4041,6 +4135,11 @@ export class GdmLiveAudio extends LitElement {
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
         ></camera-manager>
+
+        <!-- File Upload -->
+        <file-upload
+          @file-uploaded=${this.handleFileUploaded}
+        ></file-upload>
 
         <div
           id="status"
