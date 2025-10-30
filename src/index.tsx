@@ -218,6 +218,12 @@ export class GdmLiveAudio extends LitElement {
   // Calendar state
   @state() showCalendar = false;
   
+  // Dual PersonI state
+  @state() dualModeActive = false;
+  @state() dualModeType: DualMode = 'collaborative';
+  @state() secondaryPersoni: PersoniConfig | null = null;
+  @state() showDualControls = false;
+  
   @query('camera-manager') cameraManager?: any;
   @query('object-detection-overlay') objectDetectionOverlay?: any;
   
@@ -1922,6 +1928,53 @@ export class GdmLiveAudio extends LitElement {
     }
     
     console.log('[ObjectDetection] Stopped continuous detection');
+  }
+
+  // Dual PersonI Methods
+  private handleToggleDualMode() {
+    this.dualModeActive = !this.dualModeActive;
+    
+    if (this.dualModeActive && this.secondaryPersoni) {
+      // Activate dual mode with current primary and selected secondary
+      dualPersonIManager.activateDualMode(
+        this.personis[this.selectedPersoniIndex],
+        this.secondaryPersoni,
+        this.dualModeType
+      );
+      console.log('[DualPersonI] Activated dual mode');
+    } else {
+      // Deactivate dual mode, restore primary
+      dualPersonIManager.deactivateDualMode();
+      console.log('[DualPersonI] Deactivated dual mode');
+    }
+  }
+  
+  private handleDualModeTypeChange(mode: DualMode) {
+    this.dualModeType = mode;
+    
+    if (this.dualModeActive && this.secondaryPersoni) {
+      // Re-activate with new mode
+      dualPersonIManager.activateDualMode(
+        this.personis[this.selectedPersoniIndex],
+        this.secondaryPersoni,
+        mode
+      );
+      console.log('[DualPersonI] Changed mode to:', mode);
+    }
+  }
+  
+  private handleSecondaryPersonISelect(personi: PersoniConfig) {
+    this.secondaryPersoni = personi;
+    
+    if (this.dualModeActive) {
+      // Re-activate with new secondary
+      dualPersonIManager.activateDualMode(
+        this.personis[this.selectedPersoniIndex],
+        personi,
+        this.dualModeType
+      );
+      console.log('[DualPersonI] Changed secondary to:', personi.name);
+    }
   }
 
   private handleModeChange(e: CustomEvent) {
