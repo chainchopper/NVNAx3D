@@ -2246,12 +2246,28 @@ export class GdmLiveAudio extends LitElement {
     if (this.ragEnabled && this.ragInitialized) {
       try {
         console.log('[RAG] 💾 Storing user message as memory');
+        
+        let memoryType: MemoryType = 'conversation';
+        let importance = 5;
+        let additionalMetadata: Record<string, any> = {};
+        
+        if (this.activePersoni.name === 'BILLY') {
+          const financialContext = this.analyzeFinancialContext(transcript, 'user');
+          memoryType = financialContext.type;
+          importance = financialContext.importance;
+          if (financialContext.tags.length > 0) {
+            additionalMetadata.tags = financialContext.tags;
+          }
+          console.log(`[RAG] 💰 Financial context detected: type=${memoryType}, importance=${importance}, tags=${financialContext.tags.join(', ')}`);
+        }
+        
         await ragMemoryManager.addMemory(
           transcript,
           'user',
-          'conversation',
+          memoryType,
           this.activePersoni.name,
-          5
+          importance,
+          additionalMetadata
         );
       } catch (error) {
         console.error('[RAG] Failed to store user message:', error);
@@ -2709,6 +2725,57 @@ export class GdmLiveAudio extends LitElement {
     this.sources.add(source);
   }
 
+  private analyzeFinancialContext(text: string, speaker: 'user' | 'ai'): { type: MemoryType; importance: number; tags: string[] } {
+    const lowerText = text.toLowerCase();
+    const tags: string[] = [];
+    
+    const goalKeywords = ['goal', 'target', 'save for', 'retirement', 'house', 'college', 'education fund', 'emergency fund', 'nest egg'];
+    const preferenceKeywords = ['risk tolerance', 'aggressive', 'conservative', 'moderate', 'diversif', 'invest in', 'prefer', 'strategy', 'allocation'];
+    const transactionKeywords = ['bought', 'sold', 'purchase', 'transaction', 'spent', 'withdraw', 'deposit', 'transfer'];
+    const insightKeywords = ['recommend', 'suggest', 'analysis', 'performance', 'projection', 'forecast', 'advise', 'you should', 'you might', 'you could', 'i recommend'];
+    
+    const hasGoal = goalKeywords.some(kw => lowerText.includes(kw));
+    const hasPreference = preferenceKeywords.some(kw => lowerText.includes(kw));
+    const hasTransaction = transactionKeywords.some(kw => lowerText.includes(kw));
+    const hasInsight = insightKeywords.some(kw => lowerText.includes(kw));
+    
+    const isQuestion = lowerText.includes('?') || lowerText.startsWith('should i') || lowerText.startsWith('can i') || lowerText.startsWith('how do i') || lowerText.startsWith('what should') || lowerText.includes('should i ');
+    
+    if (lowerText.includes('risk tolerance') || lowerText.includes('conservative') || lowerText.includes('aggressive')) {
+      tags.push('risk_profile');
+    }
+    if (lowerText.includes('retirement')) tags.push('retirement_planning');
+    if (lowerText.includes('tax')) tags.push('tax_planning');
+    if (lowerText.includes('budget')) tags.push('budgeting');
+    if (lowerText.includes('stock') || lowerText.includes('etf') || lowerText.includes('fund')) tags.push('equities');
+    if (lowerText.includes('crypto') || lowerText.includes('bitcoin') || lowerText.includes('ethereum')) tags.push('cryptocurrency');
+    if (lowerText.includes('bond')) tags.push('fixed_income');
+    
+    if (speaker === 'user') {
+      if (hasGoal) {
+        return { type: 'financial_goal', importance: 9, tags: [...tags, 'goal'] };
+      } else if (hasPreference) {
+        return { type: 'financial_preference', importance: 8, tags: [...tags, 'preference'] };
+      } else if (hasTransaction) {
+        return { type: 'financial_transaction', importance: 7, tags: [...tags, 'transaction'] };
+      } else {
+        return { type: 'conversation', importance: 5, tags };
+      }
+    } else {
+      if (hasGoal && !hasInsight && !isQuestion) {
+        return { type: 'financial_goal', importance: 9, tags: [...tags, 'goal'] };
+      } else if (hasPreference && !hasInsight) {
+        return { type: 'financial_preference', importance: 8, tags: [...tags, 'preference'] };
+      } else if (hasTransaction) {
+        return { type: 'financial_transaction', importance: 7, tags: [...tags, 'transaction'] };
+      } else if (hasInsight) {
+        return { type: 'financial_insight', importance: 6, tags: [...tags, 'insight'] };
+      } else {
+        return { type: 'conversation', importance: 5, tags };
+      }
+    }
+  }
+
   private async speakText(text: string, speaker: 'ai' | 'system' = 'ai') {
     if (!this.activePersoni && speaker === 'ai') return;
     if (!text.trim()) return;
@@ -2785,12 +2852,28 @@ export class GdmLiveAudio extends LitElement {
       if (speaker === 'ai' && this.ragEnabled && this.ragInitialized && this.activePersoni) {
         try {
           console.log('[RAG] 💾 Storing AI response as memory');
+          
+          let memoryType: MemoryType = 'conversation';
+          let importance = 5;
+          let additionalMetadata: Record<string, any> = {};
+          
+          if (this.activePersoni.name === 'BILLY') {
+            const financialContext = this.analyzeFinancialContext(text, 'ai');
+            memoryType = financialContext.type;
+            importance = financialContext.importance;
+            if (financialContext.tags.length > 0) {
+              additionalMetadata.tags = financialContext.tags;
+            }
+            console.log(`[RAG] 💰 Financial context detected in response: type=${memoryType}, importance=${importance}, tags=${financialContext.tags.join(', ')}`);
+          }
+          
           await ragMemoryManager.addMemory(
             text,
             this.activePersoni.name,
-            'conversation',
+            memoryType,
             this.activePersoni.name,
-            5
+            importance,
+            additionalMetadata
           );
         } catch (error) {
           console.error('[RAG] Failed to store AI response:', error);
