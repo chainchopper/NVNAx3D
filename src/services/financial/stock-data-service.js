@@ -3,37 +3,15 @@
  * Fetches real-time stock market data from Alpha Vantage API
  */
 
-interface StockQuote {
-  symbol: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  high: number;
-  low: number;
-  open: number;
-  previousClose: number;
-  timestamp: string;
-}
-
-interface StockCache {
-  [symbol: string]: {
-    data: StockQuote;
-    timestamp: number;
-  };
-}
-
 class StockDataService {
-  private cache: StockCache = {};
-  private cacheTimeout = 60000; // 1 minute cache
-  private apiKey: string | null = null;
-  private readonly baseUrl = 'https://www.alphavantage.co/query';
-
   constructor() {
+    this.cache = {};
+    this.cacheTimeout = 60000;
     this.apiKey = this.getApiKey();
+    this.baseUrl = 'https://www.alphavantage.co/query';
   }
 
-  private getApiKey(): string | null {
+  getApiKey() {
     try {
       if (typeof import.meta !== 'undefined' && import.meta.env) {
         return import.meta.env.VITE_ALPHA_VANTAGE_API_KEY || null;
@@ -51,11 +29,11 @@ class StockDataService {
     return null;
   }
 
-  setApiKey(key: string) {
+  setApiKey(key) {
     this.apiKey = key;
   }
 
-  async getQuote(symbol: string): Promise<StockQuote> {
+  async getQuote(symbol) {
     const cached = this.cache[symbol];
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       console.log(`[StockData] Cache hit for ${symbol}`);
@@ -74,7 +52,7 @@ class StockDataService {
 
       if (data['Global Quote']) {
         const quote = data['Global Quote'];
-        const stockQuote: StockQuote = {
+        const stockQuote = {
           symbol: symbol.toUpperCase(),
           price: parseFloat(quote['05. price'] || 0),
           change: parseFloat(quote['09. change'] || 0),
@@ -102,8 +80,8 @@ class StockDataService {
     }
   }
 
-  private getMockQuote(symbol: string): StockQuote {
-    const mockPrices: Record<string, number> = {
+  getMockQuote(symbol) {
+    const mockPrices = {
       'AAPL': 175.43,
       'GOOGL': 140.23,
       'MSFT': 378.91,
@@ -138,4 +116,3 @@ class StockDataService {
 }
 
 export const stockDataService = new StockDataService();
-export type { StockQuote };

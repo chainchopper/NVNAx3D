@@ -3,58 +3,22 @@
  * Manages investment portfolio tracking and analysis
  */
 
-import { stockDataService, StockQuote } from './stock-data-service';
-import { cryptoDataService, CryptoData } from './crypto-data-service';
-
-interface PortfolioHolding {
-  symbol: string;
-  type: 'stock' | 'crypto';
-  quantity: number;
-  averageCost: number;
-  currentPrice: number;
-  totalValue: number;
-  totalCost: number;
-  gainLoss: number;
-  gainLossPercent: number;
-}
-
-interface PortfolioSummary {
-  totalValue: number;
-  totalCost: number;
-  totalGainLoss: number;
-  totalGainLossPercent: number;
-  holdings: PortfolioHolding[];
-  assetAllocation: {
-    stocks: number;
-    crypto: number;
-  };
-  topPerformers: PortfolioHolding[];
-  bottomPerformers: PortfolioHolding[];
-}
-
-interface Portfolio {
-  holdings: Array<{
-    symbol: string;
-    type: 'stock' | 'crypto';
-    quantity: number;
-    averageCost: number;
-  }>;
-}
+import { stockDataService } from './stock-data-service.js';
+import { cryptoDataService } from './crypto-data-service.js';
 
 class PortfolioManager {
-  private portfolio: Portfolio | null = null;
-  private initialized = false;
-
   constructor() {
+    this.portfolio = null;
+    this.initialized = false;
   }
 
-  private ensureInitialized() {
+  ensureInitialized() {
     if (this.initialized) return;
     this.initialized = true;
     this.loadPortfolio();
   }
 
-  private loadPortfolio() {
+  loadPortfolio() {
     try {
       if (typeof localStorage === 'undefined') {
         console.warn('[Portfolio] localStorage unavailable, using default portfolio');
@@ -75,7 +39,7 @@ class PortfolioManager {
     }
   }
 
-  private savePortfolio() {
+  savePortfolio() {
     try {
       if (typeof localStorage === 'undefined') {
         console.warn('[Portfolio] localStorage unavailable, cannot persist portfolio');
@@ -88,7 +52,7 @@ class PortfolioManager {
     }
   }
 
-  private getDefaultPortfolio(): Portfolio {
+  getDefaultPortfolio() {
     return {
       holdings: [
         { symbol: 'AAPL', type: 'stock', quantity: 10, averageCost: 150.00 },
@@ -100,13 +64,13 @@ class PortfolioManager {
     };
   }
 
-  async getSummary(): Promise<PortfolioSummary> {
+  async getSummary() {
     this.ensureInitialized();
     if (!this.portfolio) {
       throw new Error('[Portfolio] Not initialized');
     }
 
-    const holdings: PortfolioHolding[] = [];
+    const holdings = [];
     let totalValue = 0;
     let totalCost = 0;
 
@@ -127,7 +91,7 @@ class PortfolioManager {
         const gainLoss = holdingValue - holdingCost;
         const gainLossPercent = (gainLoss / holdingCost) * 100;
 
-        const portfolioHolding: PortfolioHolding = {
+        const portfolioHolding = {
           symbol: holding.symbol,
           type: holding.type,
           quantity: holding.quantity,
@@ -174,7 +138,7 @@ class PortfolioManager {
     };
   }
 
-  addHolding(symbol: string, type: 'stock' | 'crypto', quantity: number, averageCost: number) {
+  addHolding(symbol, type, quantity, averageCost) {
     this.ensureInitialized();
     if (!this.portfolio) {
       throw new Error('[Portfolio] Not initialized');
@@ -196,7 +160,7 @@ class PortfolioManager {
     this.savePortfolio();
   }
 
-  removeHolding(symbol: string, type: 'stock' | 'crypto') {
+  removeHolding(symbol, type) {
     this.ensureInitialized();
     if (!this.portfolio) {
       throw new Error('[Portfolio] Not initialized');
@@ -219,4 +183,3 @@ class PortfolioManager {
 }
 
 export const portfolioManager = new PortfolioManager();
-export type { PortfolioHolding, PortfolioSummary };

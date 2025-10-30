@@ -64,6 +64,9 @@
 
 import express from 'express';
 import cors from 'cors';
+import { stockDataService } from './src/services/financial/stock-data-service.js';
+import { cryptoDataService } from './src/services/financial/crypto-data-service.js';
+import { portfolioManager } from './src/services/financial/portfolio-manager.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1896,6 +1899,162 @@ app.post('/api/connectors/yolo/detect', async (req, res) => {
       success: false,
       error: error.message,
       setupInstructions: 'YOLO API integration optional. For browser-based detection, use TensorFlow.js COCO-SSD model instead.',
+    });
+  }
+});
+
+app.get('/api/financial/stocks/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    
+    if (!symbol) {
+      return res.status(400).json({
+        success: false,
+        error: 'Stock symbol is required',
+      });
+    }
+
+    const quote = await stockDataService.getQuote(symbol.toUpperCase());
+    
+    res.json({
+      success: true,
+      data: quote,
+    });
+  } catch (error) {
+    console.error('[Financial API - Stock Quote Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch stock quote',
+    });
+  }
+});
+
+app.get('/api/financial/crypto/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cryptocurrency ID or symbol is required',
+      });
+    }
+
+    const cryptoData = await cryptoDataService.getPrice(id.toLowerCase());
+    
+    res.json({
+      success: true,
+      data: cryptoData,
+    });
+  } catch (error) {
+    console.error('[Financial API - Crypto Price Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch cryptocurrency price',
+    });
+  }
+});
+
+app.get('/api/financial/portfolio/summary', async (req, res) => {
+  try {
+    const summary = await portfolioManager.getSummary();
+    
+    res.json({
+      success: true,
+      data: summary,
+    });
+  } catch (error) {
+    console.error('[Financial API - Portfolio Summary Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch portfolio summary',
+    });
+  }
+});
+
+app.get('/api/financial/portfolio/holdings', async (req, res) => {
+  try {
+    const holdings = portfolioManager.getHoldings();
+    
+    res.json({
+      success: true,
+      data: holdings,
+    });
+  } catch (error) {
+    console.error('[Financial API - Portfolio Holdings Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch portfolio holdings',
+    });
+  }
+});
+
+app.post('/api/financial/portfolio/holding/add', async (req, res) => {
+  try {
+    const { symbol, type, quantity, averageCost } = req.body;
+    
+    if (!symbol || !type || !quantity || !averageCost) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: symbol, type, quantity, averageCost',
+      });
+    }
+
+    if (!['stock', 'crypto'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Type must be either "stock" or "crypto"',
+      });
+    }
+
+    portfolioManager.addHolding(symbol, type, parseFloat(quantity), parseFloat(averageCost));
+    
+    res.json({
+      success: true,
+      data: {
+        message: `Added ${quantity} shares/units of ${symbol} to portfolio`,
+      },
+    });
+  } catch (error) {
+    console.error('[Financial API - Add Holding Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to add holding to portfolio',
+    });
+  }
+});
+
+app.delete('/api/financial/portfolio/holding/:symbol/:type', async (req, res) => {
+  try {
+    const { symbol, type } = req.params;
+    
+    if (!symbol || !type) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbol and type are required',
+      });
+    }
+
+    if (!['stock', 'crypto'].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Type must be either "stock" or "crypto"',
+      });
+    }
+
+    portfolioManager.removeHolding(symbol, type);
+    
+    res.json({
+      success: true,
+      data: {
+        message: `Removed ${symbol} from portfolio`,
+      },
+    });
+  } catch (error) {
+    console.error('[Financial API - Remove Holding Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to remove holding from portfolio',
     });
   }
 });
