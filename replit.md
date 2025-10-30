@@ -33,6 +33,7 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Environmental Awareness Suite**: Real-time camera-based contextual observation. Includes a Camera Manager component with minimalist controls (👁️ preview toggle, 📷 camera toggle), Camera-as-3D-Background, Vision-Enhanced Idle Speech (analyzing live camera frames), and an Environmental Observer Service for continuous monitoring and proactive assistance. Features a multi-format file upload system with RAG integration for analyzed content and metadata.
 - **Object Recognition System**: Real-time object detection using TensorFlow.js and COCO-SSD model. Detects 80 object classes with confidence scores, bounding boxes, FPS tracking, and visual overlay with proper video scaling.
 - **Voice Command System**: Hands-free control with 20+ natural language commands (PersonI switching, camera control, panel management, volume, object detection, notes/tasks, etc.). Pattern-based matching with parameter extraction and structured return values.
+- **Routine Automation System**: IF-THEN-THAT automation supporting time-based, event-driven, state monitoring, user actions, and vision detection triggers. Vision triggers support 'local' (TensorFlow.js), 'frigate', 'codeprojectai', and 'yolo' services for object detection-based automation with configurable confidence thresholds.
 - **Dual PersonI Manager**: Multi-AI collaboration system with 4 modes (collaborative, debate, teaching, single). Features turn management, conversation history, intelligent switching logic, and primary persona preservation.
 - **Calendar System**: Visual calendar component with month/week/day/agenda views, natural language event creation ("Meeting with John tomorrow at 2pm"), and integration-ready Google Calendar backend support.
 - **CSP Security Hardening**: Implemented Content Security Policy for secure content delivery.
@@ -64,12 +65,12 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **CORS**: Cross-origin resource sharing for backend API.
 - **ChromaDB**: For vector database integration in the RAG system.
 - **raw.githubusercontent.com, HuggingFace CDN**: Allowed for content delivery.
-- **Yahoo Finance API**: For stock data.
-- **CoinGecko API**: For cryptocurrency data.
+- **Alpha Vantage API**: For real-time stock market data.
+- **CoinGecko API**: For cryptocurrency market data (free tier, production-ready).
+- **Finnhub API**: For financial market news with sentiment analysis.
 - **AudD API**: For song identification.
 - **Genius API**: For song lyrics.
 - **Plaid/Yodlee (planned)**: For financial transaction and account data.
-- **NewsAPI/Finnhub (planned)**: For financial news.
 
 ## Recent Development (October 30, 2025)
 ### UI/UX Cleanup Sprint
@@ -81,19 +82,21 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 ### Advanced Features Sprint
 - **Object Recognition**: ✅ PRODUCTION-READY - TensorFlow.js COCO-SSD integration with 80-class detection, bounding boxes, confidence scores, FPS tracking, proper video scaling, RAG memory integration
 - **Voice Commands**: ✅ PRODUCTION-READY - 20+ natural language commands with voice feedback for all actions (PersonI switching, camera, panels, volume, detection, notes, tasks, routines), routine name-to-ID lookup, error handling
-- **BILLY Financial APIs**: ✅ REAL DATA INTEGRATED - CoinGecko for crypto (production), Alpha Vantage for stocks (needs API key), Finnhub for market news (needs API key). All services properly secured on backend with mock data fallback.
+- **Routine Vision Triggers**: ✅ PRODUCTION-READY - Local TensorFlow.js object detection integrated with routine automation system. Supports 'local' vision service alongside Frigate, CodeProject.AI, and YOLO. Automatic model initialization, proper error handling, configurable confidence thresholds.
+- **BILLY Financial APIs**: ✅ PRODUCTION-READY - Real backend integration with Alpha Vantage (stocks), CoinGecko (crypto - no API key needed), and Finnhub (market news with sentiment). Backend-secured with caching, graceful mock data fallback, no API key exposure.
 - **Dual PersonI**: 🔧 IN PROGRESS - Backend integration complete (state management, handler methods), UI controls pending, conversation routing pending
 - **Calendar**: Component built with month/week/day/agenda views and natural language parsing, Google Calendar backend integration pending
-- **Bug Fixes**: Bounding box scaling, parameter propagation, primary persona restoration, voice command async routine lookup - all architect-reviewed and production-ready
+- **Bug Fixes**: Bounding box scaling, parameter propagation, primary persona restoration, voice command async routine lookup, vision trigger initialization - all architect-reviewed and production-ready
 
 ### BILLY Financial Integration Status
-- ✅ Stock Data Service: Alpha Vantage API with backend caching (requires ALPHA_VANTAGE_API_KEY)
-- ✅ Crypto Data Service: CoinGecko free API - PRODUCTION READY (no API key needed)
-- ✅ Market News Service: Finnhub API with sentiment analysis (requires FINNHUB_API_KEY)
-- ✅ Portfolio Manager: Real-time tracking with backend persistence
-- ✅ All services secured on backend (server.js) - no frontend API key exposure
-- ✅ Graceful fallback to mock data when API keys not configured
-- ⏳ Banking Integration: Pending Plaid/Yodlee integration for real transactions and account balances
+- ✅ **Stock Data Service**: Alpha Vantage API with backend caching (requires ALPHA_VANTAGE_API_KEY secret)
+- ✅ **Crypto Data Service**: CoinGecko free API - PRODUCTION READY (no API key needed, 30 calls/min)
+- ✅ **Market News Service**: Finnhub API with sentiment analysis (requires FINNHUB_API_KEY secret)
+- ✅ **Portfolio Manager**: Real-time tracking with backend persistence
+- ✅ **Security**: All services secured on backend (server.js) - no frontend API key exposure
+- ✅ **Fallback System**: Graceful fallback to mock data when API keys not configured
+- ✅ **Backend Endpoints**: `/api/financial/stocks`, `/api/financial/crypto`, `/api/financial/news`
+- ⏳ **Banking Integration**: Pending Plaid/Yodlee integration for real transactions and account balances
 
 ### Dual PersonI Integration Status
 - ✅ Imported dualPersonIManager and DualMode types
@@ -103,3 +106,12 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - ⏳ TODO: Modify conversation routing to use dualPersonIManager.getActivePersonI()
 - ⏳ TODO: Implement turn switching after each AI response
 - ⏳ TODO: Visual indicators for active speaker in dual mode
+
+### Routine Vision Triggers Integration Status
+- ✅ **Vision Service Types**: Added 'local' service to routine-types.ts alongside frigate, codeprojectai, yolo
+- ✅ **Local Detection Integration**: TensorFlow.js object detection service integrated with routine executor
+- ✅ **Model Initialization**: Automatic idempotent initialization before detection (critical fix)
+- ✅ **Object Mapping**: Detected objects mapped to routine trigger format (label, confidence)
+- ✅ **Error Handling**: Proper video element validation and error logging
+- ✅ **Configuration**: Supports minConfidence threshold, checkInterval polling, objectTypes filtering
+- ✅ **Architecture Review**: Production-ready after architect review and initialization fix
