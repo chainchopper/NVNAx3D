@@ -35,6 +35,7 @@ import './components/constellation-map-bg';
 import './components/code-flow-bg';
 import './components/static-noise-bg';
 import './components/camera-manager';
+import './components/camera-controls';
 import './components/transcription-log';
 import './components/ui-controls';
 import {
@@ -191,6 +192,9 @@ export class GdmLiveAudio extends LitElement {
   
   // Camera and input mode state
   @state() cameraEnabled = false;
+  @state() cameraShowPreview = false;
+  @state() cameraHasPermission = false;
+  @state() cameraError: string | null = null;
   @state() inputMode: 'voice' | 'text' = 'voice';
   @state() textInput = '';
   @query('camera-manager') cameraManager?: any;
@@ -1733,6 +1737,8 @@ export class GdmLiveAudio extends LitElement {
 
   private handleCameraPermissions(e: CustomEvent) {
     this.cameraEnabled = true;
+    this.cameraHasPermission = true;
+    this.cameraError = null;
     console.log('[Camera] Permissions granted, camera enabled');
     
     if (this.cameraEnabled && this.activePersoni) {
@@ -1746,6 +1752,39 @@ export class GdmLiveAudio extends LitElement {
         );
       }
     }
+  }
+
+  private handleCameraPermissionsDenied(e: CustomEvent) {
+    this.cameraHasPermission = false;
+    this.cameraEnabled = false;
+    this.cameraError = 'Camera permission denied';
+    console.log('[Camera] Permissions denied');
+  }
+
+  private async handleRequestCameraPermission() {
+    console.log('[Camera] Requesting camera permission...');
+    if (this.cameraManager) {
+      const granted = await this.cameraManager.requestPermissions();
+      if (granted) {
+        this.cameraHasPermission = true;
+        this.cameraError = null;
+        console.log('[Camera] Permission granted via controls');
+      } else {
+        this.cameraHasPermission = false;
+        this.cameraError = 'Camera permission denied';
+        console.log('[Camera] Permission denied via controls');
+      }
+    }
+  }
+
+  private handleToggleCameraControl() {
+    this.cameraEnabled = !this.cameraEnabled;
+    console.log('[Camera] Camera toggled:', this.cameraEnabled ? 'ON' : 'OFF');
+  }
+
+  private handleToggleCameraPreview() {
+    this.cameraShowPreview = !this.cameraShowPreview;
+    console.log('[Camera] Preview toggled:', this.cameraShowPreview ? 'VISIBLE' : 'HIDDEN');
   }
 
   private handleFrameCaptured(e: CustomEvent) {
@@ -3961,6 +4000,25 @@ export class GdmLiveAudio extends LitElement {
           .playbackTime=${this.musicStartTime > 0 ? (Date.now() - this.musicStartTime) / 1000 : 0}
           @close=${this.handleCloseSongBubble}
         ></song-info-bubble>
+
+        <!-- Camera Controls -->
+        <camera-controls
+          .hasPermission=${this.cameraHasPermission}
+          .isActive=${this.cameraEnabled}
+          .showPreview=${this.cameraShowPreview}
+          .error=${this.cameraError}
+          @request-permission=${this.handleRequestCameraPermission}
+          @toggle-camera=${this.handleToggleCameraControl}
+          @toggle-preview=${this.handleToggleCameraPreview}
+        ></camera-controls>
+
+        <!-- Camera Manager -->
+        <camera-manager
+          .enabled=${this.cameraEnabled}
+          .showPreview=${this.cameraShowPreview}
+          @permissions-granted=${this.handleCameraPermissions}
+          @permissions-denied=${this.handleCameraPermissionsDenied}
+        ></camera-manager>
 
         <div
           id="status"
