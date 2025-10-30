@@ -20,7 +20,7 @@ export interface RoutineTrigger {
     actionType?: string;
     taskPattern?: string;
     visionDetection?: {
-      service: 'frigate' | 'codeprojectai' | 'yolo';
+      service: 'frigate' | 'codeprojectai' | 'yolo' | 'local';
       camera?: string;
       objectTypes: string[];
       minConfidence?: number;

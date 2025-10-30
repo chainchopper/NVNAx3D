@@ -430,7 +430,32 @@ export class RoutineExecutor {
       try {
         let result;
         
-        if (visionConfig.service === 'frigate') {
+        if (visionConfig.service === 'local') {
+          // Use the local TensorFlow.js object detection service
+          const { objectRecognitionService } = await import('./object-recognition');
+          
+          // Initialize the TensorFlow model (idempotent - safe to call multiple times)
+          await objectRecognitionService.initialize();
+          
+          const videoElement = document.querySelector('video');
+          
+          if (!videoElement) {
+            console.warn(`[RoutineExecutor] Local vision trigger missing video element for routine ${routine.id}`);
+            return;
+          }
+          
+          const detectedObjects = await objectRecognitionService.detectObjects(videoElement);
+          
+          result = {
+            success: true,
+            data: {
+              detections: detectedObjects.map(obj => ({
+                label: obj.class,
+                confidence: obj.score
+              }))
+            }
+          };
+        } else if (visionConfig.service === 'frigate') {
           if (!visionConfig.camera) {
             console.warn(`[RoutineExecutor] Frigate vision trigger missing camera for routine ${routine.id}`);
             return;
