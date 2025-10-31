@@ -46,6 +46,14 @@ export class GameOfLifeBg extends LitElement {
     super.connectedCallback();
     this.setupCanvas();
     this.startGameLoop();
+    
+    // GAME OF LIFE PERSISTENCE - Load saved state
+    this.loadGameState();
+    
+    // Save state every 60 seconds
+    setInterval(() => {
+      this.saveGameState();
+    }, 60000);
   }
 
   disconnectedCallback() {
@@ -86,19 +94,78 @@ export class GameOfLifeBg extends LitElement {
   }
 
   private initializeGrid() {
+    // Check if we have saved state first
+    const savedGrid = this.getSavedGrid();
+    if (savedGrid && savedGrid.rows === this.rows && savedGrid.cols === this.cols) {
+      this.grid = savedGrid.grid;
+      console.log('[GameOfLife] Restored saved state');
+      return;
+    }
+    
+    // Otherwise initialize randomly with session ID influence
+    const sessionId = localStorage.getItem('nirvana-session-id') || 'default';
+    const sessionSeed = sessionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const density = 0.25 + (sessionSeed % 20) / 100; // 0.25-0.45 density based on session
+    
     this.grid = Array(this.rows)
       .fill(null)
       .map(() => Array(this.cols).fill(false));
 
     for (let i = 0; i < this.rows; i++) {
       for (let j = 0; j < this.cols; j++) {
-        this.grid[i][j] = Math.random() < 0.3;
+        this.grid[i][j] = Math.random() < density;
       }
     }
 
     this.addGlider(5, 5);
     this.addGlider(15, 20);
     this.addGlider(30, 10);
+  }
+  
+  private saveGameState() {
+    try {
+      const state = {
+        grid: this.grid,
+        rows: this.rows,
+        cols: this.cols,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('nirvana-gol-state', JSON.stringify(state));
+      console.log('[GameOfLife] State saved');
+    } catch (error) {
+      console.error('[GameOfLife] Failed to save state:', error);
+    }
+  }
+  
+  private loadGameState() {
+    try {
+      const saved = localStorage.getItem('nirvana-gol-state');
+      if (saved) {
+        const state = JSON.parse(saved);
+        // Only use if less than 5 minutes old
+        if (Date.now() - state.timestamp < 5 * 60 * 1000) {
+          console.log('[GameOfLife] Found recent saved state');
+        }
+      }
+    } catch (error) {
+      console.error('[GameOfLife] Failed to load state:', error);
+    }
+  }
+  
+  private getSavedGrid() {
+    try {
+      const saved = localStorage.getItem('nirvana-gol-state');
+      if (saved) {
+        const state = JSON.parse(saved);
+        // Only use if less than 5 minutes old
+        if (Date.now() - state.timestamp < 5 * 60 * 1000) {
+          return state;
+        }
+      }
+    } catch (error) {
+      console.error('[GameOfLife] Failed to get saved grid:', error);
+    }
+    return null;
   }
 
   private addGlider(row: number, col: number) {

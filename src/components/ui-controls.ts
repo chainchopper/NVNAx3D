@@ -34,7 +34,7 @@ export class UIControls extends LitElement {
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      z-index: 10;
+      z-index: 1500;
     }
 
     .main-controls {

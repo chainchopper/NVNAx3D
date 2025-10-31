@@ -76,7 +76,7 @@ import { chatterboxTTS } from './services/chatterbox-tts';
 import { audioRecordingManager } from './services/audio-recording-manager';
 import { objectRecognitionService, DetectionResult } from './services/object-recognition';
 import { voiceCommandSystem } from './services/voice-command-system';
-import { dualPersonIManager } from './services/dual-personi-manager';
+import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
 import './components/object-detection-overlay';
 import './components/calendar-view';
 
@@ -738,7 +738,7 @@ export class GdmLiveAudio extends LitElement {
       border-left: 1px solid rgba(255, 255, 255, 0.2);
       color: white;
       font-family: sans-serif;
-      z-index: 200;
+      z-index: 2000;
       transition: right 0.5s ease-in-out;
       display: flex;
       flex-direction: column;
@@ -1112,6 +1112,18 @@ export class GdmLiveAudio extends LitElement {
     
     // Request notification permission for reminders
     reminderManager.requestNotificationPermission();
+    
+    // Add ESCAPE key handler to close panels
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (this.activeSidePanel !== 'none') {
+          this.closeSidePanel();
+        }
+        if (this.settingsMenuVisible) {
+          this.settingsMenuVisible = false;
+        }
+      }
+    });
   }
 
   protected updated(
@@ -1132,6 +1144,16 @@ export class GdmLiveAudio extends LitElement {
   private async init() {
     this.outputNode.connect(this.outputAudioContext.destination);
     this.loadConfiguration();
+    
+    // SESSION ID SYSTEM - Generate unique ID on first load
+    let sessionId = localStorage.getItem('nirvana-session-id');
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      localStorage.setItem('nirvana-session-id', sessionId);
+      console.log('[SessionID] Generated new session ID:', sessionId);
+    } else {
+      console.log('[SessionID] Using existing session ID:', sessionId);
+    }
     
     try {
       console.log('[RAG] Initializing memory system...');
@@ -1214,7 +1236,8 @@ export class GdmLiveAudio extends LitElement {
       console.log(`[DualMode] Synced primary slot with ${this.activePersoni.name}`);
     }
     
-    if (this.dualModeEnabled && this.secondaryPersoni) {
+    // NEVER auto-activate dual mode - only via explicit user action
+    if (false && this.dualModeEnabled && this.secondaryPersoni) {
       activePersonasManager.setPersona('secondary', this.secondaryPersoni);
       console.log(`[DualMode] Dual mode enabled with secondary: ${this.secondaryPersoni.name}`);
     }
@@ -1936,7 +1959,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.dualModeActive && this.secondaryPersoni) {
       // Activate dual mode with current primary and selected secondary
       dualPersonIManager.activateDualMode(
-        this.personis[this.selectedPersoniIndex],
+        this.activePersoni!,
         this.secondaryPersoni,
         this.dualModeType
       );
@@ -1954,7 +1977,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.dualModeActive && this.secondaryPersoni) {
       // Re-activate with new mode
       dualPersonIManager.activateDualMode(
-        this.personis[this.selectedPersoniIndex],
+        this.activePersoni!,
         this.secondaryPersoni,
         mode
       );
@@ -1968,7 +1991,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.dualModeActive) {
       // Re-activate with new secondary
       dualPersonIManager.activateDualMode(
-        this.personis[this.selectedPersoniIndex],
+        this.activePersoni!,
         personi,
         this.dualModeType
       );
@@ -4739,7 +4762,8 @@ export class GdmLiveAudio extends LitElement {
           .isMusicDetected=${this.isMusicDetected}
           .musicBpm=${this.musicBpm}
           .musicBeatDetected=${this.musicBeatDetected}
-          .musicConfidence=${this.musicConfidence}></gdm-live-audio-visuals-3d>
+          .musicConfidence=${this.musicConfidence}
+          .cameraVideoElement=${this.cameraManager?.getVideoElement()}></gdm-live-audio-visuals-3d>
       </div>
     `;
   }

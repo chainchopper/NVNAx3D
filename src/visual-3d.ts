@@ -40,6 +40,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private scene!: THREE.Scene;
   private composer!: EffectComposer;
   private centralObject!: THREE.Mesh;
+  private secondaryObject: THREE.Mesh | null = null; // For dual PersonI mode
   private lightGroup!: THREE.Group;
   private pointLights: THREE.PointLight[] = [];
   private prevTime = 0;
@@ -94,6 +95,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   @property({type: Boolean}) musicBeatDetected = false;
   @property({type: Number}) musicConfidence = 0;
   @property({type: Object}) cameraVideoElement: HTMLVideoElement | null = null;
+  @property({type: Boolean}) dualModeActive = false;
+  @property({type: Object}) secondaryVisuals: PersoniConfig['visuals'] | null = null;
 
   private _outputNode!: AudioNode;
   private _inputNode!: AudioNode;
@@ -149,6 +152,11 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     
     if (changedProperties.has('cameraVideoElement')) {
       this.updateCameraBackground();
+    }
+    
+    // Handle dual mode changes
+    if (changedProperties.has('dualModeActive') || changedProperties.has('secondaryVisuals')) {
+      this.updateDualModeVisuals();
     }
   }
 
@@ -348,10 +356,63 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     const geometry = this.createShapeGeometry(this.visuals.shape);
     this.centralObject = new THREE.Mesh(geometry, this.sphereMaterial);
     this.centralObject.castShadow = true;
+    
+    // Position primary object based on dual mode
+    if (this.dualModeActive) {
+      this.centralObject.position.set(-2, 0, 0);
+    } else {
+      this.centralObject.position.set(0, 0, 0);
+    }
+    
     this.scene.add(this.centralObject);
 
     if (this.godRaysEffect) {
       this.godRaysEffect.lightSource = this.centralObject;
+    }
+  }
+  
+  private updateDualModeVisuals() {
+    if (!this.scene) return;
+    
+    // Handle secondary object for dual mode
+    if (this.dualModeActive && this.secondaryVisuals) {
+      if (!this.secondaryObject) {
+        // Create secondary object
+        const geometry = this.createShapeGeometry(this.secondaryVisuals.shape);
+        const material = this.sphereMaterial.clone();
+        material.emissive.set(this.secondaryVisuals.accentColor);
+        this.secondaryObject = new THREE.Mesh(geometry, material);
+        this.secondaryObject.castShadow = true;
+        this.secondaryObject.position.set(2, 0, 0);
+        this.scene.add(this.secondaryObject);
+        
+        // Animate fade in
+        material.opacity = 0;
+        const fadeIn = setInterval(() => {
+          material.opacity = Math.min(material.opacity + 0.05, this.baseOpacity);
+          if (material.opacity >= this.baseOpacity) {
+            clearInterval(fadeIn);
+          }
+        }, 16);
+      }
+      
+      // Position objects for dual mode
+      if (this.centralObject) {
+        this.centralObject.position.set(-2, 0, 0);
+      }
+    } else {
+      // Remove secondary object if dual mode is disabled
+      if (this.secondaryObject) {
+        this.scene.remove(this.secondaryObject);
+        this.secondaryObject.geometry.dispose();
+        (this.secondaryObject.material as THREE.Material).dispose();
+        this.secondaryObject = null;
+      }
+      
+      // Center primary object
+      if (this.centralObject) {
+        this.centralObject.position.set(0, 0, 0);
+      }
     }
   }
 
