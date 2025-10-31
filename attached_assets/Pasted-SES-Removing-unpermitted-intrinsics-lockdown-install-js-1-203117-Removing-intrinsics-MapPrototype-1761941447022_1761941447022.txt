@@ -1,0 +1,362 @@
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Loading failed for the <script> with source “https://vercel.live/_next-live/feedback/feedback.js”. emojithing.com:39:181
+Content-Security-Policy: The page’s settings blocked a script (script-src-elem) at https://vercel.live/_next-live/feedback/feedback.js from being executed because it violates the following directive: “script-src-elem 'self' https://esm.sh 'unsafe-inline'” emojithing.com
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[EmbeddingGenerator] No valid Google provider found, using fallback embeddings <anonymous code>:1:147461
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[EmbeddingGenerator] No valid Google provider found, using fallback embeddings <anonymous code>:1:147461
+[EmbeddingGenerator] No valid Google provider found, using fallback embeddings <anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked a JavaScript eval (script-src) from being executed because it violates the following directive: “script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'” (Missing 'unsafe-eval') 2 index-Ba-O4l0p.js:4402:22734
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+The Notification permission may only be requested from inside a short running user-generated event handler. emojithing.com
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://cas-bridge.xethub.hf.co/xet-bridge-us/6452c2113a794b2d9b15b8ae/dffddb2c339fd5949ce6e991872aab98b6ee852b701467a2f8f3c4e56351c337?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=cas%2F20251031%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251031T200619Z&X-Amz-Expires=3600&X-Amz-Signature=291f14dd3c1a54f7b5251636b3f8a425b68aee7db75e1135c6124fb8f1df27f1&X-Amz-SignedHeaders=host&X-Xet-Cas-Uid=public&response-content-disposition=inline%3B+filename*%3DUTF-8%27%27decoder_model_merged.onnx%3B+filename%3D%22decoder_model_merged.onnx%22%3B&x-id=GetObject&Expires=1761944779&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc2MTk0NDc3OX19LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2FzLWJyaWRnZS54ZXRodWIuaGYuY28veGV0LWJyaWRnZS11cy82NDUyYzIxMTNhNzk0YjJkOWIxNWI4YWUvZGZmZGRiMmMzMzlmZDU5NDljZTZlOTkxODcyYWFiOThiNmVlODUyYjcwMTQ2N2EyZjhmM2M0ZTU2MzUxYzMzNyoifV19&Signature=TMtnOyqlSKHX31DnARkpcPjrGhCj33PMchEq09VcVy748lvdusAXqG1bn-bdmVT7SQBJ0Z%7EtNpK53IhK8RX-sOZYXbSwuFLxRCzMFcLF18ACbd7AVtHvcgb0AytWb2zKqSLY5zLT%7Ew1ZPEDkx1iO-X3QxRoWR96wpx%7Ek1tAJUM0YAU2cOmCDD0ABu6DWI9HFLknAZCrzlPedP6Taqrb5NtNflNadvpCRp2vbBeshl87ff5l5rrx78nRlvhDLKTAQLDV9sc3535ecH28zLldQvkA9tg9XHJFG-9-FxqUQAkFM4-wOefZ5D%7EM20fFE5yYQf1ytpTgyl67k5LxVY7lEVw__&Key-Pair-Id=K2L8F4GPSG1IFC because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” emojithing.com
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://cas-bridge.xethub.hf.co/xet-bridge-us/6452c2113a794b2d9b15b8ae/ab85e00a5cfe13fda726b4e0ab80ff5bf15c079292bc5e0dadd1861558034020?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=cas%2F20251031%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251031T200619Z&X-Amz-Expires=3600&X-Amz-Signature=c4cf817b44fb38444aa9c3415e28c7ba4c1618aa1a02a4364c39f38f11ea3908&X-Amz-SignedHeaders=host&X-Xet-Cas-Uid=public&response-content-disposition=inline%3B+filename*%3DUTF-8%27%27encoder_model.onnx%3B+filename%3D%22encoder_model.onnx%22%3B&x-id=GetObject&Expires=1761944779&Policy=eyJTdGF0ZW1lbnQiOlt7IkNvbmRpdGlvbiI6eyJEYXRlTGVzc1RoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc2MTk0NDc3OX19LCJSZXNvdXJjZSI6Imh0dHBzOi8vY2FzLWJyaWRnZS54ZXRodWIuaGYuY28veGV0LWJyaWRnZS11cy82NDUyYzIxMTNhNzk0YjJkOWIxNWI4YWUvYWI4NWUwMGE1Y2ZlMTNmZGE3MjZiNGUwYWI4MGZmNWJmMTVjMDc5MjkyYmM1ZTBkYWRkMTg2MTU1ODAzNDAyMCoifV19&Signature=Lzhc5McV7RNhUXVankSfq8m6H787kKFgwpGEaTeh-iGmXvKICLJKKV7NTLkRnxilOyG9OCIomZxgDBVzrtkqH7MhGJq17iYowESwPtiCPHLzXFlr4cXpDZAjG%7E5fYsOGBF%7E2-lWTvdRWpveT%7ESX6YXzDpY0wR-BppDDkK7EkYbezdK3UCQELycvqVWqZ%7E05hIbpB-X-ahNTIIuoxsc7CSWI53gNF8-O5G01CTFjL1t4cTXswXxi7aRYrsXgdgpg1hjiBGbjfxaDir21MkG24Raq%7E53XyAWS1uLUbpARFq4Fsa-1bdAN39ln99XeugpIyMIr3%7EUxwwgVTeWMzAuAYUw__&Key-Pair-Id=K2L8F4GPSG1IFC because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” emojithing.com
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at https://huggingface.co/Xenova/whisper-small/resolve/main/onnx/decoder_model_merged.onnx. (Reason: CORS request did not succeed). Status code: (null).
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at https://huggingface.co/Xenova/whisper-small/resolve/main/onnx/encoder_model.onnx. (Reason: CORS request did not succeed). Status code: (null).
+[Whisper] Failed to load model: Unsupported model type: whisper <anonymous code>:1:147461
+Failed to load Whisper model on init: Unsupported model type: whisper <anonymous code>:1:147461
+Transcription error: Error: Model not loaded. Call loadModel() first.
+    transcribe https://emojithing.com/assets/index-Ba-O4l0p.js:6203
+    transcribeAudio https://emojithing.com/assets/index-Ba-O4l0p.js:34606
+<anonymous code>:1:147461
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+<anonymous code>:1:147461
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+[ObjectRecognition] Failed to load model: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+[ObjectDetection] Failed to start: TypeError: NetworkError when attempting to fetch resource.
+    fetch https://emojithing.com/assets/index-Ba-O4l0p.js:12499
+    loadModelJSON https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:16447
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    loadGraphModel https://emojithing.com/assets/index-Ba-O4l0p.js:17641
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    load https://emojithing.com/assets/index-Ba-O4l0p.js:17671
+    initialize https://emojithing.com/assets/index-Ba-O4l0p.js:34103
+    startObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleToggleObjectDetection https://emojithing.com/assets/index-Ba-O4l0p.js:34596
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+    handleToggle https://emojithing.com/assets/index-Ba-O4l0p.js:34111
+    handleEvent https://emojithing.com/assets/index-Ba-O4l0p.js:143
+<anonymous code>:1:147461
+Content-Security-Policy: The page’s settings blocked the loading of a resource (connect-src) at https://storage.googleapis.com/tfjs-models/savedmodel/ssdlite_mobilenet_v2/model.json because it violates the following directive: “connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss:” index-Ba-O4l0p.js:12499:167
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:74:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://emojithing.com/assets/index-Ba-O4l0p.js%20line%204402%20%3E%20WebAssembly.Module
+Source Map URL: null
+Source map error: Error: request failed with status 404
+Stack in the worker:networkRequest@resource://devtools/client/shared/source-map-loader/utils/network-request.js:43:9
+
+Resource URL: https://emojithing.com/%3Canonymous%20code%3E
+Source Map URL: installHook.js.map
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+<anonymous code>:1:147461
+    overrideMethod <anonymous code>:1
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    setTimeout handler*resetIdlePromptTimer https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    onend https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+<anonymous code>:1:147461
+Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    addMemory https://emojithing.com/assets/index-Ba-O4l0p.js:7009
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    setTimeout handler*resetIdlePromptTimer https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    onend https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    setTimeout handler*resetIdlePromptTimer https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    onend https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakWithBrowserTTS https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    speakText https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    triggerIdlePrompt https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+    idlePromptTimeout https://emojithing.com/assets/index-Ba-O4l0p.js:34620
+<anonymous code>:1:147461
