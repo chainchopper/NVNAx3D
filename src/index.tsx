@@ -181,7 +181,6 @@ export class GdmLiveAudio extends LitElement {
   
   // Dual PersonI mode state (opt-in feature)
   @state() dualModeEnabled = false;
-  @state() secondaryPersoni: PersoniConfig | null = null;
   @state() currentSpeakerSlot: PersonaSlot | null = null;
   
   // Music detection state
@@ -218,7 +217,7 @@ export class GdmLiveAudio extends LitElement {
   // Calendar state
   @state() showCalendar = false;
   
-  // Dual PersonI state
+  // Dual PersonI advanced controls
   @state() dualModeActive = false;
   @state() dualModeType: DualMode = 'collaborative';
   @state() secondaryPersoni: PersoniConfig | null = null;
