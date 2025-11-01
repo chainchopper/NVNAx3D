@@ -1682,6 +1682,9 @@ export class GdmLiveAudio extends LitElement {
       });
       this.savePersonis();
     }
+    
+    // AUTO-FIX: Update PersonI to use first available model if their model doesn't exist
+    this.autoUpdatePersonIModels();
 
     if (this.personis.length > 0) {
       this.activePersoni = this.personis[0];
@@ -1703,6 +1706,36 @@ export class GdmLiveAudio extends LitElement {
   private savePersonis() {
     localStorage.setItem(PERSONIS_KEY, JSON.stringify(this.personis));
     this.personis = [...this.personis];
+  }
+  
+  private autoUpdatePersonIModels() {
+    const availableModels = providerManager.getAvailableModels();
+    
+    if (availableModels.length === 0) {
+      console.warn('[PersonI] No providers configured - PersonI models cannot be auto-updated');
+      return;
+    }
+    
+    let updated = false;
+    this.personis = this.personis.map(personi => {
+      const modelExists = availableModels.some(m => m.id === personi.thinkingModel);
+      
+      if (!modelExists) {
+        const firstModel = availableModels[0];
+        console.log(`[PersonI] Auto-updating ${personi.name} from "${personi.thinkingModel}" to "${firstModel.id}" (model not found in configured providers)`);
+        updated = true;
+        return {
+          ...personi,
+          thinkingModel: firstModel.id,
+        };
+      }
+      
+      return personi;
+    });
+    
+    if (updated) {
+      this.savePersonis();
+    }
   }
 
   private saveFabPosition() {
@@ -1924,7 +1957,37 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
-  private handleToggleCameraControl() {
+  private async handleToggleCameraControl() {
+    if (!this.cameraEnabled && !this.cameraHasPermission) {
+      console.log('[Camera] Requesting permissions before enabling...');
+      const videoElement = this.cameraManager?.shadowRoot?.querySelector('video');
+      const canvasElement = this.cameraManager?.shadowRoot?.querySelector('canvas');
+      
+      if (videoElement && canvasElement) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'user' } 
+          });
+          this.cameraHasPermission = true;
+          this.cameraError = null;
+          console.log('[Camera] Permissions granted');
+          
+          const manager = this.cameraManager as any;
+          if (manager) {
+            manager.mediaStream = stream;
+            manager.videoElement = videoElement;
+            manager.canvasElement = canvasElement;
+            manager.hasPermission = true;
+          }
+        } catch (err: any) {
+          this.cameraHasPermission = false;
+          this.cameraError = 'Camera permission denied';
+          console.error('[Camera] Permission denied:', err);
+          return;
+        }
+      }
+    }
+    
     this.cameraEnabled = !this.cameraEnabled;
     console.log('[Camera] Camera toggled:', this.cameraEnabled ? 'ON' : 'OFF');
   }
@@ -4412,7 +4475,6 @@ export class GdmLiveAudio extends LitElement {
         </div>
 
         <ui-controls
-          style="opacity: ${showControls ? 1 : 0}"
           .isMuted=${this.isMuted}
           .isSpeaking=${this.isSpeaking}
           .isAiSpeaking=${this.isAiSpeaking}
