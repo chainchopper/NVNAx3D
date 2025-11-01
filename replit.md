@@ -68,6 +68,21 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session - Part 6) - IDLE SPEECH SYSTEM REFACTOR
+- **100% LLM-GENERATED IDLE SPEECH**: ✅ ARCHITECT-APPROVED (No more preset prompts anywhere)
+  - **Issue**: System had three conflicting idle speech systems (legacy preset prompts in index.tsx, environmental observer presets, idle-speech-manager)
+  - **Legacy System Removed**: Deleted triggerIdlePrompt() and resetIdlePromptTimer() from index.tsx - no more hardcoded idle phrases
+  - **Environmental Observer Speech Disabled**: Commented out preset speech generation - observer now only stores data
+  - **Smart Contextual Generation**: Enhanced idle-speech-manager.ts with:
+    - **User Profile Integration**: Uses actual user name from user-profile-manager (e.g., "Hey Sarah, it's nearly 5:30 PM...")
+    - **Real-Time Clock**: Includes formatted current time in prompts (e.g., "It's 5:28 PM" in eastern time)
+    - **Camera Change Detection**: SHA-256 hash comparison of camera frames - skips idle speech if camera feed unchanged (prevents repetitive comments about static scenes)
+    - **Repeat Prevention**: Stores last 10 idle speeches, calculates 80% word similarity threshold, rejects similar responses
+    - **Explicit Anti-Generic Rules**: System prompt forbids phrases like "is there anything I can help you with?" or "how can I assist you?"
+  - **Single Source of Truth**: IdleSpeechManager is now the ONLY system generating idle responses - zero preset fallbacks
+  - **Dual Return Type Support**: Fixed environmental-observer.ts and idle-speech-manager.ts to handle both string and {text, functionCalls} responses
+  - **Results**: Every idle comment is unique, contextual, camera-aware, never repeats, uses user's name and current time, zero LSP errors
+
 ### Latest Fixes (Current Session - Part 5) - COMPLETE UI FADING SYSTEM
 - **IMMERSIVE IDLE MODE**: ✅ ARCHITECT-APPROVED (Complete UI fade after 5 seconds of inactivity)
   - **Issue**: UI elements remained visible during idle periods, cluttering the immersive experience
