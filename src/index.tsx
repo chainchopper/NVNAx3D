@@ -212,6 +212,7 @@ export class GdmLiveAudio extends LitElement {
   @state() cameraError: string | null = null;
   @state() inputMode: 'voice' | 'text' = 'voice';
   @state() textInput = '';
+  @state() showKeyboardOverlay = false;
   @state() lastRetrievedMemories = 0;
   
   // Object detection state
@@ -2137,6 +2138,24 @@ export class GdmLiveAudio extends LitElement {
       this.textInput = '';
       await this.processTranscript(text);
     }
+  }
+
+  private async handleKeyboardSubmit() {
+    if (!this.textInput.trim()) return;
+
+    const text = this.textInput;
+    this.textInput = '';
+    this.showKeyboardOverlay = false;
+    
+    console.log('[Keyboard] Text submitted:', text);
+    
+    // If no PersonI selected, select NIRVANA by default
+    if (!this.activePersoni && this.personis.length > 0) {
+      const nirvana = this.personis.find(p => p.name === 'NIRVANA') || this.personis[0];
+      await this.requestPersoniSwitch(nirvana);
+    }
+    
+    await this.processTranscript(text);
   }
 
   private handleRAGToggle(e: CustomEvent) {
@@ -4911,6 +4930,75 @@ export class GdmLiveAudio extends LitElement {
           >
             💰
           </button>
+        ` : ''}
+
+        <!-- Floating Keyboard Button -->
+        ${!this.activePersoni ? html`
+          <button
+            style="position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+                   width: 60px; height: 60px; border-radius: 50%;
+                   background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
+                   border: 2px solid rgba(255, 255, 255, 0.3);
+                   display: flex; align-items: center; justify-content: center;
+                   cursor: pointer; font-size: 28px; z-index: 1500;
+                   opacity: ${this.settingsButtonVisible ? 1 : 0};
+                   transition: opacity 0.3s ease;"
+            @click=${() => this.showKeyboardOverlay = true}
+            title="Type a message">
+            ⌨️
+          </button>
+        ` : ''}
+
+        <!-- Keyboard Input Overlay -->
+        ${this.showKeyboardOverlay ? html`
+          <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                      background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(10px);
+                      z-index: 3000; display: flex; align-items: center; justify-content: center;"
+               @click=${(e: MouseEvent) => {
+                 if (e.target === e.currentTarget) this.showKeyboardOverlay = false;
+               }}>
+            <div style="background: rgba(20, 20, 20, 0.95); padding: 30px; border-radius: 20px;
+                        border: 2px solid rgba(255, 255, 255, 0.2); min-width: 500px; max-width: 90%;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: white;">Type your message</h3>
+                <button @click=${() => this.showKeyboardOverlay = false}
+                        style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">
+                  ×
+                </button>
+              </div>
+              <textarea
+                .value=${this.textInput}
+                @input=${(e: any) => this.textInput = e.target.value}
+                @keydown=${(e: KeyboardEvent) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    this.handleKeyboardSubmit();
+                  }
+                }}
+                placeholder="Type your message here... (Ctrl+Enter to send)"
+                style="width: 100%; min-height: 150px; padding: 15px;
+                       background: rgba(40, 40, 40, 0.8); border: 1px solid rgba(255, 255, 255, 0.2);
+                       border-radius: 10px; color: white; font-size: 16px; resize: vertical;
+                       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;"
+                autofocus
+              ></textarea>
+              <div style="display: flex; justify-content: flex-end; margin-top: 15px; gap: 10px;">
+                <button @click=${() => this.showKeyboardOverlay = false}
+                        style="padding: 10px 20px; background: rgba(100, 100, 100, 0.5);
+                               border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 8px;
+                               color: white; cursor: pointer;">
+                  Cancel
+                </button>
+                <button @click=${() => this.handleKeyboardSubmit()}
+                        ?disabled=${!this.textInput.trim()}
+                        style="padding: 10px 20px; background: rgba(100, 200, 255, 0.3);
+                               border: 1px solid rgba(100, 200, 255, 0.6); border-radius: 8px;
+                               color: white; cursor: pointer;">
+                  Send (Ctrl+Enter)
+                </button>
+              </div>
+            </div>
+          </div>
         ` : ''}
 
         <div
