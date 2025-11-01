@@ -228,7 +228,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     if (!this.visuals || !this.sphereMaterial) return;
     const {textureName, shape, idleAnimation} = this.visuals;
 
-    // Reset material to base crystal state
+    // TEMPORARY: Disable all backgrounds to show camera clearly
+    // Make PersonI sphere nearly invisible (5% opacity)
     this.sphereMaterial.map = null;
     this.sphereMaterial.emissiveMap = null;
     this.sphereMaterial.roughnessMap = null;
@@ -236,99 +237,19 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.sphereMaterial.normalMap = null;
     this.sphereMaterial.alphaMap = null;
     this.sphereMaterial.emissive.set(0xffffff);
-    this.sphereMaterial.emissiveIntensity = 0.1;
-    this.sphereMaterial.transmission = 0.3;
-    this.sphereMaterial.thickness = 0.5;
+    this.sphereMaterial.emissiveIntensity = 0.02;
+    this.sphereMaterial.transmission = 0.95;
+    this.sphereMaterial.thickness = 0.1;
     this.sphereMaterial.roughness = 0.05;
     this.sphereMaterial.metalness = 0.1;
     this.sphereMaterial.color.set(0xffffff);
     this.sphereMaterial.transparent = true;
-    this.sphereMaterial.opacity = this.baseOpacity;
+    this.sphereMaterial.opacity = 0.05;
     this.sphereMaterial.depthWrite = false;
-
-    if (!textureName && idleAnimation === 'code') {
-      this.sphereMaterial.color.set(0x000000);
-      this.sphereMaterial.emissive.set(0x00ff00);
-      this.sphereMaterial.emissiveIntensity = 1.0;
-      this.sphereMaterial.transmission = 0;
-      this.sphereMaterial.transparent = false;
-      this.sphereMaterial.roughness = 0.9;
-      this.sphereMaterial.metalness = 0.0;
-      this.sphereMaterial.needsUpdate = true;
-      return;
-    }
-
-    const texture = this.loadTexture(textureName);
-
-    if (texture) {
-      // Shape-specific tiling adjustments for more natural wrapping
-      if (shape === 'TorusKnot') {
-        texture.repeat.set(8, 2);
-      } else if (shape === 'Icosahedron') {
-        texture.repeat.set(3, 2);
-      } else {
-        texture.repeat.set(2, 2);
-      }
-
-      this.sphereMaterial.map = texture;
-      this.sphereMaterial.transmission = 0; // Opaque for textures
-      this.sphereMaterial.transparent = true;
-      this.sphereMaterial.opacity = 0.85;
-      this.sphereMaterial.roughness = 0.7;
-      this.sphereMaterial.metalness = 0.2;
-    }
-
-    // Texture-specific material properties for realism
-    if (textureName === 'lava') {
-      this.sphereMaterial.emissiveMap = texture;
-      this.sphereMaterial.emissive.set(0xffffff);
-      this.sphereMaterial.emissiveIntensity = 0.5;
-      
-      // Load PBR maps for realistic lava
-      const maps = this.loadPBRMaps('lava');
-      this.sphereMaterial.roughnessMap = maps.glossMap;
-      this.sphereMaterial.metalnessMap = maps.specularMap;
-      this.sphereMaterial.metalness = 0.3;
-      this.sphereMaterial.roughness = 0.7;
-    } else if (textureName === 'bio_green' || textureName === 'organic_glow') {
-      this.sphereMaterial.emissiveMap = texture;
-      this.sphereMaterial.emissive.set(0xffffff);
-      this.sphereMaterial.emissiveIntensity = 0.2;
-      this.sphereMaterial.roughness = 0.8;
-    } else if (textureName === 'metallic_brushed') {
-      this.sphereMaterial.roughness = 0.4;
-      this.sphereMaterial.metalness = 0.6;
-    } else if (textureName === 'crystal_blue') {
-      this.sphereMaterial.roughness = 0.1;
-      this.sphereMaterial.transmission = 0.9;
-      this.sphereMaterial.thickness = 1.0;
-      this.sphereMaterial.transparent = true;
-      this.sphereMaterial.emissive.set(this.accentColor);
-      this.sphereMaterial.emissiveIntensity = 0.2;
-    } else if (textureName === 'water') {
-      this.sphereMaterial.transmission = 0.9;
-      this.sphereMaterial.thickness = 1.5;
-      this.sphereMaterial.roughness = 0.05;
-      this.sphereMaterial.metalness = 0;
-      this.sphereMaterial.transparent = true;
-      this.sphereMaterial.color.set(0x88ccff);
-      if (texture) {
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(2, 2);
-      }
-    } else if (textureName === 'slime') {
-      this.sphereMaterial.transmission = 0.7;
-      this.sphereMaterial.thickness = 0.8;
-      this.sphereMaterial.roughness = 0.3;
-      this.sphereMaterial.metalness = 0;
-      this.sphereMaterial.transparent = true;
-      this.sphereMaterial.color.set(0x88ff88);
-      this.sphereMaterial.emissiveMap = texture;
-      this.sphereMaterial.emissive.set(0x00ff00);
-      this.sphereMaterial.emissiveIntensity = 0.1;
-    }
-
     this.sphereMaterial.needsUpdate = true;
+    
+    // Note: Original background/texture loading code has been temporarily disabled above
+    // to make the PersonI sphere nearly invisible so the camera feed is clearly visible
   }
 
   private createShapeGeometry(shape: string): THREE.BufferGeometry {

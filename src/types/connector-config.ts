@@ -24,41 +24,41 @@ export const CONNECTOR_FIELDS: Record<string, ConnectorFieldDefinition[]> = {
   gmail: [
     {
       key: 'googleAccessToken',
-      label: 'Google Access Token',
+      label: 'Google Access Token (Optional - use OAuth button above)',
       type: 'password',
       placeholder: 'Enter your Google OAuth access token',
-      required: true,
-      helpText: 'OAuth token with Gmail read permissions',
+      required: false,
+      helpText: 'OAuth token with Gmail read permissions. Use "Connect with Google" button instead for easier setup.',
     },
   ],
   google_calendar: [
     {
       key: 'googleAccessToken',
-      label: 'Google Access Token',
+      label: 'Google Access Token (Optional - use OAuth button above)',
       type: 'password',
       placeholder: 'Enter your Google OAuth access token',
-      required: true,
-      helpText: 'OAuth token with Calendar read permissions',
+      required: false,
+      helpText: 'OAuth token with Calendar read permissions. Use "Connect with Google" button instead for easier setup.',
     },
   ],
   google_docs: [
     {
       key: 'googleAccessToken',
-      label: 'Google Access Token',
+      label: 'Google Access Token (Optional - use OAuth button above)',
       type: 'password',
       placeholder: 'Enter your Google OAuth access token',
-      required: true,
-      helpText: 'OAuth token with Google Docs read permissions',
+      required: false,
+      helpText: 'OAuth token with Google Docs read permissions. Use "Connect with Google" button instead for easier setup.',
     },
   ],
   google_sheets: [
     {
       key: 'googleAccessToken',
-      label: 'Google Access Token',
+      label: 'Google Access Token (Optional - use OAuth button above)',
       type: 'password',
       placeholder: 'Enter your Google OAuth access token',
-      required: true,
-      helpText: 'OAuth token with Google Sheets read permissions',
+      required: false,
+      helpText: 'OAuth token with Google Sheets read permissions. Use "Connect with Google" button instead for easier setup.',
     },
   ],
   github: [
