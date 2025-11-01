@@ -68,6 +68,17 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session - Part 3)
+- **SECURITY ARCHITECTURE - API Key Protection**: ✅ CRITICAL SECURITY FIX (Architect-Approved)
+  - **Backend Gemini Proxy Endpoints**: Created `/api/gemini/chat` and `/api/gemini/embeddings` endpoints in server.js
+  - **Zero Browser Exposure**: GEMINI_API_KEY now stored exclusively in backend environment (process.env), never exposed to browser
+  - **Relative URL Architecture**: All backend calls use relative URLs (`/api/*`) leveraging Vite proxy configuration (works in all environments)
+  - **GoogleProvider Secured**: Removed direct `@google/genai` client in browser, replaced with backend fetch calls
+  - **EmbeddingGenerator Secured**: Removed direct API key usage, now proxies through backend
+  - **Provider-Manager Fixed**: Updated all backend URL constructions to use relative URLs
+  - **Environment Variables**: Backend requires `GEMINI_API_KEY` environment variable for Gemini API operations
+  - **Results**: Browser console completely clean, no API key exposure, full end-to-end functionality preserved
+
 ### Latest Fixes (Current Session - Part 2)
 - **Always-Active PersonI System**: ✅ CRITICAL ARCHITECTURAL FIX
   - PersonI is now **always active** from app startup (requirement: app does nothing without PersonI)
