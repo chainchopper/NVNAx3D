@@ -156,7 +156,7 @@ export class GdmLiveAudio extends LitElement {
   @state() isAiSpeaking = false;
   @state() status = 'Initializing...';
   @state() error = '';
-  @state() settingsButtonVisible = false;
+  @state() settingsButtonVisible = true;
   @state() settingsMenuVisible = false;
   @state() fabPosition = { x: 0, y: 0 };
   @state() isDraggingFab = false;
@@ -1738,11 +1738,6 @@ export class GdmLiveAudio extends LitElement {
 
   private handleUserActivity() {
     this.settingsButtonVisible = true;
-    if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
-    this.settingsTimeout = window.setTimeout(() => {
-      this.settingsButtonVisible = false;
-      this.settingsMenuVisible = false;
-    }, 4000);
   }
   
   private async setupSongIdentification() {
@@ -4307,8 +4302,7 @@ export class GdmLiveAudio extends LitElement {
   }
 
   render() {
-    const showControls =
-      this.settingsButtonVisible || this.isAiSpeaking || this.isSpeaking;
+    const showControls = true;
 
     return html`
       <div>
