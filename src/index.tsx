@@ -4468,7 +4468,7 @@ export class GdmLiveAudio extends LitElement {
         </div>
 
         <div
-          class="persona-carousel-container ${showControls ? 'visible' : ''}">
+          class="persona-carousel-container visible">
           <div class="persona-carousel">
             ${this.personis.map((personi) => {
               return html`
@@ -4933,19 +4933,17 @@ export class GdmLiveAudio extends LitElement {
         ` : ''}
 
         <!-- Global Keyboard Input Button -->
-        ${!this.activePersoni ? html`
-          <div 
-            style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); 
-                   width: 60px; height: 60px; border-radius: 50%; 
-                   background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
-                   border: 2px solid rgba(255, 255, 255, 0.3);
-                   display: flex; align-items: center; justify-content: center;
-                   cursor: pointer; font-size: 28px; z-index: 2000;"
-            @click=${() => this.showKeyboardOverlay = true}
-            title="Type a message">
-            ⌨️
-          </div>
-        ` : ''}
+        <div 
+          style="position: fixed; bottom: ${this.activePersoni ? '20px' : '80px'}; right: 20px;
+                 width: 60px; height: 60px; border-radius: 50%; 
+                 background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
+                 border: 2px solid rgba(255, 255, 255, 0.3);
+                 display: flex; align-items: center; justify-content: center;
+                 cursor: pointer; font-size: 28px; z-index: 2000;"
+          @click=${() => this.showKeyboardOverlay = true}
+          title="Type a message">
+          ⌨️
+        </div>
 
         <!-- Keyboard Input Overlay -->
         ${this.showKeyboardOverlay ? html`
