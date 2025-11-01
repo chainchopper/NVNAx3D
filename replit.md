@@ -68,6 +68,18 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session - Part 5) - COMPLETE UI FADING SYSTEM
+- **IMMERSIVE IDLE MODE**: ✅ ARCHITECT-APPROVED (Complete UI fade after 5 seconds of inactivity)
+  - **Issue**: UI elements remained visible during idle periods, cluttering the immersive experience
+  - **Complete Fade Implementation**: ALL UI elements now fade to opacity 0 after 5 seconds without mouse/touch interaction
+  - **Elements That Fade**: PersonI carousel, text input bar, ui-controls wrapper, settings FAB, status text, financial dashboard toggle (BILLY only)
+  - **What Remains Visible**: Only camera feed background (if enabled) and PersonI 3D visualization
+  - **Pointer Events Management**: All faded UI sets pointer-events: none to prevent ghost interactions
+  - **CSS Pattern**: .visible class controls opacity (0→1) with 0.5s ease-in-out transition for smooth fading
+  - **Activity Detection**: handleUserActivity() sets 5-second timeout, resets on any mouse/touch event
+  - **LLM-Generated Idle Speech**: Confirmed idle responses use active PersonI's provider via idle-speech-manager.ts (contextual, memory-aware, camera-vision-enhanced)
+  - **Results**: Clean immersive experience - UI completely disappears during idle periods, instantly reappears on interaction
+
 ### Latest Fixes (Current Session - Part 4) - CRITICAL BUG FIXES
 - **TEXT INPUT & FUNCTION CALL RESTORATION**: ✅ ARCHITECT-APPROVED (Complete system restoration after security refactor)
   - **Issue**: Text input not working - no LLM requests/responses after security refactor broke GoogleProvider
