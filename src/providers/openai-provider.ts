@@ -43,21 +43,42 @@ export class OpenAIProvider extends BaseProvider {
       const isCustomEndpoint = this.config.providerType === 'custom';
       
       // For OpenAI: filter for GPT models only
-      // For custom endpoints: include all models
+      // For custom endpoints (LMStudio, vLLM, LocalAI): include all models
       const filteredData = isCustomEndpoint 
         ? data.data 
         : data.data.filter((model: any) => model.id.includes('gpt'));
       
-      return filteredData.map((model: any) => ({
-        id: model.id,
-        name: model.id,
-        providerId: this.config.providerId,
-        capabilities: {
-          vision: model.id.includes('vision') || model.id.includes('gpt-4'),
-          streaming: true,
-          functionCalling: true,
-        },
-      }));
+      return filteredData.map((model: any) => {
+        const modelId = model.id.toLowerCase();
+        
+        // Detect capabilities from model name
+        const hasVision = modelId.includes('vision') || 
+                         modelId.includes('gpt-4') || 
+                         modelId.includes('llava') ||
+                         modelId.includes('pixtral') ||
+                         modelId.includes('qwen') ||
+                         modelId.includes('cogvlm') ||
+                         modelId.includes('internvl');
+        
+        const hasTools = modelId.includes('gpt') || 
+                        modelId.includes('claude') ||
+                        modelId.includes('mistral') ||
+                        modelId.includes('llama-3') ||
+                        modelId.includes('command') ||
+                        modelId.includes('function') ||
+                        modelId.includes('tools');
+        
+        return {
+          id: model.id,
+          name: model.id,
+          providerId: this.config.providerId,
+          capabilities: {
+            vision: hasVision,
+            streaming: true,
+            functionCalling: hasTools,
+          },
+        };
+      });
     } catch (error) {
       console.error('Failed to get OpenAI models:', error);
       return [];
