@@ -5010,8 +5010,7 @@ export class GdmLiveAudio extends LitElement {
           .isMusicDetected=${this.isMusicDetected}
           .musicBpm=${this.musicBpm}
           .musicBeatDetected=${this.musicBeatDetected}
-          .musicConfidence=${this.musicConfidence}
-          .cameraVideoElement=${this.cameraManager?.getVideoElement()}></gdm-live-audio-visuals-3d>
+          .musicConfidence=${this.musicConfidence}></gdm-live-audio-visuals-3d>
       </div>
     `;
   }
