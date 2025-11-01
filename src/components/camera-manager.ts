@@ -199,6 +199,27 @@ export class CameraManager extends LitElement {
     return this.isActive && this.hasPermission;
   }
 
+  async firstUpdated() {
+    // Auto-request camera permissions on first load (only if not already granted/denied)
+    try {
+      const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      console.log('[CameraManager] Camera permission state:', permissions.state);
+      
+      if (permissions.state === 'prompt') {
+        // Permission hasn't been decided yet, auto-request
+        console.log('[CameraManager] Auto-requesting camera permissions...');
+        await this.requestPermissions();
+      } else if (permissions.state === 'granted') {
+        // Permission already granted, mark as such
+        this.hasPermission = true;
+        console.log('[CameraManager] Camera permission already granted');
+      }
+    } catch (err) {
+      // Permissions API not supported or camera query not supported
+      console.log('[CameraManager] Permissions API not available, will request on first use');
+    }
+  }
+
   protected updated(changedProps: Map<string, any>) {
     if (changedProps.has('enabled')) {
       if (this.enabled) {

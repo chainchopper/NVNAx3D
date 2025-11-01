@@ -19,6 +19,7 @@ export class ConnectorConfigPanel extends LitElement {
   @state() formCredentials: Record<string, string> = {};
   @state() verifying = false;
   @state() verificationMessage = '';
+  @state() oauthLoading = false;
 
   static styles = css`
     :host {
@@ -294,6 +295,57 @@ export class ConnectorConfigPanel extends LitElement {
       font-size: 48px;
       margin-bottom: 16px;
     }
+
+    .oauth-button {
+      width: 100%;
+      padding: 12px 20px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .oauth-button:hover:not(:disabled) {
+      background: #357ae8;
+    }
+
+    .oauth-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .oauth-divider {
+      text-align: center;
+      margin: 20px 0;
+      color: rgba(255, 255, 255, 0.5);
+      position: relative;
+    }
+
+    .oauth-divider::before,
+    .oauth-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 45%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .oauth-divider::before {
+      left: 0;
+    }
+
+    .oauth-divider::after {
+      right: 0;
+    }
   `;
 
   async connectedCallback() {
@@ -418,10 +470,14 @@ export class ConnectorConfigPanel extends LitElement {
       name: AVAILABLE_CONNECTORS.find(c => c.id === this.editingConnector)?.name || this.editingConnector,
       configured: true,
       verified: false,
-      credentials: this.formCredentials,
     };
 
     ConnectorConfigManager.updateConfig(config);
+    
+    // Store credentials separately in localStorage
+    const credentialsKey = `connector_credentials_${this.editingConnector}`;
+    localStorage.setItem(credentialsKey, JSON.stringify(this.formCredentials));
+    
     this.loadConfigs();
     this.mode = 'list';
     this.editingConnector = null;
@@ -440,6 +496,111 @@ export class ConnectorConfigPanel extends LitElement {
     this.editingConnector = null;
     this.formCredentials = {};
     this.verificationMessage = '';
+  }
+
+  private isGoogleConnector(connectorId: string): boolean {
+    return ['gmail', 'google_calendar', 'google_docs', 'google_sheets'].includes(connectorId);
+  }
+
+  private async handleGoogleOAuth() {
+    if (!this.editingConnector) return;
+
+    this.oauthLoading = true;
+    this.verificationMessage = '';
+    
+    try {
+      // Initiate OAuth flow (relative URL for same-origin)
+      const response = await fetch('/api/oauth/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'google' })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate OAuth flow');
+      }
+
+      const { authUrl } = await response.json();
+      
+      // Open OAuth URL in popup
+      const width = 600;
+      const height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+      const popup = window.open(
+        authUrl,
+        'Google OAuth',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      if (!popup) {
+        throw new Error('Failed to open OAuth popup - please allow popups for this site');
+      }
+
+      // Poll for OAuth completion with proper cleanup
+      let attempts = 0;
+      const maxAttempts = 300; // 5 minutes max (300 seconds)
+      
+      const checkInterval = setInterval(async () => {
+        attempts++;
+
+        // Check if popup was closed by user
+        if (popup.closed) {
+          clearInterval(checkInterval);
+          this.oauthLoading = false;
+          this.verificationMessage = '⚠️ OAuth cancelled - popup was closed';
+          console.log('[OAuth] Popup closed by user');
+          return;
+        }
+
+        // Timeout after max attempts
+        if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          popup.close();
+          this.oauthLoading = false;
+          this.verificationMessage = '❌ OAuth timeout - please try again';
+          console.log('[OAuth] Timeout after 5 minutes');
+          return;
+        }
+
+        // Check OAuth status
+        try {
+          const statusResponse = await fetch('/api/oauth/status?provider=google');
+          const { connected } = await statusResponse.json();
+
+          if (connected) {
+            clearInterval(checkInterval);
+            popup.close();
+            
+            // Save connector config as verified
+            const config: ConnectorConfig = {
+              id: this.editingConnector!,
+              name: AVAILABLE_CONNECTORS.find(c => c.id === this.editingConnector)?.name || this.editingConnector!,
+              configured: true,
+              verified: true,
+              lastVerified: new Date().toISOString(),
+            };
+
+            ConnectorConfigManager.updateConfig(config);
+            this.loadConfigs();
+            this.mode = 'list';
+            this.editingConnector = null;
+            this.oauthLoading = false;
+            
+            this.verificationMessage = '✅ Google account connected successfully!';
+            console.log('[OAuth] Successfully connected Google account');
+          }
+        } catch (error) {
+          console.error('[OAuth] Status check error:', error);
+          // Don't break on status check errors, keep polling
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('[OAuth] Error:', error);
+      this.verificationMessage = `❌ OAuth error: ${error.message}`;
+      this.oauthLoading = false;
+    }
   }
 
   render() {
@@ -521,6 +682,8 @@ export class ConnectorConfigPanel extends LitElement {
       return html`<div>Connector not found</div>`;
     }
 
+    const isGoogle = this.isGoogleConnector(this.editingConnector!);
+
     return html`
       <div class="panel-content">
         <button class="back-button" @click=${this.handleCancel}>
@@ -532,6 +695,24 @@ export class ConnectorConfigPanel extends LitElement {
           <h3>Configure ${connector.name}</h3>
           <p>${connector.description}</p>
         </div>
+
+        ${isGoogle ? html`
+          <button 
+            class="oauth-button" 
+            @click=${this.handleGoogleOAuth}
+            ?disabled=${this.oauthLoading}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+              <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.71v2.26h2.92a8.78 8.78 0 002.68-6.61z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.02-3.71H.98v2.33A9 9 0 009 18z"/>
+              <path fill="#FBBC05" d="M3.98 10.71a5.41 5.41 0 010-3.42V4.96H.98A9 9 0 000 9c0 1.45.35 2.82.98 4.04l2.99-2.33z"/>
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 009 0 9 9 0 00.98 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+            </svg>
+            ${this.oauthLoading ? 'Connecting...' : 'Connect with Google'}
+          </button>
+
+          <div class="oauth-divider">OR</div>
+        ` : ''}
 
         ${fields.map(field => this.renderField(field))}
 
@@ -545,14 +726,16 @@ export class ConnectorConfigPanel extends LitElement {
 
         <div class="form-actions">
           <button class="secondary" @click=${this.handleCancel}>Cancel</button>
-          <button class="primary" @click=${this.handleSave}>Save</button>
-          <button 
-            class="verify" 
-            @click=${this.handleVerify}
-            ?disabled=${this.verifying}
-          >
-            ${this.verifying ? 'Verifying...' : 'Verify Connection'}
-          </button>
+          ${!isGoogle ? html`
+            <button class="primary" @click=${this.handleSave}>Save</button>
+            <button 
+              class="verify" 
+              @click=${this.handleVerify}
+              ?disabled=${this.verifying}
+            >
+              ${this.verifying ? 'Verifying...' : 'Verify Connection'}
+            </button>
+          ` : ''}
         </div>
       </div>
     `;

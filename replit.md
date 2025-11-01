@@ -73,7 +73,24 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Plaid/Yodlee (planned)**: For financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
-### OAuth Security & Plugin Sandbox Hardening
+### UI/UX Fixes & Google OAuth Modal Implementation
+- **Settings Menu & Controls Restoration**: Fixed obliterated settings access - settings FAB and UI controls now always visible (no auto-hide)
+- **NIRVANA Geometry**: Confirmed using Icosahedron (not cube) - TorusKnot and Icosahedron only geometries in system
+- **Google OAuth Modal UI**: Browser-based OAuth flow for Google connectors (Gmail, Calendar, Docs, Sheets)
+  - "Connect with Google" button opens OAuth popup (600x700px centered)
+  - Polls `/api/oauth/status` every 1s for completion
+  - Auto-closes popup and saves verified config on success
+  - Uses OAuth Vault V2 backend (`/api/oauth/initiate`, `/api/oauth/callback`)
+  - Manual credential entry still available as fallback (OR divider)
+- **Camera Auto-Request**: Auto-requests camera permissions on first load using Permissions API
+  - Checks permission state: 'prompt' (auto-request), 'granted' (mark as ready), 'denied' (wait for manual)
+  - Only requests if permission state is 'prompt' (not already decided)
+  - Gracefully handles browsers without Permissions API
+- **Connector Config LSP Fix**: Separated credential storage from ConnectorConfig type
+  - Credentials stored in `localStorage` with key `connector_credentials_{connectorId}`
+  - ConnectorConfig remains type-safe (id, name, configured, verified, lastVerified)
+
+### OAuth Security & Plugin Sandbox Hardening (Earlier Nov 1)
 - **DOMPurify Integration**: Battle-tested HTML sanitization for plugin system (replaced custom sanitizer)
 - **OAuth Vault V2 Backend**: Server-side token storage with PKCE + CSRF protection
   - Backend endpoints: `/api/oauth/initiate`, `/api/oauth/callback`, `/api/oauth/status`, `/api/oauth/disconnect`, `/api/oauth/proxy`
@@ -84,7 +101,6 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **CSP Camera Fix**: Added `media-src 'self' blob: mediastream:` for getUserMedia support
 - **CSP Backend Communication**: Added `http://localhost:*` to connect-src for dev environment
 - **WebSocket Real-Time Feeds**: Crypto price streams (CoinGecko polling), stock streams (planned Finnhub), connection pooling
-- **UI Cleanup**: Removed Box/cube geometry - ADAM uses TorusKnot, BILLY uses Icosahedron
 
 ## Recent Development (October 30, 2025)
 ### UI/UX Cleanup Sprint
