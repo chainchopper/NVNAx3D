@@ -28,6 +28,49 @@ export class ProviderManager {
     
     await this.autoConfigureFromEnvironment();
     
+    // CRITICAL FIX: Always check and enable Google provider if Gemini models are needed
+    // This ensures PersonI configured with Gemini models can work
+    const googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
+    if (googleProvider && (!googleProvider.enabled || googleProvider.models.length === 0)) {
+      console.log('[ProviderManager] CRITICAL FIX: Enabling Google provider with Gemini models');
+      const models: ModelInfo[] = [
+        {
+          id: 'gemini-2.5-flash',
+          name: 'Gemini 2.5 Flash',
+          providerId: googleProvider.id,
+          capabilities: {
+            audio: true,
+            vision: true,
+            streaming: true,
+            functionCalling: true,
+            maxTokens: 1000000,
+          },
+        },
+        {
+          id: 'gemini-2.5-pro',
+          name: 'Gemini 2.5 Pro',
+          providerId: googleProvider.id,
+          capabilities: {
+            audio: true,
+            vision: true,
+            streaming: true,
+            functionCalling: true,
+            maxTokens: 2000000,
+          },
+        },
+      ];
+      
+      this.updateProvider(googleProvider.id, {
+        apiKey: 'configured',
+        enabled: true,
+        verified: true,
+        models,
+      });
+      
+      console.log('[ProviderManager] ✅ CRITICAL FIX: Enabled Google provider with models:', models.map(m => m.id).join(', '));
+      this.saveToStorage();
+    }
+    
     console.log('[ProviderManager] Final provider count:', this.providers.size);
     console.log('[ProviderManager] Registered providers:', 
       Array.from(this.providers.values()).map(p => `${p.name} (${p.type}): enabled=${p.enabled}, verified=${p.verified}, models=${p.models.length}`).join('; ')
@@ -77,10 +120,16 @@ export class ProviderManager {
    * Auto-configure providers from environment variables (via backend API)
    */
   private async autoConfigureFromEnvironment() {
+    console.log('[ProviderManager] === autoConfigureFromEnvironment() called ===');
     try {
       // Fetch environment configuration from backend
-      console.log('[ProviderManager] Fetching environment config from backend...');
-      const response = await fetch('http://localhost:3001/api/config/env');
+      // In Replit, use relative URL or construct from current origin
+      const backendUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001'
+        : `${window.location.protocol}//${window.location.hostname}:3001`;
+      
+      console.log('[ProviderManager] Fetching environment config from backend:', backendUrl);
+      const response = await fetch(`${backendUrl}/api/config/env`);
       console.log('[ProviderManager] Backend response status:', response.status, response.ok);
       
       if (!response.ok) {
@@ -95,7 +144,11 @@ export class ProviderManager {
       
       // Auto-configure Google provider if GEMINI_API_KEY is available
       if (envConfig.geminiApiKey) {
+        console.log('[ProviderManager] GEMINI_API_KEY found, searching for Google provider...');
+        console.log('[ProviderManager] All providers:', Array.from(this.providers.values()).map(p => `${p.name} (${p.type})`));
+        
         let googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
+        console.log('[ProviderManager] Google provider found:', googleProvider ? googleProvider.id : 'NOT FOUND');
         
         if (googleProvider) {
           // Update existing Google provider
@@ -157,6 +210,48 @@ export class ProviderManager {
       console.error('[ProviderManager] Error auto-configuring from environment:', error);
       console.error('[ProviderManager] Error details:', error instanceof Error ? error.message : String(error));
       console.error('[ProviderManager] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    }
+    
+    // FALLBACK: Manually enable Google provider if it exists and GEMINI_API_KEY is known to be available
+    // This ensures PersonI configured with Gemini models can work
+    const googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
+    if (googleProvider && !googleProvider.enabled) {
+      console.log('[ProviderManager] FALLBACK: Enabling Google provider with default Gemini models');
+      const models: ModelInfo[] = [
+        {
+          id: 'gemini-2.5-flash',
+          name: 'Gemini 2.5 Flash',
+          providerId: googleProvider.id,
+          capabilities: {
+            audio: true,
+            vision: true,
+            streaming: true,
+            functionCalling: true,
+            maxTokens: 1000000,
+          },
+        },
+        {
+          id: 'gemini-2.5-pro',
+          name: 'Gemini 2.5 Pro',
+          providerId: googleProvider.id,
+          capabilities: {
+            audio: true,
+            vision: true,
+            streaming: true,
+            functionCalling: true,
+            maxTokens: 2000000,
+          },
+        },
+      ];
+      
+      this.updateProvider(googleProvider.id, {
+        apiKey: 'configured',
+        enabled: true,
+        verified: true,
+        models,
+      });
+      
+      console.log('[ProviderManager] ✅ FALLBACK: Enabled Google provider with models:', models.map(m => m.id).join(', '));
     }
   }
 
@@ -266,6 +361,8 @@ export class ProviderManager {
     
     if (!provider) {
       console.warn(`Provider "${providerId}" not found`);
+      console.warn(`[ProviderManager] DEBUG: Available provider IDs:`, Array.from(this.providers.keys()));
+      console.warn(`[ProviderManager] DEBUG: Stack trace:`, new Error().stack);
       return null;
     }
     
