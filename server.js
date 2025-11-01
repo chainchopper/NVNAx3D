@@ -1,56 +1,42 @@
 /**
- * NIRVANA Connector Backend Server
+ * NIRVANA Backend Server - Standalone/Docker Deployment
  * 
- * This backend provides API endpoints for external service integrations using
- * Replit Connectors for authentication. Replit Connectors handle OAuth flows
- * automatically and provide tokens via environment variables.
+ * This backend provides API endpoints for external service integrations.
+ * API keys and OAuth tokens are configured via environment variables (.env file
+ * or in-app configuration) for standalone/Docker deployment.
  * 
- * HOW TO USE REPLIT CONNECTORS:
+ * ENVIRONMENT VARIABLES (Configure in .env):
  * 
- * 1. Set up connectors in your Replit workspace:
- *    - Open the "Connectors" panel in your Replit workspace sidebar
- *    - Click "Add new integration" and choose the service
- *    - Click "Connect" and authenticate with that service
- *    - Replit handles OAuth and stores credentials securely
+ * Service                 | Environment Variables
+ * ----------------------- | -----------------------
+ * Google Gemini AI        | GEMINI_API_KEY
+ * OpenAI                  | OPENAI_API_KEY
+ * Financial APIs          | ALPHA_VANTAGE_API_KEY, FINNHUB_API_KEY, COINMARKETCAP_API_KEY
+ * Crypto APIs             | (CoinGecko is free, no key needed)
+ * OAuth Services          | COINBASE_CLIENT_ID, COINBASE_CLIENT_SECRET
+ * Twilio                  | TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+ * Song Identification     | AUDD_API_TOKEN, GENIUS_API_TOKEN
+ * External Connectors     | GOOGLE_ACCESS_TOKEN, GITHUB_TOKEN, NOTION_TOKEN, LINEAR_API_KEY
  * 
- * 2. Connectors provide environment variables automatically:
- *    - Gmail/Calendar: GOOGLE_ACCESS_TOKEN
- *    - GitHub: GITHUB_TOKEN
- *    - Notion: NOTION_TOKEN
- *    - Linear: LINEAR_API_KEY
- *    - Slack: SLACK_BOT_TOKEN
- * 
- * 3. This server uses process.env.* to access tokens:
- *    - No manual API key management required
- *    - Tokens are refreshed automatically by Replit
- *    - Works in both development and production
- * 
- * ENVIRONMENT VARIABLE MAPPING:
- * 
- * Connector Name          | Environment Variable    | Replit Connector ID
- * ----------------------- | ----------------------- | -------------------------------------------------
- * Gmail                   | GOOGLE_ACCESS_TOKEN     | connector:ccfg_google-mail_B959E7249792448ABBA58D46AF
- * Google Calendar         | GOOGLE_ACCESS_TOKEN     | connector:ccfg_google-calendar_DDDBAC03DE404369B74F32E78D
- * GitHub                  | GITHUB_TOKEN            | connector:ccfg_github_01K4B9XD3VRVD2F99YM91YTCAF
- * Notion                  | NOTION_TOKEN            | connector:ccfg_notion_01K49R392Z3CSNMXCPWSV67AF4
- * Linear                  | LINEAR_API_KEY          | connector:ccfg_linear_01K4B3DCSR7JEAJK400V1HTJAK
- * Slack                   | SLACK_BOT_TOKEN         | (Manual Secret - add via Secrets panel)
- * Home Assistant          | HOME_ASSISTANT_URL      | (Manual Secret - add via Secrets panel)
- * Home Assistant          | HOME_ASSISTANT_TOKEN    | (Manual Secret - add via Secrets panel)
- * 
- * For services without Replit connectors (like Slack), add API keys manually
- * via the Secrets panel (lock icon in sidebar).
+ * CORE INTEGRATIONS:
+ * - Twilio: SMS, voice calls, media streaming (WebSocket)
+ * - Financial APIs: CoinGecko, CoinMarketCap, Coinbase (OAuth), Alpha Vantage
+ * - OAuth/SSO: Centralized token vault with refresh scheduling
+ * - Tool execution: Sandboxed tool orchestration for PersonI autonomy
  * 
  * API ENDPOINTS:
- * - POST /api/connectors/gmail/search       - Search Gmail emails
- * - POST /api/connectors/calendar/events    - Get Google Calendar events
- * - POST /api/connectors/notion/search      - Search Notion pages
- * - POST /api/connectors/linear/issues      - Get Linear issues
- * - POST /api/connectors/slack/send         - Send Slack message
- * - POST /api/connectors/github/repo        - Get GitHub repository details
- * - POST /api/connectors/homeassistant/devices  - List Home Assistant entities
- * - POST /api/connectors/homeassistant/state    - Get entity state
- * - POST /api/connectors/homeassistant/control  - Control Home Assistant device
+ * - POST /api/twilio/sms/send              - Send SMS message
+ * - POST /api/twilio/voice/call            - Initiate voice call
+ * - GET  /api/twilio/voice/calls           - Get active calls
+ * - POST /api/financial/stocks             - Get stock data (Alpha Vantage)
+ * - POST /api/financial/crypto             - Get crypto data (CoinGecko)
+ * - POST /api/financial/news               - Get market news (Finnhub)
+ * - POST /api/connectors/gmail/search      - Search Gmail emails
+ * - POST /api/connectors/calendar/events   - Get Google Calendar events
+ * - POST /api/connectors/notion/search     - Search Notion pages
+ * - POST /api/connectors/linear/issues     - Get Linear issues
+ * - POST /api/connectors/slack/send        - Send Slack message
+ * - POST /api/connectors/github/repo       - Get GitHub repository details
  * 
  * All endpoints return a consistent response format:
  * {
@@ -64,12 +50,17 @@
 
 import express from 'express';
 import cors from 'cors';
+import http from 'http';
+import { WebSocketServer } from 'ws';
 import { stockDataService } from './src/services/financial/stock-data-service.js';
 import { cryptoDataService } from './src/services/financial/crypto-data-service.js';
 import { portfolioManager } from './src/services/financial/portfolio-manager.js';
 import { marketNewsService } from './src/services/financial/market-news-service.js';
+import { coinMarketCapService } from './src/services/financial/coinmarketcap-service.js';
 
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 const PORT = process.env.PORT || 3001;
 
 const CONNECTOR_SECRETS = {
@@ -1956,6 +1947,77 @@ app.get('/api/financial/crypto/:id', async (req, res) => {
   }
 });
 
+// CoinMarketCap Integration - Real-time crypto data with market cap tracking
+app.post('/api/financial/coinmarketcap/quotes', async (req, res) => {
+  try {
+    const { symbols, convert = 'USD' } = req.body;
+    
+    if (!symbols || !Array.isArray(symbols)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Symbols array is required',
+      });
+    }
+
+    // Initialize service with API key if available
+    const hasApiKey = coinMarketCapService.init(process.env.COINMARKETCAP_API_KEY);
+    const quotes = await coinMarketCapService.getLatestQuotes(symbols, convert);
+    
+    res.json({
+      success: true,
+      quotes,
+      requiresSetup: !hasApiKey,
+      setupInstructions: hasApiKey ? null : 'Using mock data. Add COINMARKETCAP_API_KEY for real-time data from CoinMarketCap (free tier: 333 credits/day).',
+    });
+  } catch (error) {
+    console.error('[CoinMarketCap API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch CoinMarketCap quotes',
+    });
+  }
+});
+
+app.get('/api/financial/coinmarketcap/trending', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const hasApiKey = coinMarketCapService.init(process.env.COINMARKETCAP_API_KEY);
+    const trending = await coinMarketCapService.getTrending(limit);
+    
+    res.json({
+      success: true,
+      trending,
+      requiresSetup: !hasApiKey,
+    });
+  } catch (error) {
+    console.error('[CoinMarketCap Trending Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch trending cryptocurrencies',
+    });
+  }
+});
+
+app.get('/api/financial/coinmarketcap/global', async (req, res) => {
+  try {
+    const hasApiKey = coinMarketCapService.init(process.env.COINMARKETCAP_API_KEY);
+    const metrics = await coinMarketCapService.getGlobalMetrics();
+    
+    res.json({
+      success: true,
+      metrics,
+      requiresSetup: !hasApiKey,
+    });
+  } catch (error) {
+    console.error('[CoinMarketCap Global Metrics Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch global crypto metrics',
+    });
+  }
+});
+
 app.get('/api/financial/portfolio/summary', async (req, res) => {
   try {
     const summary = await portfolioManager.getSummary();
@@ -2193,11 +2255,351 @@ app.get('/api/config/env', (req, res) => {
       finnhubApiKey: !!process.env.FINNHUB_API_KEY,
       auddApiToken: !!process.env.AUDD_API_TOKEN,
       geniusApiToken: !!process.env.GENIUS_API_TOKEN,
+      twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
     },
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// ============================================================================
+// TWILIO INTEGRATION - Voice & SMS
+// ============================================================================
+// Required environment variables:
+//   TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
+// ============================================================================
+
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+  ? require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+
+// In-memory call state (use Redis in production)
+const activeCalls = new Map();
+const smsHistory = [];
+
+// SMS: Send outgoing message
+app.post('/api/twilio/sms/send', async (req, res) => {
+  if (!twilioClient) {
+    return res.status(503).json({
+      success: false,
+      error: 'Twilio not configured. Add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN to environment.',
+    });
+  }
+
+  try {
+    const { to, message } = req.body;
+    
+    if (!to || !message) {
+      return res.status(400).json({ success: false, error: 'Missing required fields: to, message' });
+    }
+
+    const twilioMessage = await twilioClient.messages.create({
+      body: message,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: to,
+    });
+
+    smsHistory.push({
+      sid: twilioMessage.sid,
+      direction: 'outbound',
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: to,
+      body: message,
+      timestamp: new Date().toISOString(),
+      status: twilioMessage.status,
+    });
+
+    res.json({
+      success: true,
+      messageSid: twilioMessage.sid,
+      status: twilioMessage.status,
+    });
+  } catch (error) {
+    console.error('[Twilio SMS Send Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send SMS',
+    });
+  }
+});
+
+// SMS: Incoming webhook (receives messages)
+app.post('/api/twilio/sms/incoming', (req, res) => {
+  const { From, To, Body, MessageSid } = req.body;
+
+  console.log(`[Twilio] Incoming SMS from ${From}: ${Body}`);
+
+  smsHistory.push({
+    sid: MessageSid,
+    direction: 'inbound',
+    from: From,
+    to: To,
+    body: Body,
+    timestamp: new Date().toISOString(),
+    status: 'received',
+  });
+
+  // Send TwiML response (optional auto-reply)
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Message>Thanks for your message! NIRVANA received it.</Message>
+</Response>`;
+
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+// SMS: Get history
+app.get('/api/twilio/sms/history', (req, res) => {
+  const limit = parseInt(req.query.limit) || 50;
+  const history = smsHistory.slice(-limit).reverse();
+  
+  res.json({
+    success: true,
+    messages: history,
+    total: smsHistory.length,
+  });
+});
+
+// Voice: Make outgoing call
+app.post('/api/twilio/voice/call', async (req, res) => {
+  if (!twilioClient) {
+    return res.status(503).json({
+      success: false,
+      error: 'Twilio not configured.',
+    });
+  }
+
+  try {
+    const { to, personaVoice = 'Polly.Joanna' } = req.body;
+
+    if (!to) {
+      return res.status(400).json({ success: false, error: 'Missing required field: to' });
+    }
+
+    const call = await twilioClient.calls.create({
+      url: `${process.env.PUBLIC_URL || 'https://your-domain.com'}/api/twilio/voice/twiml`,
+      to: to,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      statusCallback: `${process.env.PUBLIC_URL || 'https://your-domain.com'}/api/twilio/voice/status`,
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST',
+    });
+
+    activeCalls.set(call.sid, {
+      sid: call.sid,
+      to: to,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      status: call.status,
+      direction: 'outbound',
+      startTime: new Date().toISOString(),
+      personaVoice,
+      userMuted: false,
+      userListening: true,
+    });
+
+    res.json({
+      success: true,
+      callSid: call.sid,
+      status: call.status,
+    });
+  } catch (error) {
+    console.error('[Twilio Voice Call Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to initiate call',
+    });
+  }
+});
+
+// Voice: Incoming call webhook
+app.post('/api/twilio/voice/incoming', (req, res) => {
+  const { CallSid, From, To } = req.body;
+
+  console.log(`[Twilio] Incoming call from ${From}`);
+
+  activeCalls.set(CallSid, {
+    sid: CallSid,
+    from: From,
+    to: To,
+    status: 'ringing',
+    direction: 'inbound',
+    startTime: new Date().toISOString(),
+    personaVoice: 'Polly.Joanna',
+    userMuted: false,
+    userListening: true,
+  });
+
+  // TwiML response - connect to media stream
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">Hello! This is NIRVANA. How can I help you today?</Say>
+  <Pause length="1"/>
+  <Start>
+    <Stream url="wss://${req.get('host')}/api/twilio/voice/media/${CallSid}" />
+  </Start>
+  <Pause length="60"/>
+</Response>`;
+
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+// Voice: TwiML handler for outbound calls
+app.post('/api/twilio/voice/twiml', (req, res) => {
+  const { CallSid } = req.body;
+
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">Hello! This is NIRVANA calling. Please hold while I connect you.</Say>
+  <Pause length="1"/>
+  <Start>
+    <Stream url="wss://${req.get('host')}/api/twilio/voice/media/${CallSid}" />
+  </Start>
+  <Pause length="60"/>
+</Response>`;
+
+  res.type('text/xml');
+  res.send(twiml);
+});
+
+// Voice: Call status callback
+app.post('/api/twilio/voice/status', (req, res) => {
+  const { CallSid, CallStatus, CallDuration } = req.body;
+
+  if (activeCalls.has(CallSid)) {
+    const call = activeCalls.get(CallSid);
+    call.status = CallStatus;
+    call.duration = CallDuration;
+
+    if (CallStatus === 'completed' || CallStatus === 'failed' || CallStatus === 'busy' || CallStatus === 'no-answer') {
+      call.endTime = new Date().toISOString();
+      console.log(`[Twilio] Call ${CallSid} ended with status: ${CallStatus}`);
+    }
+  }
+
+  res.sendStatus(200);
+});
+
+// Voice: Get active calls
+app.get('/api/twilio/voice/calls', (req, res) => {
+  const calls = Array.from(activeCalls.values());
+  
+  res.json({
+    success: true,
+    calls: calls,
+  });
+});
+
+// Voice: Update call controls (mute, join, etc.)
+app.post('/api/twilio/voice/controls', (req, res) => {
+  const { callSid, action, value } = req.body;
+
+  if (!activeCalls.has(callSid)) {
+    return res.status(404).json({ success: false, error: 'Call not found' });
+  }
+
+  const call = activeCalls.get(callSid);
+
+  switch (action) {
+    case 'mute':
+      call.userMuted = value;
+      break;
+    case 'listen':
+      call.userListening = value;
+      break;
+    case 'join':
+      call.userJoined = value;
+      break;
+    default:
+      return res.status(400).json({ success: false, error: 'Invalid action' });
+  }
+
+  res.json({
+    success: true,
+    call: call,
+  });
+});
+
+// Voice: Hangup call
+app.post('/api/twilio/voice/hangup', async (req, res) => {
+  if (!twilioClient) {
+    return res.status(503).json({ success: false, error: 'Twilio not configured' });
+  }
+
+  try {
+    const { callSid } = req.body;
+
+    await twilioClient.calls(callSid).update({ status: 'completed' });
+
+    if (activeCalls.has(callSid)) {
+      const call = activeCalls.get(callSid);
+      call.status = 'completed';
+      call.endTime = new Date().toISOString();
+    }
+
+    res.json({
+      success: true,
+      callSid: callSid,
+    });
+  } catch (error) {
+    console.error('[Twilio Hangup Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to hangup call',
+    });
+  }
+});
+
+// Voice: Media stream WebSocket handler
+wss.on('connection', (ws, req) => {
+  const urlParts = req.url.split('/');
+  const callSid = urlParts[urlParts.length - 1];
+  
+  console.log(`[Twilio WebSocket] Media stream connected for call: ${callSid}`);
+
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.event === 'connected') {
+        console.log('[Twilio WebSocket] Stream connected:', data);
+      } else if (data.event === 'start') {
+        console.log('[Twilio WebSocket] Stream started:', data);
+      } else if (data.event === 'media') {
+        // Incoming audio from caller (mulaw format)
+        // This can be sent to PersonI STT for processing
+        // For now, we just echo it back as a test
+        ws.send(JSON.stringify({
+          event: 'media',
+          media: {
+            payload: data.media.payload
+          }
+        }));
+      } else if (data.event === 'stop') {
+        console.log('[Twilio WebSocket] Stream stopped');
+      }
+    } catch (error) {
+      console.error('[Twilio WebSocket] Error processing message:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    console.log(`[Twilio WebSocket] Stream disconnected for call: ${callSid}`);
+  });
+
+  ws.on('error', (error) => {
+    console.error('[Twilio WebSocket] Error:', error);
+  });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);
+  console.log(`[Connector Backend] WebSocket server ready for Twilio media streams`);
+  
+  if (twilioClient) {
+    console.log('[Twilio] ✅ Integration active');
+    console.log(`[Twilio] Phone number: ${process.env.TWILIO_PHONE_NUMBER || 'NOT SET'}`);
+  } else {
+    console.log('[Twilio] ⚠️  Not configured - add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER');
+  }
 });
