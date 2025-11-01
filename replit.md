@@ -68,6 +68,10 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session)
+- **PersonI Backgrounds Disabled**: ✅ All PersonI 3D sphere backgrounds temporarily disabled (5% opacity, 95% transparency) so camera feed is clearly visible
+- **Google OAuth Token Optional**: ✅ Google connector access tokens now optional when using "Connect with Google" OAuth button - no manual token entry required
+
 ### Critical UX & Provider Flexibility Fixes
 - **UI Controls Always Visible**: ✅ Removed opacity fade that was hiding controls - keyboard input, mic mute, and volume buttons now always accessible
 - **Keyboard Text Input**: Text mode toggle button (⌨️) fully functional - click to type messages without using voice
