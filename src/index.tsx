@@ -553,10 +553,12 @@ export class GdmLiveAudio extends LitElement {
       gap: 8px;
       cursor: move;
       user-select: none;
+      pointer-events: none;
     }
 
     .settings-fab.visible {
       opacity: 1;
+      pointer-events: auto;
     }
 
     .settings-fab.dragging {
