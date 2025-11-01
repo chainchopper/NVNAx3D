@@ -52,7 +52,6 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { WebSocketServer } from 'ws';
-import { GoogleGenAI } from '@google/genai';
 import { stockDataService } from './src/services/financial/stock-data-service.js';
 import { cryptoDataService } from './src/services/financial/crypto-data-service.js';
 import { portfolioManager } from './src/services/financial/portfolio-manager.js';
@@ -176,9 +175,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Increase payload limit for camera vision (base64-encoded images can be large)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json());
 
 async function verifyGmailCredentials() {
   const token = process.env.GOOGLE_ACCESS_TOKEN;
@@ -435,106 +432,6 @@ async function verifyConnectorCredentials(connectorId) {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// ==================== GEMINI API ENDPOINTS (Security: Backend Proxy) ====================
-// CRITICAL SECURITY: API keys must NEVER be sent to the browser
-// All Gemini API calls are proxied through these backend endpoints
-
-app.post('/api/gemini/chat', async (req, res) => {
-  try {
-    const { model, contents, tools, systemInstruction } = req.body;
-
-    if (!model || !contents) {
-      return res.status(400).json({
-        success: false,
-        error: 'model and contents are required'
-      });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'GEMINI_API_KEY not configured on backend'
-      });
-    }
-
-    const client = new GoogleGenAI({ apiKey });
-    
-    // Build config object
-    const config = {};
-    if (systemInstruction) {
-      config.systemInstruction = systemInstruction;
-    }
-    if (tools) {
-      config.tools = tools;
-    }
-
-    const response = await client.models.generateContent({
-      model,
-      contents,
-      config: Object.keys(config).length > 0 ? config : undefined,
-    });
-
-    const text = response.text || '';
-    const functionCalls = response.functionCalls || [];
-
-    res.json({
-      success: true,
-      data: { text, functionCalls }
-    });
-  } catch (error) {
-    console.error('[Gemini Chat] Error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to generate response'
-    });
-  }
-});
-
-app.post('/api/gemini/embeddings', async (req, res) => {
-  try {
-    const { model, text } = req.body;
-
-    if (!model || !text) {
-      return res.status(400).json({
-        success: false,
-        error: 'model and text are required'
-      });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'GEMINI_API_KEY not configured on backend'
-      });
-    }
-
-    const client = new GoogleGenAI({ apiKey });
-    const result = await client.models.embedContent({
-      model,
-      contents: [{ parts: [{ text }] }],
-    });
-
-    if (!result.embeddings || result.embeddings.length === 0) {
-      throw new Error('No embedding returned from Gemini');
-    }
-
-    const embedding = result.embeddings[0].values;
-
-    res.json({
-      success: true,
-      data: { embedding }
-    });
-  } catch (error) {
-    console.error('[Gemini Embeddings] Error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to generate embedding'
-    });
-  }
 });
 
 app.post('/api/connectors/verify', async (req, res) => {

@@ -21,6 +21,7 @@ export class CameraManager extends LitElement {
   @state() private hasPermission = false;
   @state() private isActive = false;
   @state() private error: string | null = null;
+  @state() private facingMode: 'user' | 'environment' = 'user';
   
   @query('video') private videoElement!: HTMLVideoElement;
   @query('canvas') private canvasElement!: HTMLCanvasElement;
@@ -72,13 +73,13 @@ export class CameraManager extends LitElement {
 
   async requestPermissions(): Promise<boolean> {
     try {
-      console.log('[CameraManager] Requesting camera permissions...');
+      console.log(`[CameraManager] Requesting camera permissions (${this.facingMode} camera)...`);
       
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          facingMode: 'user'
+          facingMode: this.facingMode
         }
       });
 
@@ -97,6 +98,42 @@ export class CameraManager extends LitElement {
       this.dispatchEvent(new CustomEvent('permissions-denied', { detail: { error: err } }));
       return false;
     }
+  }
+
+  /**
+   * Switch between front (user) and back (environment) cameras
+   * This is especially useful on mobile devices
+   */
+  async switchCamera(): Promise<boolean> {
+    const wasActive = this.isActive;
+    
+    // Properly stop the camera (clears isActive flag)
+    this.stop();
+    
+    // Toggle facing mode
+    this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
+    console.log(`[CameraManager] Switching to ${this.facingMode} camera`);
+    
+    // If was active, restart with new camera
+    if (wasActive) {
+      const granted = await this.requestPermissions();
+      if (granted) {
+        await this.start();
+        this.dispatchEvent(new CustomEvent('camera-switched', { 
+          detail: { facingMode: this.facingMode } 
+        }));
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Get the current camera facing mode
+   */
+  getFacingMode(): 'user' | 'environment' {
+    return this.facingMode;
   }
 
   async start(): Promise<boolean> {

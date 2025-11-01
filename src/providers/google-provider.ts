@@ -1,41 +1,44 @@
 /**
  * Google Gemini provider implementation
- * SECURITY: Uses backend proxy to prevent API key exposure in browser
  */
 
 import { BaseProvider, ProviderMessage, StreamingResponse } from './base-provider';
 import { ModelInfo } from '../types/providers';
+import { GoogleGenAI } from '@google/genai';
 
 export class GoogleProvider extends BaseProvider {
-  constructor(config: any) {
-    super(config);
-  }
+  private client: GoogleGenAI | null = null;
 
   async verify(): Promise<boolean> {
+    if (!this.config.apiKey) return false;
+
     try {
-      // Verify by making a test API call through backend proxy (Vite proxy handles routing)
-      const response = await fetch('/api/gemini/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'gemini-2.5-flash',
-          contents: [{
-            role: 'user',
-            parts: [{ text: 'test' }],
-          }],
-        }),
+      this.client = new GoogleGenAI({ apiKey: this.config.apiKey });
+      
+      // Actually verify by making a simple API call
+      const response = await this.client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [{
+          role: 'user',
+          parts: [{ text: 'test' }],
+        }],
       });
 
-      const data = await response.json();
-      return data.success === true;
+      // If we get here without error, the API key is valid
+      return !!response;
     } catch (error) {
       console.error('Google provider verification failed:', error);
+      this.client = null;
       return false;
     }
   }
 
   async getAvailableModels(): Promise<ModelInfo[]> {
-    // Gemini available models (no backend call needed - static list)
+    if (!this.client) {
+      throw new Error('Provider not initialized');
+    }
+
+    // Gemini available models
     return [
       {
         id: 'gemini-2.5-flash',
@@ -78,86 +81,37 @@ export class GoogleProvider extends BaseProvider {
 
   async sendMessage(
     messages: ProviderMessage[],
-    options?: { tools?: any[], systemInstruction?: string, onChunk?: (chunk: StreamingResponse) => void } | ((chunk: StreamingResponse) => void)
-  ): Promise<string | { text: string, functionCalls: any[] }> {
-    // Handle backward compat: options can be a function (onChunk) or an object
-    const onChunk = typeof options === 'function' ? options : options?.onChunk;
-    const tools = typeof options === 'object' && options ? options.tools : undefined;
-    const systemInstruction = typeof options === 'object' && options ? options.systemInstruction : undefined;
-    
-    // Filter out system messages and extract system instruction
-    let extractedSystemInstruction = systemInstruction;
-    const contents = messages
-      .filter(msg => {
-        if (msg.role === 'system') {
-          // Extract system instruction from system message
-          if (!extractedSystemInstruction && typeof msg.content === 'string') {
-            extractedSystemInstruction = msg.content;
-          }
-          return false; // Don't include system messages in contents
-        }
-        return true;
-      })
-      .map(msg => {
-        const role = msg.role === 'assistant' ? 'model' : 'user';
-        
-        if (typeof msg.content === 'string') {
-          return {
-            role,
-            parts: [{ text: msg.content }],
-          };
-        } else {
-          return {
-            role,
-            parts: msg.content,
-          };
-        }
-      });
-
-    // Build request payload
-    const requestPayload: any = {
-      model: this.config.model,
-      contents,
-    };
-
-    // Add systemInstruction if provided
-    if (extractedSystemInstruction) {
-      requestPayload.systemInstruction = extractedSystemInstruction;
+    onChunk?: (chunk: StreamingResponse) => void
+  ): Promise<string> {
+    if (!this.client) {
+      throw new Error('Provider not initialized');
     }
 
-    // Add tools if provided
-    if (tools && tools.length > 0) {
-      requestPayload.tools = [{ functionDeclarations: tools }];
-    }
-
-    // Call backend proxy endpoint instead of using API key directly (Vite proxy handles routing)
-    const response = await fetch('/api/gemini/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestPayload),
+    const contents = messages.map(msg => {
+      const role = msg.role === 'assistant' ? 'model' : 'user';
+      
+      if (typeof msg.content === 'string') {
+        return {
+          role,
+          parts: [{ text: msg.content }],
+        };
+      } else {
+        return {
+          role,
+          parts: msg.content,
+        };
+      }
     });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(error.error || `Backend returned ${response.status}`);
-    }
+    const response = await this.client.models.generateContent({
+      model: this.config.model,
+      contents,
+    });
 
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Backend request failed');
-    }
-
-    const text = data.data.text || '';
-    const functionCalls = data.data.functionCalls || [];
+    const text = response.text || '';
 
     if (onChunk) {
       onChunk({ text, done: true });
-    }
-
-    // Return both text and functionCalls if there are function calls
-    if (functionCalls.length > 0) {
-      return { text, functionCalls };
     }
 
     return text;

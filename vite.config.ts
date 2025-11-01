@@ -28,19 +28,5 @@ export default defineConfig(({ mode }) => {
       worker: {
         format: 'es',
       },
-      build: {
-        chunkSizeWarningLimit: 1000,
-        rollupOptions: {
-          output: {
-            manualChunks: {
-              'three': ['three', 'postprocessing'],
-              'tensorflow': ['@tensorflow/tfjs', '@tensorflow-models/coco-ssd'],
-              'transformers': ['@xenova/transformers', 'onnxruntime-web'],
-              'ai-providers': ['@google/genai'],
-              'lit-framework': ['lit'],
-            }
-          }
-        }
-      }
     };
 });

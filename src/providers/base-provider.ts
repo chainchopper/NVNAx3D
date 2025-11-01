@@ -31,12 +31,6 @@ export interface ProviderConfig {
   providerType: string;
 }
 
-export interface SendMessageOptions {
-  tools?: any[];
-  systemInstruction?: string;
-  onChunk?: (chunk: StreamingResponse) => void;
-}
-
 export abstract class BaseProvider {
   protected config: ProviderConfig;
 
@@ -48,8 +42,8 @@ export abstract class BaseProvider {
   abstract getAvailableModels(): Promise<ModelInfo[]>;
   abstract sendMessage(
     messages: ProviderMessage[],
-    options?: SendMessageOptions | ((chunk: StreamingResponse) => void)
-  ): Promise<string | { text: string, functionCalls: any[] }>;
+    onChunk?: (chunk: StreamingResponse) => void
+  ): Promise<string>;
   
   // Optional: Audio streaming support
   async sendAudio?(

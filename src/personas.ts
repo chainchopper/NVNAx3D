@@ -45,17 +45,6 @@ export const DEFAULT_CAPABILITIES: PersoniCapabilities = {
   audioOutput: true,
 };
 
-// Model assignments for different PersonI capabilities
-export interface PersoniModels {
-  conversation?: string;        // Primary conversation/chat model
-  vision?: string;              // Vision/multimodal model
-  embedding?: string;           // Text embedding model for RAG
-  functionCalling?: string;     // Model for function/tool calling
-  imageGeneration?: string;     // Image generation model
-  objectDetection?: string;     // YOLO/object detection model
-  textToSpeech?: string;        // TTS model (voice name for now)
-}
-
 // User-configured instance of a Personi
 export interface PersoniConfig {
   id: string;
@@ -64,8 +53,7 @@ export interface PersoniConfig {
   systemInstruction: string;
   templateName: string;
   voiceName: string;
-  thinkingModel?: string;       // DEPRECATED: Use models.conversation instead (backward compat)
-  models?: PersoniModels;       // Flexible multi-model assignments
+  thinkingModel: string;
   enabledConnectors: string[]; // List of connector IDs
   capabilities?: PersoniCapabilities;
   avatarUrl?: string;
@@ -81,27 +69,6 @@ export interface PersoniConfig {
 export interface PersonaTemplate extends Omit<PersoniConfig, 'id'> {
   introductions: string[];
   idlePrompts: string[];
-}
-
-/**
- * Helper function to get the appropriate model for a PersonI capability
- * Falls back to thinkingModel for backward compatibility
- */
-export function getPersoniModel(
-  personi: PersoniConfig,
-  capability: keyof PersoniModels = 'conversation'
-): string | undefined {
-  // Try new models structure first
-  if (personi.models && personi.models[capability]) {
-    return personi.models[capability];
-  }
-  
-  // Fallback to thinkingModel for backward compatibility
-  if (personi.thinkingModel) {
-    return personi.thinkingModel;
-  }
-  
-  return undefined;
 }
 
 export const AVAILABLE_CONNECTORS: Connector[] = [

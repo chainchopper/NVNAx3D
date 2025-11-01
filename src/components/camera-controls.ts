@@ -101,13 +101,29 @@ export class CameraControls extends LitElement {
     this.dispatchEvent(new CustomEvent('toggle-preview'));
   }
 
+  private handleSwitchCamera() {
+    if (!this.hasPermission || !this.isActive) return;
+    this.dispatchEvent(new CustomEvent('switch-camera'));
+  }
+
   render() {
     const cameraClass = this.error ? 'error' : this.isActive ? 'active' : '';
     const previewClass = this.showPreview ? 'active' : '';
     const previewDisabled = !this.hasPermission || !this.isActive ? 'disabled' : '';
+    const switchDisabled = !this.hasPermission || !this.isActive ? 'disabled' : '';
 
     return html`
       <div class="camera-controls">
+        <!-- Switch Camera icon: Front/Back (mobile) -->
+        <div 
+          class="icon-button ${switchDisabled}"
+          @click="${this.handleSwitchCamera}"
+          title="Switch camera (front/back)"
+        >
+          🔄
+          <span class="tooltip">Switch Camera</span>
+        </div>
+
         <!-- Eye icon: Show/Hide Preview -->
         <div 
           class="icon-button ${previewClass} ${previewDisabled}"

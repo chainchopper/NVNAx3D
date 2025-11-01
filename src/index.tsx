@@ -53,7 +53,6 @@ import {
   switchPersonaDeclaration,
   TextureName,
   DEFAULT_CAPABILITIES,
-  getPersoniModel,
 } from './personas';
 import { providerManager } from './services/provider-manager';
 import { ProviderFactory } from './providers/provider-factory';
@@ -75,10 +74,11 @@ import { connectorHandlers, ConnectorResult } from './services/connector-handler
 import { routineExecutor } from './services/routine-executor';
 import { routinePatternDetector } from './services/routine-pattern-detector';
 import type { RoutinePattern } from './types/routine-types';
+import { reminderManager } from './services/reminder-manager';
 import { environmentalObserver } from './services/environmental-observer';
 import { chatterboxTTS } from './services/chatterbox-tts';
 import { audioRecordingManager } from './services/audio-recording-manager';
-import type { DetectionResult } from './services/object-recognition';
+import { objectRecognitionService, DetectionResult } from './services/object-recognition';
 import { voiceCommandSystem } from './services/voice-command-system';
 import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
 import './components/object-detection-overlay';
@@ -234,7 +234,7 @@ export class GdmLiveAudio extends LitElement {
   private identificationTimeout: number | undefined;
 
   private settingsTimeout: number | undefined;
-  // Legacy idlePromptTimeout removed - now using idle-speech-manager.ts
+  private idlePromptTimeout: number | undefined;
   private nirvanaGradientInterval: number | undefined;
   private idleSpeechManager = new IdleSpeechManager();
   
@@ -359,15 +359,8 @@ export class GdmLiveAudio extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0;
-      transition: all 0.5s ease-in-out;
-      pointer-events: none;
+      transition: all 0.3s ease;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-
-    .financial-dashboard-toggle.visible {
-      opacity: 1;
-      pointer-events: auto;
     }
 
     .financial-dashboard-toggle:hover {
@@ -434,7 +427,7 @@ export class GdmLiveAudio extends LitElement {
 
     .persona-carousel-container {
       position: absolute;
-      bottom: 20vh;
+      bottom: 20vh; /* Position it above the main controls */
       left: 0;
       right: 0;
       display: flex;
@@ -447,17 +440,6 @@ export class GdmLiveAudio extends LitElement {
     }
 
     .persona-carousel-container.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
-
-    .persona-input-container {
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      pointer-events: none;
-    }
-
-    .persona-input-container.visible {
       opacity: 1;
       pointer-events: all;
     }
@@ -530,17 +512,6 @@ export class GdmLiveAudio extends LitElement {
       line-height: 1.2;
     }
 
-    .ui-controls-wrapper {
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
-      pointer-events: none;
-    }
-
-    .ui-controls-wrapper.visible {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
     .settings-fab {
       position: fixed;
       z-index: 100;
@@ -552,12 +523,10 @@ export class GdmLiveAudio extends LitElement {
       gap: 8px;
       cursor: move;
       user-select: none;
-      pointer-events: none;
     }
 
     .settings-fab.visible {
       opacity: 1;
-      pointer-events: auto;
     }
 
     .settings-fab.dragging {
@@ -1125,6 +1094,7 @@ export class GdmLiveAudio extends LitElement {
     window.removeEventListener('mousemove', this.handleUserActivity);
     window.removeEventListener('touchstart', this.handleUserActivity);
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
+    if (this.idlePromptTimeout) clearTimeout(this.idlePromptTimeout);
     this.stopNirvanaGradientUpdates();
     
     // Cleanup music detector
@@ -1132,7 +1102,7 @@ export class GdmLiveAudio extends LitElement {
     sharedMic.unregisterConsumer('music-detector');
   }
 
-  protected async firstUpdated() {
+  protected firstUpdated() {
     console.log('[Lifecycle] firstUpdated called, ensuring dual mode system is initialized');
     // Ensure dual mode system is initialized after first render
     // This is a safety net in case init() hasn't completed yet
@@ -1142,17 +1112,13 @@ export class GdmLiveAudio extends LitElement {
       console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
     }
     
-    // Initialize reminder notification checks (lazy loaded)
-    const { reminderManager } = await import('./services/reminder-manager');
+    // Initialize reminder notification checks
     reminderManager.startNotificationChecks((message) => {
       this.speakText(message);
     });
     
     // Request notification permission for reminders
     reminderManager.requestNotificationPermission();
-    
-    // Auto-initialize camera if permission was previously granted
-    await this.autoInitializeCamera();
     
     // Add ESCAPE key handler to close panels
     document.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -1200,15 +1166,6 @@ export class GdmLiveAudio extends LitElement {
       console.log('[ProviderManager] Initializing provider system...');
       await providerManager.initialize();
       console.log('[ProviderManager] ✅ Provider system initialized');
-      
-      // Debug: check what providers are available
-      const allProviders = providerManager.getAllProviders();
-      console.log('[ProviderManager] DEBUG: Total providers:', allProviders.length);
-      allProviders.forEach(p => {
-        console.log(`[ProviderManager] DEBUG: ${p.name} (${p.id}): enabled=${p.enabled}, verified=${p.verified}, models=${p.models.length}`);
-      });
-      const availableModels = providerManager.getAvailableModels();
-      console.log('[ProviderManager] DEBUG: Available models:', availableModels.map(m => `${m.id} from ${m.providerId}`).join(', '));
       
       console.log('[RAG] Initializing memory system...');
       await ragMemoryManager.initialize();
@@ -1269,6 +1226,7 @@ export class GdmLiveAudio extends LitElement {
       this.updateStatus('Current provider not configured - go to Settings → Models');
     } else {
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
     }
 
     if (this.activePersoni?.name === 'NIRVANA') {
@@ -1592,6 +1550,7 @@ export class GdmLiveAudio extends LitElement {
       this.recognition.onspeechstart = () => {
         this.isSpeaking = true;
         this.status = 'Listening (browser microphone)...';
+        clearTimeout(this.idlePromptTimeout);
         this.idleSpeechManager.pause();
       };
       
@@ -1651,7 +1610,7 @@ export class GdmLiveAudio extends LitElement {
       case 'configured':
         return 'Provider configured and ready';
       case 'missing':
-        return `Provider for ${getPersoniModel(this.activePersoni, 'conversation') || 'current model'} not configured`;
+        return `Provider for ${this.activePersoni?.thinkingModel || 'current model'} not configured`;
       case 'unconfigured':
         return 'No providers configured - click to configure';
       default:
@@ -1705,7 +1664,7 @@ export class GdmLiveAudio extends LitElement {
       
       this.savePersonis(); // Save with updated capabilities, avatarUrl, and new PersonI
     } else {
-      // First time setup: create PersonI from templates
+      // First time setup: create Personis from templates
       this.personis = personaTemplates.map((template) => {
         return {
           id: crypto.randomUUID(),
@@ -1727,22 +1686,8 @@ export class GdmLiveAudio extends LitElement {
     // AUTO-FIX: Update PersonI to use first available model if their model doesn't exist
     this.autoUpdatePersonIModels();
 
-    // Ensure a PersonI is always active after loading configuration
-    if (!this.activePersoni && this.personis.length > 0) {
-      // Try to load last active PersonI from storage
-      const lastActiveId = localStorage.getItem('last-active-personi-id');
-      let defaultPersoni = lastActiveId 
-        ? this.personis.find(p => p.id === lastActiveId)
-        : null;
-      
-      // Fallback to NIRVANA or first PersonI
-      if (!defaultPersoni) {
-        defaultPersoni = this.personis.find(p => p.name === 'NIRVANA') || this.personis[0];
-      }
-      
-      this.activePersoni = defaultPersoni;
-      activePersonasManager.setPersona('primary', defaultPersoni);
-      console.log(`[PersonI] Auto-selected default PersonI: ${defaultPersoni.name}`);
+    if (this.personis.length > 0) {
+      this.activePersoni = this.personis[0];
     }
 
     const storedSttPreferences = localStorage.getItem(STT_PREFERENCES_KEY);
@@ -1773,20 +1718,15 @@ export class GdmLiveAudio extends LitElement {
     
     let updated = false;
     this.personis = this.personis.map(personi => {
-      const currentModel = getPersoniModel(personi, 'conversation');
-      const modelExists = availableModels.some(m => m.id === currentModel);
+      const modelExists = availableModels.some(m => m.id === personi.thinkingModel);
       
       if (!modelExists) {
         const firstModel = availableModels[0];
-        console.log(`[PersonI] Auto-updating ${personi.name} from "${currentModel}" to "${firstModel.id}" (model not found in configured providers)`);
+        console.log(`[PersonI] Auto-updating ${personi.name} from "${personi.thinkingModel}" to "${firstModel.id}" (model not found in configured providers)`);
         updated = true;
         return {
           ...personi,
-          thinkingModel: firstModel.id, // Backward compat
-          models: {
-            ...personi.models,
-            conversation: firstModel.id,
-          },
+          thinkingModel: firstModel.id,
         };
       }
       
@@ -1857,16 +1797,6 @@ export class GdmLiveAudio extends LitElement {
 
   private handleUserActivity() {
     this.settingsButtonVisible = true;
-    
-    // Clear existing timeout
-    if (this.settingsTimeout) {
-      clearTimeout(this.settingsTimeout);
-    }
-    
-    // Hide UI after 5 seconds of inactivity
-    this.settingsTimeout = window.setTimeout(() => {
-      this.settingsButtonVisible = false;
-    }, 5000);
   }
   
   private async setupSongIdentification() {
@@ -2027,48 +1957,6 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
-  private async autoInitializeCamera() {
-    try {
-      // Check if camera permission was previously granted using Permissions API
-      const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
-      
-      console.log('[CameraManager] Camera permission state:', permissionStatus.state);
-      
-      if (permissionStatus.state === 'granted') {
-        console.log('[CameraManager] Camera permission already granted, auto-initializing...');
-        
-        // Check if camera was enabled in previous session
-        const cameraWasEnabled = localStorage.getItem('nirvana-camera-enabled') === 'true';
-        
-        if (cameraWasEnabled && this.cameraManager) {
-          // Auto-request camera stream
-          const granted = await this.cameraManager.requestPermissions();
-          if (granted) {
-            this.cameraHasPermission = true;
-            this.cameraEnabled = true;
-            this.cameraError = null;
-            console.log('[CameraManager] Camera auto-initialized successfully');
-            
-            // Start environmental observer if active PersonI has vision
-            if (this.activePersoni) {
-              const provider = this.getProviderForPersoni(this.activePersoni);
-              if (provider) {
-                environmentalObserver.start(
-                  () => this.cameraManager?.captureFrame() || null,
-                  provider,
-                  this.activePersoni.name,
-                  (text) => this.speakText(text)
-                );
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.log('[CameraManager] Auto-initialization skipped:', error);
-    }
-  }
-
   private async handleToggleCameraControl() {
     if (!this.cameraEnabled && !this.cameraHasPermission) {
       console.log('[Camera] Requesting permissions before enabling...');
@@ -2101,16 +1989,22 @@ export class GdmLiveAudio extends LitElement {
     }
     
     this.cameraEnabled = !this.cameraEnabled;
-    
-    // Save camera state for auto-initialization on next session
-    localStorage.setItem('nirvana-camera-enabled', this.cameraEnabled.toString());
-    
     console.log('[Camera] Camera toggled:', this.cameraEnabled ? 'ON' : 'OFF');
   }
 
   private handleToggleCameraPreview() {
     this.cameraShowPreview = !this.cameraShowPreview;
     console.log('[Camera] Preview toggled:', this.cameraShowPreview ? 'VISIBLE' : 'HIDDEN');
+  }
+
+  private async handleSwitchCamera() {
+    if (!this.cameraManager) {
+      console.warn('[Camera] Camera manager not available');
+      return;
+    }
+    
+    console.log('[Camera] Switching camera...');
+    await this.cameraManager.switchCamera();
   }
 
   private handleFrameCaptured(e: CustomEvent) {
@@ -2135,8 +2029,6 @@ export class GdmLiveAudio extends LitElement {
     }
 
     try {
-      // Lazy load object recognition service
-      const { objectRecognitionService } = await import('./services/object-recognition');
       await objectRecognitionService.initialize();
       
       objectRecognitionService.startContinuousDetection(
@@ -2184,9 +2076,7 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
-  private async stopObjectDetection() {
-    // Lazy load object recognition service
-    const { objectRecognitionService } = await import('./services/object-recognition');
+  private stopObjectDetection() {
     objectRecognitionService.stopContinuousDetection();
     this.currentDetections = null;
     
@@ -2257,16 +2147,6 @@ export class GdmLiveAudio extends LitElement {
       this.textInput = '';
       await this.processTranscript(text);
     }
-  }
-
-  private async handleKeyboardSubmit() {
-    if (!this.textInput.trim() || !this.activePersoni) return;
-
-    const text = this.textInput;
-    this.textInput = '';
-    
-    console.log('[Keyboard] Text submitted:', text);
-    await this.processTranscript(text);
   }
 
   private handleRAGToggle(e: CustomEvent) {
@@ -2410,10 +2290,9 @@ export class GdmLiveAudio extends LitElement {
       return;
     }
 
-    this.idleSpeechManager.stop();
+    clearTimeout(this.idlePromptTimeout);
     this.isSwitchingPersona = true;
     this.updateStatus(`Switching to ${personi.name}...`);
-    localStorage.setItem('last-active-personi-id', personi.id);
 
     const handoffMessages = [
       `Certainly. Handing over to ${personi.name}.`,
@@ -2458,11 +2337,12 @@ export class GdmLiveAudio extends LitElement {
     this.isSwitchingPersona = false;
     this.checkProviderStatus();
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+    this.resetIdlePromptTimer();
 
     if (provider && !this.isMuted) {
       this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
         this.handleIdleSpeech(text);
-      }, () => this.cameraManager?.captureFrame() || null);
+      });
     }
   }
 
@@ -2476,7 +2356,7 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private getProviderForPersoni(personi: PersoniConfig): BaseProvider | null {
-    const modelId = getPersoniModel(personi, 'conversation');
+    const modelId = personi.thinkingModel;
     
     const availableModels = providerManager.getAvailableModels();
     const modelInfo = availableModels.find(m => m.id === modelId);
@@ -2759,6 +2639,11 @@ export class GdmLiveAudio extends LitElement {
       }
 
       if (provider instanceof GoogleProvider) {
+        const googleProvider = provider as any;
+        if (!googleProvider.client) {
+          await googleProvider.verify();
+        }
+
         const userContext = userProfileManager.getSystemPromptContext();
         let systemInstruction = userContext 
           ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
@@ -2768,27 +2653,23 @@ export class GdmLiveAudio extends LitElement {
           systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
         }
 
-        const messages = [
-          { role: 'system' as const, content: systemInstruction },
-          { role: 'user' as const, content: transcript },
-        ];
+        const response = await googleProvider.client.models.generateContent({
+          model: this.activePersoni.thinkingModel,
+          contents: transcript,
+          config: {
+            systemInstruction,
+            tools: [{functionDeclarations: enabledDeclarations}],
+          },
+        });
 
-        const response = await provider.sendMessage(messages, { 
-          tools: enabledDeclarations 
-        } as any);
-        
-        // Handle both string and object responses
-        if (typeof response === 'string') {
-          await this.speakText(response);
-        } else {
-          // Response contains functionCalls
-          if (response.functionCalls && response.functionCalls.length > 0) {
-            for (const fc of response.functionCalls) {
-              await this.handleFunctionCall(fc);
-            }
-          } else {
-            await this.speakText(response.text);
+        const functionCalls = response.functionCalls;
+        if (functionCalls && functionCalls.length > 0) {
+          for (const fc of functionCalls) {
+            await this.handleFunctionCall(fc);
           }
+        } else {
+          const responseText = response.text;
+          await this.speakText(responseText);
         }
       } else {
         const userContext = userProfileManager.getSystemPromptContext();
@@ -2805,8 +2686,7 @@ export class GdmLiveAudio extends LitElement {
           { role: 'user' as const, content: transcript },
         ];
 
-        const response = await provider.sendMessage(messages);
-        const responseText = typeof response === 'string' ? response : response.text;
+        const responseText = await provider.sendMessage(messages);
         await this.speakText(responseText);
       }
     } catch (e) {
@@ -2820,13 +2700,14 @@ export class GdmLiveAudio extends LitElement {
     } finally {
       if (!this.isAiSpeaking) {
         this.updateStatus('Idle');
+        this.resetIdlePromptTimer();
         
         if (this.activePersoni && !this.isMuted) {
           const provider = this.getProviderForPersoni(this.activePersoni);
           if (provider) {
             this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
               this.handleIdleSpeech(text);
-            }, () => this.cameraManager?.captureFrame() || null);
+            });
           }
         }
       }
@@ -3128,7 +3009,7 @@ export class GdmLiveAudio extends LitElement {
   private async playAudio(base64Audio: string) {
     this.isAiSpeaking = true;
     this.updateStatus('Speaking...');
-    this.idleSpeechManager.pause();
+    clearTimeout(this.idlePromptTimeout);
 
     this.nextStartTime = Math.max(
       this.nextStartTime,
@@ -3148,6 +3029,7 @@ export class GdmLiveAudio extends LitElement {
       if (this.sources.size === 0) {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
       }
     });
 
@@ -3364,7 +3246,7 @@ export class GdmLiveAudio extends LitElement {
     return new Promise((resolve) => {
       this.isAiSpeaking = true;
       this.updateStatus('Speaking (browser voice)...');
-      this.idleSpeechManager.pause();
+      clearTimeout(this.idlePromptTimeout);
 
       const utterance = new SpeechSynthesisUtterance(text);
       
@@ -3409,6 +3291,7 @@ export class GdmLiveAudio extends LitElement {
       utterance.onend = () => {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3416,6 +3299,7 @@ export class GdmLiveAudio extends LitElement {
         console.error('Speech synthesis error:', event);
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3692,8 +3576,7 @@ export class GdmLiveAudio extends LitElement {
           { type: 'image' as const, data: frame.dataUrl }
         ]}
       ];
-      const response = await provider.sendMessage(messages);
-      const analysis = typeof response === 'string' ? response : response.text;
+      const analysis = await provider.sendMessage(messages);
       await this.speakText(analysis);
     } catch (error) {
       console.error('[Vision] Analysis failed:', error);
@@ -3705,6 +3588,7 @@ export class GdmLiveAudio extends LitElement {
       // Only use VAD for blob-based STT (provider/Whisper)
       if (this.useBrowserStt) return;
       
+      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.pause();
       this.isSpeaking = true;
       this.status = 'Listening...';
@@ -3725,11 +3609,13 @@ export class GdmLiveAudio extends LitElement {
           await this.processTranscript(transcript);
         } else {
           this.updateStatus('Idle');
+          this.resetIdlePromptTimer();
         }
       } else {
         this.updateStatus('No speech detected.');
         setTimeout(() => {
           this.updateStatus('Idle');
+          this.resetIdlePromptTimer();
         }, 2000);
       }
     });
@@ -3793,6 +3679,7 @@ export class GdmLiveAudio extends LitElement {
       }
       this.vad.reset();
       this.isSpeaking = false;
+      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.stop();
       this.updateStatus('Muted');
     } else {
@@ -3801,13 +3688,14 @@ export class GdmLiveAudio extends LitElement {
         this.startBrowserSttRecognition();
       }
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
       
       if (this.activePersoni) {
         const provider = this.getProviderForPersoni(this.activePersoni);
         if (provider) {
           this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
             this.handleIdleSpeech(text);
-          }, () => this.cameraManager?.captureFrame() || null);
+          });
         }
       }
     }
@@ -3821,9 +3709,52 @@ export class GdmLiveAudio extends LitElement {
     this.nextStartTime = 0;
     this.isAiSpeaking = false;
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+    this.resetIdlePromptTimer();
   }
 
-  // Legacy idle prompt system removed - now using idle-speech-manager.ts exclusively
+  // Idle Prompt Logic
+  private resetIdlePromptTimer() {
+    clearTimeout(this.idlePromptTimeout);
+
+    if (this.isMuted || this.isSpeaking || this.isAiSpeaking) {
+      return;
+    }
+
+    const randomDelay = 20000 + Math.random() * 10000; // 20-30 seconds
+    this.idlePromptTimeout = window.setTimeout(() => {
+      this.triggerIdlePrompt();
+    }, randomDelay);
+  }
+
+  private async triggerIdlePrompt() {
+    if (
+      this.isMuted ||
+      this.isSpeaking ||
+      this.isAiSpeaking ||
+      !this.activePersoni
+    ) {
+      this.resetIdlePromptTimer();
+      return;
+    }
+
+    const template = personaTemplates.find(
+      (t) => t.name === this.activePersoni.templateName,
+    );
+    if (
+      !template ||
+      !template.idlePrompts ||
+      template.idlePrompts.length === 0
+    ) {
+      this.resetIdlePromptTimer();
+      return;
+    }
+
+    const prompt =
+      template.idlePrompts[
+        Math.floor(Math.random() * template.idlePrompts.length)
+      ];
+    await this.speakText(prompt);
+  }
 
   private async handleIdleSpeech(text: string) {
     if (this.isSpeaking || this.isAiSpeaking || this.isMuted) {
@@ -3903,6 +3834,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.showOnboarding && this.providerStatus !== 'unconfigured') {
       this.showOnboarding = false;
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
     }
   }
 
@@ -4277,112 +4209,19 @@ export class GdmLiveAudio extends LitElement {
         </select>
       </div>
       <div class="form-group">
-        <label for="p-model">Conversation Model</label>
+        <label for="p-model">Thinking Model</label>
         <select
           id="p-model"
-          .value=${this.editingPersoni.models?.conversation || this.editingPersoni.thinkingModel}
-          @change=${(e: Event) => {
-            if (!this.editingPersoni!.models) {
-              this.editingPersoni!.models = {};
-            }
-            this.editingPersoni!.models.conversation = (e.target as HTMLSelectElement).value;
-            this.editingPersoni!.thinkingModel = (e.target as HTMLSelectElement).value; // Backward compat
-          }}>
+          .value=${this.editingPersoni.thinkingModel}
+          @change=${(e: Event) =>
+            (this.editingPersoni!.thinkingModel = (
+              e.target as HTMLSelectElement
+            ).value)}>
           ${this.getAvailableModelsForDropdown().length > 0
             ? this.getAvailableModelsForDropdown().map(
                 (m) => html`<option .value=${m.id}>${m.name}</option>`,
               )
             : html`<option disabled>No providers configured - Go to Settings → Models</option>`}
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="p-vision-model">Vision Model (optional)</label>
-        <select
-          id="p-vision-model"
-          .value=${this.editingPersoni.models?.vision || ''}
-          @change=${(e: Event) => {
-            if (!this.editingPersoni!.models) {
-              this.editingPersoni!.models = {};
-            }
-            const value = (e.target as HTMLSelectElement).value;
-            this.editingPersoni!.models.vision = value || undefined;
-          }}>
-          <option value="">Use conversation model</option>
-          ${this.getAvailableModelsForDropdown().map(
-              (m) => html`<option .value=${m.id}>${m.name}</option>`,
-            )}
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="p-embed-model">Embedding Model (optional)</label>
-        <select
-          id="p-embed-model"
-          .value=${this.editingPersoni.models?.embedding || ''}
-          @change=${(e: Event) => {
-            if (!this.editingPersoni!.models) {
-              this.editingPersoni!.models = {};
-            }
-            const value = (e.target as HTMLSelectElement).value;
-            this.editingPersoni!.models.embedding = value || undefined;
-          }}>
-          <option value="">Auto-detect from provider</option>
-          ${this.getAvailableModelsForDropdown().map(
-              (m) => html`<option .value=${m.id}>${m.name}</option>`,
-            )}
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="p-function-model">Function Calling Model (optional)</label>
-        <select
-          id="p-function-model"
-          .value=${this.editingPersoni.models?.functionCalling || ''}
-          @change=${(e: Event) => {
-            if (!this.editingPersoni!.models) {
-              this.editingPersoni!.models = {};
-            }
-            const value = (e.target as HTMLSelectElement).value;
-            this.editingPersoni!.models.functionCalling = value || undefined;
-          }}>
-          <option value="">Use conversation model</option>
-          ${this.getAvailableModelsForDropdown().map(
-              (m) => html`<option .value=${m.id}>${m.name}</option>`,
-            )}
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="p-tts-model">Text-to-Speech Model (optional)</label>
-        <select
-          id="p-tts-model"
-          .value=${this.editingPersoni.models?.textToSpeech || this.editingPersoni.voiceName}
-          @change=${(e: Event) => {
-            if (!this.editingPersoni!.models) {
-              this.editingPersoni!.models = {};
-            }
-            const value = (e.target as HTMLSelectElement).value;
-            this.editingPersoni!.models.textToSpeech = value || undefined;
-            // Also update voiceName for backward compat
-            if (AVAILABLE_VOICES.includes(value)) {
-              this.editingPersoni!.voiceName = value;
-            }
-          }}>
-          <optgroup label="Google Voices">
-            ${AVAILABLE_VOICES.filter(v => !v.includes('alloy') && !v.includes('echo') && !v.includes('fable')).map(
-              (v) => html`<option .value=${v}>${v}</option>`,
-            )}
-          </optgroup>
-          <optgroup label="OpenAI Voices">
-            <option value="alloy">alloy</option>
-            <option value="echo">echo</option>
-            <option value="fable">fable</option>
-            <option value="onyx">onyx</option>
-            <option value="nova">nova</option>
-            <option value="shimmer">shimmer</option>
-          </optgroup>
-          <optgroup label="Models (for custom TTS)">
-            ${this.getAvailableModelsForDropdown().map(
-              (m) => html`<option .value=${m.id}>${m.name}</option>`,
-            )}
-          </optgroup>
         </select>
       </div>
       <div class="form-group">
@@ -4586,21 +4425,19 @@ export class GdmLiveAudio extends LitElement {
   }
 
   render() {
-    const showControls = this.settingsButtonVisible;
+    const showControls = true;
 
     return html`
       <div>
-        <!-- Camera video as background (direct, not through Three.js) -->
-        ${this.cameraManager?.getVideoElement() 
-          ? html`<video
-              style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                     object-fit: cover; z-index: -1;"
-              .srcObject=${this.cameraManager.getVideoElement()?.srcObject}
-              autoplay
-              muted
-              playsinline></video>`
-          : html`<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                              background: #000; z-index: -1;"></div>`}
+        ${this.activePersoni?.name === 'ADAM'
+          ? html`<game-of-life-bg></game-of-life-bg>`
+          : this.activePersoni?.name === 'ATHENA'
+          ? html`<constellation-map-bg></constellation-map-bg>`
+          : this.activePersoni?.name === 'THEO'
+          ? html`<code-flow-bg></code-flow-bg>`
+          : this.activePersoni?.name === 'GHOST'
+          ? html`<static-noise-bg></static-noise-bg>`
+          : html`<div class="background-gradient ${this.getBackgroundGradientClass()}"></div>`}
 
         <div class="transcription-log-container">
           ${this.transcriptHistory.map(
@@ -4647,67 +4484,25 @@ export class GdmLiveAudio extends LitElement {
           </div>
         </div>
 
-        <!-- Text Input + File Upload (below carousel) -->
-        <div class="persona-input-container ${showControls ? 'visible' : ''}"
-             style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-                    display: flex; align-items: center; gap: 12px;
-                    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px);
-                    padding: 16px 24px; border-radius: 40px;
-                    border: 2px solid rgba(255, 255, 255, 0.3);
-                    max-width: 700px; width: 90%;
-                    z-index: 2000;">
-          <file-upload
-            @file-uploaded=${this.handleFileUploaded}
-            style="flex-shrink: 0;">
-          </file-upload>
-          <input
-            type="text"
-            .value=${this.textInput}
-            @input=${(e: any) => this.textInput = e.target.value}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.handleKeyboardSubmit();
-              }
-            }}
-            placeholder="Type your message..."
-            style="flex: 1; background: transparent; border: none; outline: none;
-                   color: white; font-size: 16px;
-                   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;"
-          />
-          <button
-            @click=${() => this.handleKeyboardSubmit()}
-            ?disabled=${!this.textInput.trim()}
-            style="width: 40px; height: 40px; border-radius: 50%;
-                   background: rgba(100, 200, 255, 0.3); border: 2px solid rgba(100, 200, 255, 0.6);
-                   color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;
-                   font-size: 18px; transition: all 0.2s ease;
-                   ${!this.textInput.trim() ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
-            ➤
-          </button>
-        </div>
-
-        <div class="ui-controls-wrapper ${showControls ? 'visible' : ''}">
-          <ui-controls
-            .isMuted=${this.isMuted}
-            .isSpeaking=${this.isSpeaking}
-            .isAiSpeaking=${this.isAiSpeaking}
-            .inputMode=${this.inputMode}
-            .currentTextInput=${this.textInput}
-            .volume=${1.0}
-            .showVolumeControl=${false}
-            .status=${this.status}
-            @mic-toggle=${this.toggleMute}
-            @interrupt=${this.handleInterrupt}
-            @mode-change=${(e: CustomEvent) => {
-              this.inputMode = e.detail.mode;
-            }}
-            @text-submit=${this.handleTextSubmit}
-            @volume-change=${(e: CustomEvent) => {
-              console.log('Volume change:', e.detail.volume);
-            }}
-          ></ui-controls>
-        </div>
+        <ui-controls
+          .isMuted=${this.isMuted}
+          .isSpeaking=${this.isSpeaking}
+          .isAiSpeaking=${this.isAiSpeaking}
+          .inputMode=${this.inputMode}
+          .currentTextInput=${this.textInput}
+          .volume=${1.0}
+          .showVolumeControl=${false}
+          .status=${this.status}
+          @mic-toggle=${this.toggleMute}
+          @interrupt=${this.handleInterrupt}
+          @mode-change=${(e: CustomEvent) => {
+            this.inputMode = e.detail.mode;
+          }}
+          @text-submit=${this.handleTextSubmit}
+          @volume-change=${(e: CustomEvent) => {
+            console.log('Volume change:', e.detail.volume);
+          }}
+        ></ui-controls>
 
         <div
           class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''} ${this.isDraggingFab ? 'dragging' : ''}"
@@ -5083,6 +4878,7 @@ export class GdmLiveAudio extends LitElement {
           .error=${this.cameraError}
           @toggle-camera=${this.handleToggleCameraControl}
           @toggle-preview=${this.handleToggleCameraPreview}
+          @switch-camera=${this.handleSwitchCamera}
         ></camera-controls>
 
         <!-- Camera Manager -->
@@ -5098,6 +4894,11 @@ export class GdmLiveAudio extends LitElement {
           .enabled=${this.objectDetectionEnabled}
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
+
+        <!-- File Upload -->
+        <file-upload
+          @file-uploaded=${this.handleFileUploaded}
+        ></file-upload>
 
         <!-- Calendar View -->
         ${this.showCalendar ? html`
@@ -5115,7 +4916,7 @@ export class GdmLiveAudio extends LitElement {
         <!-- Financial Dashboard Toggle Button -->
         ${this.activePersoni?.name === 'BILLY' ? html`
           <button
-            class="financial-dashboard-toggle ${showControls ? 'visible' : ''}"
+            class="financial-dashboard-toggle"
             @click=${() => this.showFinancialDashboard = !this.showFinancialDashboard}
             title="Toggle Financial Dashboard"
           >
@@ -5125,8 +4926,11 @@ export class GdmLiveAudio extends LitElement {
 
         <div
           id="status"
-          class="${showControls || this.error || this.currentTranscript ? 'visible' : ''}"
-          style="opacity: ${showControls || this.error || this.currentTranscript ? 1 : 0}">
+          style="opacity: ${this.settingsButtonVisible ||
+          this.error ||
+          this.currentTranscript
+            ? 1
+            : 0}">
           ${this.error || this.currentTranscript || this.status}
         </div>
         <gdm-live-audio-visuals-3d
@@ -5139,7 +4943,8 @@ export class GdmLiveAudio extends LitElement {
           .isMusicDetected=${this.isMusicDetected}
           .musicBpm=${this.musicBpm}
           .musicBeatDetected=${this.musicBeatDetected}
-          .musicConfidence=${this.musicConfidence}></gdm-live-audio-visuals-3d>
+          .musicConfidence=${this.musicConfidence}
+          .cameraVideoElement=${this.cameraManager?.getVideoElement()}></gdm-live-audio-visuals-3d>
       </div>
     `;
   }
