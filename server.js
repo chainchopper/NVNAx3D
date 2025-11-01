@@ -441,7 +441,7 @@ app.get('/health', (req, res) => {
 
 app.post('/api/gemini/chat', async (req, res) => {
   try {
-    const { model, contents } = req.body;
+    const { model, contents, tools, systemInstruction } = req.body;
 
     if (!model || !contents) {
       return res.status(400).json({
@@ -459,16 +459,28 @@ app.post('/api/gemini/chat', async (req, res) => {
     }
 
     const client = new GoogleGenAI({ apiKey });
+    
+    // Build config object
+    const config = {};
+    if (systemInstruction) {
+      config.systemInstruction = systemInstruction;
+    }
+    if (tools) {
+      config.tools = tools;
+    }
+
     const response = await client.models.generateContent({
       model,
       contents,
+      config: Object.keys(config).length > 0 ? config : undefined,
     });
 
     const text = response.text || '';
+    const functionCalls = response.functionCalls || [];
 
     res.json({
       success: true,
-      data: { text }
+      data: { text, functionCalls }
     });
   } catch (error) {
     console.error('[Gemini Chat] Error:', error);

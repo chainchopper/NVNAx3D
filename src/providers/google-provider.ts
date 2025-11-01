@@ -78,32 +78,63 @@ export class GoogleProvider extends BaseProvider {
 
   async sendMessage(
     messages: ProviderMessage[],
-    onChunk?: (chunk: StreamingResponse) => void
-  ): Promise<string> {
-    const contents = messages.map(msg => {
-      const role = msg.role === 'assistant' ? 'model' : 'user';
-      
-      if (typeof msg.content === 'string') {
-        return {
-          role,
-          parts: [{ text: msg.content }],
-        };
-      } else {
-        return {
-          role,
-          parts: msg.content,
-        };
-      }
-    });
+    options?: { tools?: any[], systemInstruction?: string, onChunk?: (chunk: StreamingResponse) => void } | ((chunk: StreamingResponse) => void)
+  ): Promise<string | { text: string, functionCalls: any[] }> {
+    // Handle backward compat: options can be a function (onChunk) or an object
+    const onChunk = typeof options === 'function' ? options : options?.onChunk;
+    const tools = typeof options === 'object' && options ? options.tools : undefined;
+    const systemInstruction = typeof options === 'object' && options ? options.systemInstruction : undefined;
+    
+    // Filter out system messages and extract system instruction
+    let extractedSystemInstruction = systemInstruction;
+    const contents = messages
+      .filter(msg => {
+        if (msg.role === 'system') {
+          // Extract system instruction from system message
+          if (!extractedSystemInstruction && typeof msg.content === 'string') {
+            extractedSystemInstruction = msg.content;
+          }
+          return false; // Don't include system messages in contents
+        }
+        return true;
+      })
+      .map(msg => {
+        const role = msg.role === 'assistant' ? 'model' : 'user';
+        
+        if (typeof msg.content === 'string') {
+          return {
+            role,
+            parts: [{ text: msg.content }],
+          };
+        } else {
+          return {
+            role,
+            parts: msg.content,
+          };
+        }
+      });
+
+    // Build request payload
+    const requestPayload: any = {
+      model: this.config.model,
+      contents,
+    };
+
+    // Add systemInstruction if provided
+    if (extractedSystemInstruction) {
+      requestPayload.systemInstruction = extractedSystemInstruction;
+    }
+
+    // Add tools if provided
+    if (tools && tools.length > 0) {
+      requestPayload.tools = [{ functionDeclarations: tools }];
+    }
 
     // Call backend proxy endpoint instead of using API key directly (Vite proxy handles routing)
     const response = await fetch('/api/gemini/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.config.model,
-        contents,
-      }),
+      body: JSON.stringify(requestPayload),
     });
 
     if (!response.ok) {
@@ -118,9 +149,15 @@ export class GoogleProvider extends BaseProvider {
     }
 
     const text = data.data.text || '';
+    const functionCalls = data.data.functionCalls || [];
 
     if (onChunk) {
       onChunk({ text, done: true });
+    }
+
+    // Return both text and functionCalls if there are function calls
+    if (functionCalls.length > 0) {
+      return { text, functionCalls };
     }
 
     return text;
