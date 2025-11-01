@@ -243,7 +243,8 @@ ${memoryContext}`;
 
       const response = await provider.sendMessage(messages);
 
-      const cleanedResponse = response.trim().replace(/^["']|["']$/g, '');
+      const responseText = typeof response === 'string' ? response : response.text;
+      const cleanedResponse = responseText.trim().replace(/^["']|["']$/g, '');
 
       console.log(`[IdleSpeech] Generated: "${cleanedResponse}"`);
 

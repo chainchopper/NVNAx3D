@@ -360,8 +360,15 @@ export class GdmLiveAudio extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      opacity: 0;
+      transition: all 0.5s ease-in-out;
+      pointer-events: none;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .financial-dashboard-toggle.visible {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .financial-dashboard-toggle:hover {
@@ -522,6 +529,17 @@ export class GdmLiveAudio extends LitElement {
       font-size: 10px;
       opacity: 0.8;
       line-height: 1.2;
+    }
+
+    .ui-controls-wrapper {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      pointer-events: none;
+    }
+
+    .ui-controls-wrapper.visible {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     .settings-fab {
@@ -1837,6 +1855,16 @@ export class GdmLiveAudio extends LitElement {
 
   private handleUserActivity() {
     this.settingsButtonVisible = true;
+    
+    // Clear existing timeout
+    if (this.settingsTimeout) {
+      clearTimeout(this.settingsTimeout);
+    }
+    
+    // Hide UI after 5 seconds of inactivity
+    this.settingsTimeout = window.setTimeout(() => {
+      this.settingsButtonVisible = false;
+    }, 5000);
   }
   
   private async setupSongIdentification() {
@@ -4568,25 +4596,27 @@ export class GdmLiveAudio extends LitElement {
           </button>
         </div>
 
-        <ui-controls
-          .isMuted=${this.isMuted}
-          .isSpeaking=${this.isSpeaking}
-          .isAiSpeaking=${this.isAiSpeaking}
-          .inputMode=${this.inputMode}
-          .currentTextInput=${this.textInput}
-          .volume=${1.0}
-          .showVolumeControl=${false}
-          .status=${this.status}
-          @mic-toggle=${this.toggleMute}
-          @interrupt=${this.handleInterrupt}
-          @mode-change=${(e: CustomEvent) => {
-            this.inputMode = e.detail.mode;
-          }}
-          @text-submit=${this.handleTextSubmit}
-          @volume-change=${(e: CustomEvent) => {
-            console.log('Volume change:', e.detail.volume);
-          }}
-        ></ui-controls>
+        <div class="ui-controls-wrapper ${showControls ? 'visible' : ''}">
+          <ui-controls
+            .isMuted=${this.isMuted}
+            .isSpeaking=${this.isSpeaking}
+            .isAiSpeaking=${this.isAiSpeaking}
+            .inputMode=${this.inputMode}
+            .currentTextInput=${this.textInput}
+            .volume=${1.0}
+            .showVolumeControl=${false}
+            .status=${this.status}
+            @mic-toggle=${this.toggleMute}
+            @interrupt=${this.handleInterrupt}
+            @mode-change=${(e: CustomEvent) => {
+              this.inputMode = e.detail.mode;
+            }}
+            @text-submit=${this.handleTextSubmit}
+            @volume-change=${(e: CustomEvent) => {
+              console.log('Volume change:', e.detail.volume);
+            }}
+          ></ui-controls>
+        </div>
 
         <div
           class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''} ${this.isDraggingFab ? 'dragging' : ''}"
@@ -4994,7 +5024,7 @@ export class GdmLiveAudio extends LitElement {
         <!-- Financial Dashboard Toggle Button -->
         ${this.activePersoni?.name === 'BILLY' ? html`
           <button
-            class="financial-dashboard-toggle"
+            class="financial-dashboard-toggle ${showControls ? 'visible' : ''}"
             @click=${() => this.showFinancialDashboard = !this.showFinancialDashboard}
             title="Toggle Financial Dashboard"
           >
@@ -5004,11 +5034,8 @@ export class GdmLiveAudio extends LitElement {
 
         <div
           id="status"
-          style="opacity: ${this.settingsButtonVisible ||
-          this.error ||
-          this.currentTranscript
-            ? 1
-            : 0}">
+          class="${showControls || this.error || this.currentTranscript ? 'visible' : ''}"
+          style="opacity: ${showControls || this.error || this.currentTranscript ? 1 : 0}">
           ${this.error || this.currentTranscript || this.status}
         </div>
         <gdm-live-audio-visuals-3d
