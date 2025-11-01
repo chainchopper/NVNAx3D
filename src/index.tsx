@@ -4376,12 +4376,7 @@ export class GdmLiveAudio extends LitElement {
           @mode-change=${(e: CustomEvent) => {
             this.inputMode = e.detail.mode;
           }}
-          @text-submit=${(e: CustomEvent) => {
-            this.textInput = '';
-            if (e.detail.text.trim()) {
-              this.handleUserMessage(e.detail.text);
-            }
-          }}
+          @text-submit=${this.handleTextSubmit}
           @volume-change=${(e: CustomEvent) => {
             console.log('Volume change:', e.detail.volume);
           }}
