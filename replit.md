@@ -68,6 +68,18 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session - Part 4) - CRITICAL BUG FIXES
+- **TEXT INPUT & FUNCTION CALL RESTORATION**: ✅ ARCHITECT-APPROVED (Complete system restoration after security refactor)
+  - **Issue**: Text input not working - no LLM requests/responses after security refactor broke GoogleProvider
+  - **Multi-Model PersonI Architecture**: Added PersoniModels interface supporting capability-specific model assignments (conversation, vision, embedding, functionCalling, imageGeneration, objectDetection, textToSpeech)
+  - **getPersoniModel() Helper**: Backward-compatible model lookup system - tries models structure first, falls back to thinkingModel
+  - **Backend Proxy Enhanced**: `/api/gemini/chat` now accepts systemInstruction and tools, returns both text and functionCalls
+  - **GoogleProvider Fixed**: Filters system messages from contents, extracts systemInstruction, sends to backend properly, returns dual type (string | {text, functionCalls})
+  - **processTranscript Updated**: Handles dual return type, processes functionCalls array to restore connector/tool execution
+  - **BaseProvider Interface**: Updated sendMessage signature to support systemInstruction option and dual return type
+  - **Duplicate UI Removed**: Removed standalone file-upload component obstructing other UI elements
+  - **Results**: Text input working end-to-end, system prompts properly sent to Gemini, function calls execute correctly, zero LSP errors, clean browser console
+
 ### Latest Fixes (Current Session - Part 3)
 - **SECURITY ARCHITECTURE - API Key Protection**: ✅ CRITICAL SECURITY FIX (Architect-Approved)
   - **Backend Gemini Proxy Endpoints**: Created `/api/gemini/chat` and `/api/gemini/embeddings` endpoints in server.js
