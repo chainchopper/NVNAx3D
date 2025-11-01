@@ -19,6 +19,11 @@ export class ProviderManager {
 
   constructor() {
     this.loadFromStorage();
+    // Defer auto-configuration until async init is called
+  }
+  
+  async initialize() {
+    await this.autoConfigureFromEnvironment();
   }
 
   loadFromStorage() {
@@ -57,6 +62,88 @@ export class ProviderManager {
     } catch (error) {
       console.error('Failed to load provider config:', error);
       this.initializeDefaults();
+    }
+  }
+
+  /**
+   * Auto-configure providers from environment variables (via backend API)
+   */
+  private async autoConfigureFromEnvironment() {
+    try {
+      // Fetch environment configuration from backend
+      const response = await fetch('http://localhost:3001/api/config/env');
+      if (!response.ok) {
+        console.warn('[ProviderManager] Failed to fetch environment config from backend');
+        return;
+      }
+      
+      const data = await response.json();
+      const envConfig = data.config;
+      
+      console.log('[ProviderManager] Environment config received:', envConfig);
+      
+      // Auto-configure Google provider if GEMINI_API_KEY is available
+      if (envConfig.geminiApiKey) {
+        let googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
+        
+        if (googleProvider) {
+          // Update existing Google provider
+          const models: ModelInfo[] = [
+            {
+              id: 'gemini-2.5-flash',
+              name: 'Gemini 2.5 Flash',
+              providerId: googleProvider.id,
+              capabilities: {
+                audio: true,
+                vision: true,
+                streaming: true,
+                functionCalling: true,
+                maxTokens: 1000000,
+              },
+            },
+            {
+              id: 'gemini-2.5-pro',
+              name: 'Gemini 2.5 Pro',
+              providerId: googleProvider.id,
+              capabilities: {
+                audio: true,
+                vision: true,
+                streaming: true,
+                functionCalling: true,
+                maxTokens: 2000000,
+              },
+            },
+            {
+              id: 'gemini-2.0-flash-exp',
+              name: 'Gemini 2.0 Flash Experimental',
+              providerId: googleProvider.id,
+              capabilities: {
+                audio: true,
+                vision: true,
+                streaming: true,
+                functionCalling: true,
+                maxTokens: 1000000,
+              },
+            },
+          ];
+          
+          this.updateProvider(googleProvider.id, {
+            apiKey: 'configured', // Placeholder - actual key is on backend
+            enabled: true,
+            verified: true,
+            models,
+          });
+          
+          console.log('[ProviderManager] ✅ Auto-configured Google provider with GEMINI_API_KEY');
+          console.log('[ProviderManager] Models available:', models.map(m => m.id).join(', '));
+        } else {
+          console.warn('[ProviderManager] Google provider not found in provider list');
+        }
+      } else {
+        console.warn('[ProviderManager] GEMINI_API_KEY not available on backend');
+      }
+    } catch (error) {
+      console.error('[ProviderManager] Error auto-configuring from environment:', error);
     }
   }
 

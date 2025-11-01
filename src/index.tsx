@@ -1156,6 +1156,10 @@ export class GdmLiveAudio extends LitElement {
     }
     
     try {
+      console.log('[ProviderManager] Initializing provider system...');
+      await providerManager.initialize();
+      console.log('[ProviderManager] ✅ Provider system initialized');
+      
       console.log('[RAG] Initializing memory system...');
       await ragMemoryManager.initialize();
       this.ragInitialized = true;
@@ -1179,7 +1183,7 @@ export class GdmLiveAudio extends LitElement {
       });
       console.log('[Routines] ✅ Pattern detector initialized');
     } catch (error) {
-      console.error('[RAG] ❌ Failed to initialize:', error);
+      console.error('[Init] ❌ Failed to initialize:', error);
       this.ragInitialized = false;
       this.ragEnabled = false;
     }

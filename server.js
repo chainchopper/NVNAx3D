@@ -2182,6 +2182,21 @@ app.get('/api/financial/news', async (req, res) => {
   }
 });
 
+// Environment config endpoint - provides frontend with available API keys (without exposing actual values)
+app.get('/api/config/env', (req, res) => {
+  res.json({
+    success: true,
+    config: {
+      geminiApiKey: !!process.env.GEMINI_API_KEY,
+      openaiApiKey: !!process.env.OPENAI_API_KEY,
+      alphaVantageApiKey: !!process.env.ALPHA_VANTAGE_API_KEY,
+      finnhubApiKey: !!process.env.FINNHUB_API_KEY,
+      auddApiToken: !!process.env.AUDD_API_TOKEN,
+      geniusApiToken: !!process.env.GENIUS_API_TOKEN,
+    },
+  });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);
