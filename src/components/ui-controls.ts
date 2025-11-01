@@ -15,8 +15,6 @@ export class UIControls extends LitElement {
   @property({ type: Boolean }) isAiSpeaking = false;
   @property({ type: String }) inputMode: InputMode = 'voice';
   @property({ type: String}) currentTextInput = '';
-  @property({ type: Number }) volume = 1.0;
-  @property({ type: Boolean }) showVolumeControl = false;
   @property({ type: String }) status = '';
 
   static styles = css`
@@ -171,45 +169,6 @@ export class UIControls extends LitElement {
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .volume-control {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      padding: 12px 20px;
-      border-radius: 30px;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      animation: slideUp 0.3s ease-out;
-    }
-
-    .volume-slider {
-      width: 150px;
-      height: 4px;
-      border-radius: 2px;
-      background: rgba(255, 255, 255, 0.2);
-      outline: none;
-      -webkit-appearance: none;
-    }
-
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: white;
-      cursor: pointer;
-    }
-
-    .volume-slider::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: white;
-      cursor: pointer;
-      border: none;
-    }
-
     .fade-out {
       opacity: 0.3;
       pointer-events: none;
@@ -248,16 +207,6 @@ export class UIControls extends LitElement {
       e.preventDefault();
       this.handleTextSubmit();
     }
-  }
-
-  private handleVolumeChange(e: Event) {
-    const slider = e.target as HTMLInputElement;
-    const volume = parseFloat(slider.value);
-    this.dispatchEvent(new CustomEvent('volume-change', { detail: { volume } }));
-  }
-
-  private toggleVolumeControl() {
-    this.showVolumeControl = !this.showVolumeControl;
   }
 
   render() {
@@ -318,31 +267,7 @@ export class UIControls extends LitElement {
           >
             ${isTextMode ? '🎤' : '⌨️'}
           </div>
-
-          <div 
-            class="control-button"
-            @click="${this.toggleVolumeControl}"
-            title="Volume Control"
-          >
-            🔊
-          </div>
         </div>
-
-        ${this.showVolumeControl ? html`
-          <div class="volume-control">
-            <span>🔉</span>
-            <input 
-              type="range" 
-              class="volume-slider"
-              min="0" 
-              max="1" 
-              step="0.01"
-              .value="${this.volume.toString()}"
-              @input="${this.handleVolumeChange}"
-            />
-            <span>🔊</span>
-          </div>
-        ` : nothing}
       </div>
     `;
   }
