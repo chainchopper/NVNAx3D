@@ -58,6 +58,7 @@ import { providerManager } from './services/provider-manager';
 import { ProviderFactory } from './providers/provider-factory';
 import { BaseProvider } from './providers/base-provider';
 import { GoogleProvider } from './providers/google-provider';
+import { OpenAIProvider } from './providers/openai-provider';
 import { localWhisperService } from './services/local-whisper';
 import { SttPreferences, DEFAULT_STT_PREFERENCES } from './types/stt-preferences';
 import { userProfileManager } from './services/user-profile-manager';
@@ -1395,7 +1396,32 @@ export class GdmLiveAudio extends LitElement {
         return;
       }
       
-      if (provider instanceof GoogleProvider) {
+      // Handle OpenAI TTS
+      if (provider instanceof OpenAIProvider) {
+        // Use the persona's configured voice (from the slot's persona parameter)
+        const voice = persona.voiceName || 'alloy';
+        const audioBuffer = await provider.generateSpeech(text, voice, 'tts-1');
+        
+        // Convert ArrayBuffer to base64
+        const bytes = new Uint8Array(audioBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64Audio = btoa(binary);
+        
+        await this.playAudio(base64Audio);
+        await new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (this.sources.size === 0) {
+              clearInterval(checkInterval);
+              resolve(null);
+            }
+          }, 100);
+        });
+      }
+      // Handle Google TTS
+      else if (provider instanceof GoogleProvider) {
         const googleProvider = provider as any;
         if (!googleProvider.client) {
           await googleProvider.verify();
@@ -3013,53 +3039,77 @@ export class GdmLiveAudio extends LitElement {
     ];
 
     try {
-      let client = null;
-      
-      if (provider instanceof GoogleProvider) {
+      // Handle OpenAI TTS
+      if (provider instanceof OpenAIProvider) {
+        const voice = speaker === 'ai' && this.activePersoni 
+          ? this.activePersoni.voiceName 
+          : 'alloy';
+        
+        const audioBuffer = await provider.generateSpeech(text, voice, 'tts-1');
+        
+        // Convert ArrayBuffer to base64 for playAudio
+        const bytes = new Uint8Array(audioBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64Audio = btoa(binary);
+        
+        await this.playAudio(base64Audio);
+        await new Promise((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (this.sources.size === 0) {
+              clearInterval(checkInterval);
+              resolve(null);
+            }
+          }, 100);
+        });
+      }
+      // Handle Google TTS
+      else if (provider instanceof GoogleProvider) {
         const googleProvider = provider as any;
         if (!googleProvider.client) {
           await googleProvider.verify();
         }
-        client = googleProvider.client;
-      } 
-      else if (this.client) {
-        console.warn('Using legacy Google client for TTS (provider is not Google)');
-        client = this.client;
-      }
-
-      if (client) {
-        const response = await client.models.generateContent({
-          model: 'gemini-2.5-flash-preview-tts',
-          contents: [{parts: [{text}]}],
-          config: {
-            responseModalities: [Modality.AUDIO],
-            speechConfig: {
-              voiceConfig: {
-                prebuiltVoiceConfig: {
-                  voiceName:
-                    speaker === 'ai'
-                      ? this.activePersoni!.voiceName
-                      : AVAILABLE_VOICES[0],
+        const client = googleProvider.client;
+        
+        if (client) {
+          const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash-preview-tts',
+            contents: [{parts: [{text}]}],
+            config: {
+              responseModalities: [Modality.AUDIO],
+              speechConfig: {
+                voiceConfig: {
+                  prebuiltVoiceConfig: {
+                    voiceName:
+                      speaker === 'ai'
+                        ? this.activePersoni!.voiceName
+                        : AVAILABLE_VOICES[0],
+                  },
                 },
               },
             },
-          },
-        });
-        const audioData =
-          response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (audioData) {
-          await this.playAudio(audioData);
-          await new Promise((resolve) => {
-            const checkInterval = setInterval(() => {
-              if (this.sources.size === 0) {
-                clearInterval(checkInterval);
-                resolve(null);
-              }
-            }, 100);
           });
+          const audioData =
+            response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+          if (audioData) {
+            await this.playAudio(audioData);
+            await new Promise((resolve) => {
+              const checkInterval = setInterval(() => {
+                if (this.sources.size === 0) {
+                  clearInterval(checkInterval);
+                  resolve(null);
+                }
+              }, 100);
+            });
+          }
+        } else {
+          await this.speakWithBrowserTTS(text, speaker);
         }
-      } else {
-        // Fallback to Web Speech API (browser TTS)
+      } 
+      // Fallback to browser TTS if no provider or legacy client
+      else {
         await this.speakWithBrowserTTS(text, speaker);
       }
 

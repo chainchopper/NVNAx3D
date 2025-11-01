@@ -132,4 +132,34 @@ export class OpenAIProvider extends BaseProvider {
 
     return fullText;
   }
+
+  /**
+   * Generate speech from text using OpenAI TTS
+   * @param text Text to convert to speech
+   * @param voice Voice to use (alloy, echo, fable, onyx, nova, shimmer)
+   * @param model Model to use (tts-1 or tts-1-hd)
+   * @returns Audio data as ArrayBuffer
+   */
+  async generateSpeech(text: string, voice: string = 'alloy', model: string = 'tts-1'): Promise<ArrayBuffer> {
+    const endpoint = this.config.endpoint || 'https://api.openai.com/v1';
+
+    const response = await fetch(`${endpoint}/audio/speech`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        input: text,
+        voice,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI TTS API error: ${response.statusText}`);
+    }
+
+    return await response.arrayBuffer();
+  }
 }
