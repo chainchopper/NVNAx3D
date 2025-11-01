@@ -23,7 +23,15 @@ export class ProviderManager {
   }
   
   async initialize() {
+    console.log('[ProviderManager] Starting initialization...');
+    console.log('[ProviderManager] Providers loaded from storage:', this.providers.size);
+    
     await this.autoConfigureFromEnvironment();
+    
+    console.log('[ProviderManager] Final provider count:', this.providers.size);
+    console.log('[ProviderManager] Registered providers:', 
+      Array.from(this.providers.values()).map(p => `${p.name} (${p.type}): enabled=${p.enabled}, verified=${p.verified}, models=${p.models.length}`).join('; ')
+    );
   }
 
   loadFromStorage() {
@@ -71,7 +79,10 @@ export class ProviderManager {
   private async autoConfigureFromEnvironment() {
     try {
       // Fetch environment configuration from backend
+      console.log('[ProviderManager] Fetching environment config from backend...');
       const response = await fetch('http://localhost:3001/api/config/env');
+      console.log('[ProviderManager] Backend response status:', response.status, response.ok);
+      
       if (!response.ok) {
         console.warn('[ProviderManager] Failed to fetch environment config from backend');
         return;
@@ -80,7 +91,7 @@ export class ProviderManager {
       const data = await response.json();
       const envConfig = data.config;
       
-      console.log('[ProviderManager] Environment config received:', envConfig);
+      console.log('[ProviderManager] Environment config received:', JSON.stringify(envConfig));
       
       // Auto-configure Google provider if GEMINI_API_KEY is available
       if (envConfig.geminiApiKey) {
@@ -144,16 +155,20 @@ export class ProviderManager {
       }
     } catch (error) {
       console.error('[ProviderManager] Error auto-configuring from environment:', error);
+      console.error('[ProviderManager] Error details:', error instanceof Error ? error.message : String(error));
+      console.error('[ProviderManager] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     }
   }
 
   private initializeDefaults() {
+    console.log('[ProviderManager] Initializing default providers...');
     DEFAULT_PROVIDERS.forEach((provider, index) => {
       const id = `${provider.type}-${Date.now()}-${index}`;
       this.providers.set(id, {
         id,
         ...provider,
       } as ModelProvider);
+      console.log(`[ProviderManager] Added default provider: ${provider.name} (${provider.type}) with ID: ${id}`);
     });
     this.saveToStorage();
   }
