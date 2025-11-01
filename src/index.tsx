@@ -1997,6 +1997,16 @@ export class GdmLiveAudio extends LitElement {
     console.log('[Camera] Preview toggled:', this.cameraShowPreview ? 'VISIBLE' : 'HIDDEN');
   }
 
+  private async handleSwitchCamera() {
+    if (!this.cameraManager) {
+      console.warn('[Camera] Camera manager not available');
+      return;
+    }
+    
+    console.log('[Camera] Switching camera...');
+    await this.cameraManager.switchCamera();
+  }
+
   private handleFrameCaptured(e: CustomEvent) {
     console.log('[Camera] Frame captured:', e.detail);
   }
@@ -4868,6 +4878,7 @@ export class GdmLiveAudio extends LitElement {
           .error=${this.cameraError}
           @toggle-camera=${this.handleToggleCameraControl}
           @toggle-preview=${this.handleToggleCameraPreview}
+          @switch-camera=${this.handleSwitchCamera}
         ></camera-controls>
 
         <!-- Camera Manager -->

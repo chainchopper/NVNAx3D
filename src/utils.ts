@@ -227,6 +227,7 @@ class SharedMicrophoneManager {
   private activeRecordings: Set<string> = new Set();
   private isActive = false;
   private permissionGranted = false;
+  private pendingPermissionRequest: Promise<boolean> | null = null;
 
   private constructor() {}
 
@@ -241,50 +242,68 @@ class SharedMicrophoneManager {
    * Request microphone access and initialize AudioContext
    * IMPORTANT: AudioContext is created ONCE and reused across all recorders
    * Sample rate is determined by device capabilities, not requested by recorders
+   * 
+   * This method uses a mutex to prevent multiple concurrent permission requests,
+   * ensuring the browser only shows one microphone permission prompt.
    */
   async requestMicrophoneAccess(): Promise<boolean> {
     // If already initialized and context is valid, return true
     if (this.permissionGranted && this.stream && this.audioContext && this.audioContext.state !== 'closed') {
+      console.log('[SharedMicrophone] Already have permission, reusing existing context');
       return true;
     }
 
-    // If context was closed, clean up and reinitialize
-    if (this.audioContext && this.audioContext.state === 'closed') {
-      console.warn('[SharedMicrophone] AudioContext was closed, reinitializing...');
-      await this.cleanup();
+    // If there's already a pending permission request, wait for it
+    if (this.pendingPermissionRequest) {
+      console.log('[SharedMicrophone] Permission request already in progress, waiting...');
+      return await this.pendingPermissionRequest;
     }
 
-    try {
-      // Request microphone stream without specifying sample rate - use device default
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+    // Create a new permission request promise and store it
+    this.pendingPermissionRequest = (async () => {
+      try {
+        // If context was closed, clean up and reinitialize
+        if (this.audioContext && this.audioContext.state === 'closed') {
+          console.warn('[SharedMicrophone] AudioContext was closed, reinitializing...');
+          await this.cleanup();
+        }
 
-      // Get device's native sample rate
-      const deviceSampleRate = this.stream.getAudioTracks()[0].getSettings().sampleRate || 48000;
-      
-      // Create AudioContext ONCE with device sample rate
-      this.audioContext = new AudioContext({ sampleRate: deviceSampleRate });
+        // Request microphone stream without specifying sample rate - use device default
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
 
-      this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
-      this.analyser.smoothingTimeConstant = 0.8;
+        // Get device's native sample rate
+        const deviceSampleRate = this.stream.getAudioTracks()[0].getSettings().sampleRate || 48000;
+        
+        // Create AudioContext ONCE with device sample rate
+        this.audioContext = new AudioContext({ sampleRate: deviceSampleRate });
 
-      this.sourceNode.connect(this.analyser);
+        this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+        this.analyser.smoothingTimeConstant = 0.8;
 
-      this.permissionGranted = true;
-      console.log(`[SharedMicrophone] Microphone access granted, sample rate: ${this.audioContext.sampleRate}Hz`);
-      return true;
-    } catch (error) {
-      console.error('[SharedMicrophone] Failed to access microphone:', error);
-      this.permissionGranted = false;
-      return false;
-    }
+        this.sourceNode.connect(this.analyser);
+
+        this.permissionGranted = true;
+        console.log(`[SharedMicrophone] Microphone access granted, sample rate: ${this.audioContext.sampleRate}Hz`);
+        return true;
+      } catch (error) {
+        console.error('[SharedMicrophone] Failed to access microphone:', error);
+        this.permissionGranted = false;
+        return false;
+      } finally {
+        // Clear the pending request
+        this.pendingPermissionRequest = null;
+      }
+    })();
+
+    return await this.pendingPermissionRequest;
   }
 
   /**
