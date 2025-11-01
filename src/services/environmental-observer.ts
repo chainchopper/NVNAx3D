@@ -281,11 +281,13 @@ ${this.lastObservation ? `Previous observation: ${this.lastObservation.descripti
       }
     }
 
-    // Speak if appropriate - DISABLED: Using idle-speech-manager.ts for all idle speech instead
-    // if (observation.shouldSpeak && !this.config.silentMode && this.speakCallback) {
-    //   const speechText = this.generateSpeech(observation);
-    //   this.speakCallback(speechText);
-    // }
+    // Speak if appropriate - LLM-generated contextual speech
+    if (observation.shouldSpeak && !this.config.silentMode && this.speakCallback) {
+      const speechText = await this.generateContextualSpeech(observation);
+      if (speechText) {
+        this.speakCallback(speechText);
+      }
+    }
 
     // Dispatch event
     window.dispatchEvent(
@@ -301,18 +303,36 @@ ${this.lastObservation ? `Previous observation: ${this.lastObservation.descripti
     return `${type} at ${time}`;
   }
 
-  private generateSpeech(observation: Observation): string {
-    switch (observation.type) {
-      case 'package_delivery':
-        return `I noticed a package delivery. ${observation.description}`;
-      case 'safety_concern':
-        return `Safety alert: ${observation.description}`;
-      case 'user_emotion':
-        return `I noticed ${observation.description}. Is there anything I can help with?`;
-      case 'activity_change':
-        return observation.description;
-      default:
-        return observation.description;
+  private async generateContextualSpeech(observation: Observation): Promise<string | null> {
+    if (!this.provider) {
+      console.warn('[EnvironmentalObserver] No provider available for speech generation');
+      return observation.description;
+    }
+
+    try {
+      const systemPrompt = `You are ${this.personaName}, an observant AI assistant. Based on the environmental observation below, generate a brief, natural spoken comment (under 15 words).
+
+Observation Type: ${observation.type.replace(/_/g, ' ')}
+Description: ${observation.description}
+Confidence: ${Math.round(observation.confidence * 100)}%
+
+Guidelines:
+- Be concise and conversational
+- Match the urgency to the observation type (calm for general observations, alert for safety concerns)
+- Don't ask questions unless it's a safety or user emotion observation
+- Sound like you're making a helpful observation, not reading a report`;
+
+      const messages = [
+        { role: 'system' as const, content: systemPrompt },
+        { role: 'user' as const, content: 'Generate a natural spoken comment for this observation.' }
+      ];
+
+      const response = await this.provider.sendMessage(messages);
+      const responseText = typeof response === 'string' ? response : response.text;
+      return responseText.trim().replace(/^["']|["']$/g, '');
+    } catch (error) {
+      console.error('[EnvironmentalObserver] Failed to generate contextual speech:', error);
+      return observation.description;
     }
   }
 
