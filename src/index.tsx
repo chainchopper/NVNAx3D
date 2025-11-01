@@ -41,6 +41,9 @@ import './components/file-upload';
 import './components/financial-dashboard';
 import './components/transcription-log';
 import './components/ui-controls';
+import './components/plugin-manager-panel';
+import { pluginRegistry } from './services/plugin-registry';
+import { dynamicComponentGenerator } from './services/dynamic-component-generator';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -136,7 +139,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectorConfig' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines';
+type ActiveSidePanel = 'none' | 'personis' | 'connectorConfig' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines' | 'plugins';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -1073,6 +1076,9 @@ export class GdmLiveAudio extends LitElement {
     window.addEventListener('mousemove', this.handleUserActivity);
     window.addEventListener('touchstart', this.handleUserActivity);
     this.handleUserActivity();
+    
+    // Initialize plugin registry
+    pluginRegistry.initialize();
     
     // Initialize music detector
     this.musicDetectorConfig = musicDetector.getConfig();
@@ -4635,6 +4641,34 @@ export class GdmLiveAudio extends LitElement {
               <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"></path>
             </svg>
           </div>
+          <div
+            class="menu-item group-productivity"
+            title="Plugins - Manage PersonI-generated UI components"
+            aria-label="Plugin Manager"
+            role="button"
+            tabindex="0"
+            @click=${() => this.openSidePanel('plugins')}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.openSidePanel('plugins');
+              }
+            }}>
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M7 7h10v10H7z"></path>
+              <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+          </div>
         </div>
 
         ${this.renderPersonisPanel()} 
@@ -4682,6 +4716,15 @@ export class GdmLiveAudio extends LitElement {
               <button @click=${this.closeSidePanel}>&times;</button>
             </div>
             <routines-panel></routines-panel>
+          </div>
+        ` : ''}
+        ${this.activeSidePanel === 'plugins' ? html`
+          <div class="side-panel visible">
+            <div class="panel-header">
+              <span>Plugins</span>
+              <button @click=${this.closeSidePanel}>&times;</button>
+            </div>
+            <plugin-manager-panel></plugin-manager-panel>
           </div>
         ` : ''}
 
