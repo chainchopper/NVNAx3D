@@ -444,6 +444,12 @@ export class GdmLiveAudio extends LitElement {
       pointer-events: all;
     }
 
+    .persona-input-container {
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      pointer-events: none;
+    }
+
     .persona-input-container.visible {
       opacity: 1;
       pointer-events: all;
@@ -4449,15 +4455,7 @@ export class GdmLiveAudio extends LitElement {
 
     return html`
       <div>
-        ${this.activePersoni?.name === 'ADAM'
-          ? html`<game-of-life-bg></game-of-life-bg>`
-          : this.activePersoni?.name === 'ATHENA'
-          ? html`<constellation-map-bg></constellation-map-bg>`
-          : this.activePersoni?.name === 'THEO'
-          ? html`<code-flow-bg></code-flow-bg>`
-          : this.activePersoni?.name === 'GHOST'
-          ? html`<static-noise-bg></static-noise-bg>`
-          : html`<div class="background-gradient ${this.getBackgroundGradientClass()}"></div>`}
+        <!-- Camera feed is ONLY background - no gradients, no special backgrounds -->
 
         <div class="transcription-log-container">
           ${this.transcriptHistory.map(
@@ -4506,14 +4504,13 @@ export class GdmLiveAudio extends LitElement {
 
         <!-- Text Input + File Upload (below carousel) -->
         <div class="persona-input-container ${showControls ? 'visible' : ''}"
-             style="position: absolute; bottom: calc(20vh - 80px); left: 50%; transform: translateX(-50%);
+             style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
                     display: flex; align-items: center; gap: 12px;
-                    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px);
-                    padding: 12px 20px; border-radius: 30px;
-                    border: 2px solid rgba(255, 255, 255, 0.2);
-                    max-width: 600px; width: 90%;
-                    opacity: 0; transition: opacity 0.5s ease-in-out;
-                    pointer-events: none; z-index: 11;">
+                    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px);
+                    padding: 16px 24px; border-radius: 40px;
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    max-width: 700px; width: 90%;
+                    z-index: 2000;">
           <file-upload
             @file-uploaded=${this.handleFileUploaded}
             style="flex-shrink: 0;">
