@@ -29,46 +29,81 @@ export class ProviderManager {
     await this.autoConfigureFromEnvironment();
     
     // CRITICAL FIX: Always check and enable Google provider if Gemini models are needed
-    // This ensures PersonI configured with Gemini models can work
+    // This ensures PersonI configured with Gemini models can work even if auto-config failed
     const googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
-    if (googleProvider && (!googleProvider.enabled || googleProvider.models.length === 0)) {
-      console.log('[ProviderManager] CRITICAL FIX: Enabling Google provider with Gemini models');
-      const models: ModelInfo[] = [
-        {
-          id: 'gemini-2.5-flash',
-          name: 'Gemini 2.5 Flash',
-          providerId: googleProvider.id,
-          capabilities: {
-            audio: true,
-            vision: true,
-            streaming: true,
-            functionCalling: true,
-            maxTokens: 1000000,
-          },
-        },
-        {
-          id: 'gemini-2.5-pro',
-          name: 'Gemini 2.5 Pro',
-          providerId: googleProvider.id,
-          capabilities: {
-            audio: true,
-            vision: true,
-            streaming: true,
-            functionCalling: true,
-            maxTokens: 2000000,
-          },
-        },
-      ];
+    if (googleProvider && (!googleProvider.enabled || !googleProvider.models || googleProvider.models.length === 0)) {
+      console.log('[ProviderManager] CRITICAL FIX: Attempting to enable Google provider with Gemini models');
       
-      this.updateProvider(googleProvider.id, {
-        apiKey: 'configured',
-        enabled: true,
-        verified: true,
-        models,
-      });
+      // Use same backend URL logic as autoConfigureFromEnvironment
+      const backendUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001'
+        : `${window.location.protocol}//${window.location.hostname}:3001`;
       
-      console.log('[ProviderManager] ✅ CRITICAL FIX: Enabled Google provider with models:', models.map(m => m.id).join(', '));
-      this.saveToStorage();
+      try {
+        const response = await fetch(`${backendUrl}/api/config/env`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.config && data.config.geminiApiKey) {
+            console.log('[ProviderManager] ✅ GEMINI_API_KEY found on backend');
+            
+            const models: ModelInfo[] = [
+              {
+                id: 'gemini-2.5-flash',
+                name: 'Gemini 2.5 Flash',
+                providerId: googleProvider.id,
+                capabilities: {
+                  audio: true,
+                  vision: true,
+                  streaming: true,
+                  functionCalling: true,
+                  maxTokens: 1000000,
+                },
+              },
+              {
+                id: 'gemini-2.5-pro',
+                name: 'Gemini 2.5 Pro',
+                providerId: googleProvider.id,
+                capabilities: {
+                  audio: true,
+                  vision: true,
+                  streaming: true,
+                  functionCalling: true,
+                  maxTokens: 2000000,
+                },
+              },
+            ];
+            
+            this.updateProvider(googleProvider.id, {
+              apiKey: 'configured', // Backend stores the actual key
+              enabled: true,
+              verified: true,
+              models,
+            });
+            
+            console.log('[ProviderManager] ✅ CRITICAL FIX: Enabled Google provider with models:', models.map(m => m.id).join(', '));
+            this.saveToStorage();
+          } else {
+            console.warn('[ProviderManager] CRITICAL FIX: GEMINI_API_KEY not available on backend - skipping Google provider enable');
+          }
+        } else {
+          console.warn('[ProviderManager] CRITICAL FIX: Backend config endpoint returned error:', response.status);
+        }
+      } catch (error) {
+        console.error('[ProviderManager] CRITICAL FIX: Failed to fetch backend config:', error);
+      }
+    }
+    
+    // CRITICAL FIX: Re-verify providers with incorrect model providerIds
+    // This fixes providers loaded from localStorage with stale providerId in models
+    for (const provider of Array.from(this.providers.values())) {
+      if (provider.enabled && provider.verified && provider.models && provider.models.length > 0) {
+        // Check if any model has wrong providerId
+        const hasWrongProviderId = provider.models.some(m => m.providerId !== provider.id);
+        if (hasWrongProviderId) {
+          console.log(`[ProviderManager] CRITICAL FIX: Re-verifying ${provider.name} - models have wrong providerId`);
+          await this.verifyProvider(provider.id);
+        }
+      }
     }
     
     console.log('[ProviderManager] Final provider count:', this.providers.size);
@@ -319,11 +354,42 @@ export class ProviderManager {
     const provider = this.providers.get(id);
     if (!provider) return false;
 
-    // TODO: Implement actual verification logic per provider type
-    // For now, just check if API key is present
-    const verified = !!provider.apiKey;
-    this.updateProvider(id, { verified });
-    return verified;
+    if (!provider.apiKey) {
+      this.updateProvider(id, { verified: false, models: [] });
+      return false;
+    }
+
+    try {
+      // Create a temporary instance to verify and fetch models
+      const instance = ProviderFactory.createProvider(
+        provider.type,
+        provider.apiKey,
+        '', // No specific model for verification
+        provider.endpoint,
+        id // Pass the correct provider ID
+      );
+      
+      // Verify the provider
+      const verified = await instance.verify();
+      
+      if (!verified) {
+        this.updateProvider(id, { verified: false, models: [] });
+        return false;
+      }
+      
+      // Fetch available models with correct providerId
+      const models = await instance.getAvailableModels();
+      
+      // Update provider with verified status and models
+      this.updateProvider(id, { verified: true, models });
+      
+      console.log(`[ProviderManager] ✅ Verified ${provider.name} with ${models.length} models`);
+      return true;
+    } catch (error) {
+      console.error(`[ProviderManager] Verification failed for ${provider.name}:`, error);
+      this.updateProvider(id, { verified: false, models: [] });
+      return false;
+    }
   }
 
   getSTTConfig(): STTProvider | null {
