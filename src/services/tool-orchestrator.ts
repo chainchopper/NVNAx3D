@@ -152,22 +152,106 @@ class ToolOrchestrator {
         { name: 'symbol', type: 'string', description: 'Asset symbol', required: true },
         { name: 'type', type: 'string', description: 'Asset type: crypto or stock', required: true },
         { name: 'targetPrice', type: 'number', description: 'Target price', required: true },
-        { name: 'condition', type: 'string', description: 'Condition: above or below', required: true },
-        { name: 'action', type: 'string', description: 'Action to take: notify, sms, call, email', required: true }
+        { name: 'condition', type: 'string', description: 'Condition: above, below, or crosses', required: true },
+        { name: 'action', type: 'string', description: 'Action to take: notify, sms, call, email', required: true },
+        { name: 'phoneNumber', type: 'string', description: 'Phone number for SMS/call actions', required: false },
+        { name: 'email', type: 'string', description: 'Email for email actions', required: false }
       ],
       handler: async (params) => {
-        // This would integrate with routine automation system
-        return {
-          success: true,
-          data: {
-            alertId: `alert_${Date.now()}`,
-            symbol: params.symbol,
-            targetPrice: params.targetPrice,
-            condition: params.condition,
-            action: params.action,
-            status: 'active'
+        // Create a routine in the automation system
+        const routineName = `Price Alert: ${params.symbol} ${params.condition} $${params.targetPrice}`;
+        const routineDescription = `Alert when ${params.symbol} goes ${params.condition} $${params.targetPrice}`;
+        
+        const trigger = {
+          type: 'price_alert' as const,
+          config: {
+            priceAlert: {
+              symbol: params.symbol,
+              assetType: params.type as 'crypto' | 'stock',
+              condition: params.condition as 'above' | 'below' | 'crosses',
+              targetPrice: params.targetPrice,
+              dataSource: params.type === 'crypto' ? ('coingecko' as const) : ('alphavantage' as const),
+              checkInterval: 60000 // Check every minute
+            }
           }
         };
+        
+        const actions = [];
+        
+        // Build action based on requested action type
+        if (params.action === 'sms' && params.phoneNumber) {
+          actions.push({
+            type: 'send_sms' as const,
+            smsConfig: {
+              to: params.phoneNumber,
+              message: `Price alert: ${params.symbol} is now ${params.condition} $${params.targetPrice}`,
+              includeData: true
+            }
+          });
+        } else if (params.action === 'call' && params.phoneNumber) {
+          actions.push({
+            type: 'make_call' as const,
+            callConfig: {
+              to: params.phoneNumber,
+              message: `Price alert: ${params.symbol} has reached your target price of $${params.targetPrice}`
+            }
+          });
+        } else if (params.action === 'email' && params.email) {
+          actions.push({
+            type: 'send_email' as const,
+            emailConfig: {
+              to: params.email,
+              subject: `Price Alert: ${params.symbol}`,
+              body: `${params.symbol} is now ${params.condition} $${params.targetPrice}`,
+              includeData: true
+            }
+          });
+        } else {
+          // Default to notification
+          actions.push({
+            type: 'notification' as const,
+            parameters: {
+              message: `Price alert: ${params.symbol} is now ${params.condition} $${params.targetPrice}`
+            }
+          });
+        }
+        
+        try {
+          // Import routine executor dynamically to avoid circular dependencies
+          const { routineExecutor } = await import('./routine-executor');
+          
+          // Initialize if not already done
+          if (!routineExecutor['initialized']) {
+            await routineExecutor.initialize();
+          }
+          
+          const routineId = await routineExecutor.createRoutine({
+            name: routineName,
+            description: routineDescription,
+            trigger,
+            actions,
+            tags: ['price-alert', 'financial', params.type]
+          });
+          
+          return {
+            success: true,
+            data: {
+              alertId: routineId,
+              routineName,
+              symbol: params.symbol,
+              targetPrice: params.targetPrice,
+              condition: params.condition,
+              action: params.action,
+              status: 'active'
+            }
+          };
+        } catch (error) {
+          console.error('[ToolOrchestrator] Error creating price alert routine:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to create price alert routine'
+          };
+        }
       }
     });
 
