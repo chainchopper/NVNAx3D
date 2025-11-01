@@ -4777,6 +4777,13 @@ export class GdmLiveAudio extends LitElement {
           @file-uploaded=${this.handleFileUploaded}
         ></file-upload>
 
+        <!-- Calendar View -->
+        ${this.showCalendar ? html`
+          <calendar-view
+            @close-calendar=${() => this.showCalendar = false}
+          ></calendar-view>
+        ` : ''}
+
         <!-- Financial Dashboard -->
         <financial-dashboard
           .visible=${this.showFinancialDashboard}
