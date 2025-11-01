@@ -145,6 +145,7 @@ if (process.env.CSP_DIRECTIVES) {
     "worker-src 'self' blob:; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob: https: *; " +
+    "media-src 'self' blob: mediastream:; " +
     "font-src 'self' data:; " +
     "object-src 'none'; " +
     "base-uri 'self';";
@@ -158,6 +159,7 @@ if (process.env.CSP_DIRECTIVES) {
     "worker-src 'self' blob:; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob: https://raw.githubusercontent.com https://cdn.jsdelivr.net; " +
+    "media-src 'self' blob: mediastream:; " +
     "font-src 'self' data:; " +
     "object-src 'none'; " +
     "base-uri 'self';";
@@ -2545,6 +2547,678 @@ app.post('/api/twilio/voice/hangup', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to hangup call',
+    });
+  }
+});
+
+/**
+ * ===========================================
+ * OAUTH V2 - SECURE SERVER-SIDE TOKEN MANAGEMENT
+ * ===========================================
+ * 
+ * SECURITY MODEL:
+ * - All tokens stored server-side (in-memory Map, production: database)
+ * - CSRF protection via state parameter validation
+ * - PKCE for additional security
+ * - Tokens NEVER sent to client
+ * - Frontend makes authenticated requests via backend proxy
+ */
+
+// Server-side OAuth token storage (In production, use database)
+const oauthTokens = new Map(); // providerId -> { accessToken, refreshToken, expiresAt, accountInfo }
+const oauthStates = new Map(); // state -> { providerId, codeChallenge, timestamp }
+
+// OAuth V2: Initiate authorization flow
+app.post('/api/oauth/initiate', async (req, res) => {
+  try {
+    const { providerId, codeChallenge, codeChallengeMethod } = req.body;
+
+    if (!providerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing providerId'
+      });
+    }
+
+    // Generate state for CSRF protection
+    const state = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Store state and PKCE challenge
+    oauthStates.set(state, {
+      providerId,
+      codeChallenge,
+      codeChallengeMethod,
+      timestamp: Date.now()
+    });
+
+    // Clean up old states (>10 minutes)
+    const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
+    for (const [s, data] of oauthStates.entries()) {
+      if (data.timestamp < tenMinutesAgo) {
+        oauthStates.delete(s);
+      }
+    }
+
+    // Provider-specific auth URLs
+    let authUrl, clientId, redirectUri, scopes;
+
+    switch (providerId) {
+      case 'coinbase':
+        clientId = process.env.COINBASE_CLIENT_ID;
+        redirectUri = process.env.COINBASE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+        scopes = 'wallet:accounts:read,wallet:transactions:read,wallet:buys:read,wallet:sells:read';
+        authUrl = `https://www.coinbase.com/oauth/authorize?` +
+          `response_type=code&` +
+          `client_id=${clientId}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `scope=${encodeURIComponent(scopes)}&` +
+          `state=${state}`;
+        break;
+
+      case 'google':
+        clientId = process.env.GOOGLE_CLIENT_ID;
+        redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+        scopes = 'openid email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly';
+        authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+          `response_type=code&` +
+          `client_id=${clientId}&` +
+          `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+          `scope=${encodeURIComponent(scopes)}&` +
+          `state=${state}&` +
+          `code_challenge=${codeChallenge}&` +
+          `code_challenge_method=${codeChallengeMethod}`;
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown provider: ${providerId}`
+        });
+    }
+
+    if (!clientId) {
+      return res.status(503).json({
+        success: false,
+        error: `${providerId} OAuth not configured`,
+        requiresSetup: true
+      });
+    }
+
+    res.json({
+      success: true,
+      authUrl,
+      state
+    });
+  } catch (error) {
+    console.error('[OAuth V2 Initiate Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to initiate OAuth'
+    });
+  }
+});
+
+// OAuth V2: Handle callback with state and PKCE validation
+app.post('/api/oauth/callback', async (req, res) => {
+  try {
+    const { providerId, code, state, codeVerifier } = req.body;
+
+    // Validate state (CSRF protection)
+    const stateData = oauthStates.get(state);
+    if (!stateData || stateData.providerId !== providerId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired state (CSRF protection)'
+      });
+    }
+
+    // Clean up state
+    oauthStates.delete(state);
+
+    // Provider-specific token exchange
+    let tokenUrl, clientId, clientSecret, redirectUri;
+
+    switch (providerId) {
+      case 'coinbase':
+        tokenUrl = 'https://api.coinbase.com/oauth/token';
+        clientId = process.env.COINBASE_CLIENT_ID;
+        clientSecret = process.env.COINBASE_CLIENT_SECRET;
+        redirectUri = process.env.COINBASE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+        break;
+
+      case 'google':
+        tokenUrl = 'https://oauth2.googleapis.com/token';
+        clientId = process.env.GOOGLE_CLIENT_ID;
+        clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown provider: ${providerId}`
+        });
+    }
+
+    if (!clientId || !clientSecret) {
+      return res.status(503).json({
+        success: false,
+        error: `${providerId} OAuth not configured`
+      });
+    }
+
+    // Exchange code for tokens
+    const tokenParams = {
+      grant_type: 'authorization_code',
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri
+    };
+
+    // Add PKCE verifier if present
+    if (codeVerifier) {
+      tokenParams.code_verifier = codeVerifier;
+    }
+
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(tokenParams)
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      return res.status(tokenResponse.status).json({
+        success: false,
+        error: `Token exchange failed: ${error}`
+      });
+    }
+
+    const tokenData = await tokenResponse.json();
+
+    // Get user info (provider-specific)
+    let accountInfo = {};
+    try {
+      if (providerId === 'coinbase') {
+        const userResponse = await fetch('https://api.coinbase.com/v2/user', {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          accountInfo = {
+            id: userData.data?.id,
+            name: userData.data?.name,
+            email: userData.data?.email
+          };
+        }
+      } else if (providerId === 'google') {
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          accountInfo = {
+            id: userData.id,
+            name: userData.name,
+            email: userData.email
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('[OAuth V2] Failed to fetch user info:', error);
+    }
+
+    // Store tokens SERVER-SIDE (never sent to client!)
+    oauthTokens.set(providerId, {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : null,
+      tokenType: tokenData.token_type || 'Bearer',
+      scope: tokenData.scope,
+      accountInfo,
+      connectedAt: Date.now()
+    });
+
+    console.log(`[OAuth V2] Tokens stored server-side for ${providerId}`);
+
+    // Return success WITHOUT exposing tokens
+    res.json({
+      success: true,
+      providerId,
+      accountInfo
+    });
+
+  } catch (error) {
+    console.error('[OAuth V2 Callback Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'OAuth callback failed'
+    });
+  }
+});
+
+// OAuth V2: Get connection status (no tokens exposed)
+app.get('/api/oauth/status/:providerId', async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const tokenData = oauthTokens.get(providerId);
+
+    if (!tokenData) {
+      return res.json({
+        providerId,
+        isConnected: false,
+        status: 'disconnected'
+      });
+    }
+
+    // Check if expired
+    const isExpired = tokenData.expiresAt && tokenData.expiresAt < Date.now();
+
+    res.json({
+      providerId,
+      isConnected: true,
+      accountInfo: tokenData.accountInfo,
+      connectedAt: tokenData.connectedAt,
+      expiresAt: tokenData.expiresAt,
+      status: isExpired ? 'expired' : 'active'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// OAuth V2: Get all connections
+app.get('/api/oauth/connections', async (req, res) => {
+  try {
+    const connections = [];
+
+    for (const [providerId, tokenData] of oauthTokens.entries()) {
+      const isExpired = tokenData.expiresAt && tokenData.expiresAt < Date.now();
+      connections.push({
+        providerId,
+        isConnected: true,
+        accountInfo: tokenData.accountInfo,
+        connectedAt: tokenData.connectedAt,
+        expiresAt: tokenData.expiresAt,
+        status: isExpired ? 'expired' : 'active'
+      });
+    }
+
+    res.json({
+      success: true,
+      connections
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// OAuth V2: Disconnect (remove server-side tokens)
+app.delete('/api/oauth/disconnect/:providerId', async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    oauthTokens.delete(providerId);
+
+    res.json({
+      success: true,
+      message: `Disconnected from ${providerId}`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// OAuth V2: Proxy authenticated requests (backend uses stored tokens)
+app.post('/api/oauth/proxy/:providerId', async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const { endpoint, method, headers, body } = req.body;
+
+    const tokenData = oauthTokens.get(providerId);
+    if (!tokenData) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not connected to provider'
+      });
+    }
+
+    // Check if token expired - attempt refresh
+    if (tokenData.expiresAt && tokenData.expiresAt < Date.now()) {
+      if (tokenData.refreshToken) {
+        // Attempt token refresh
+        console.log(`[OAuth V2] Token expired for ${providerId}, refreshing...`);
+        // Token refresh logic would go here
+        // For now, return error
+        return res.status(401).json({
+          success: false,
+          error: 'Token expired, please reconnect'
+        });
+      } else {
+        return res.status(401).json({
+          success: false,
+          error: 'Token expired, please reconnect'
+        });
+      }
+    }
+
+    // Make authenticated request
+    const response = await fetch(endpoint, {
+      method: method || 'GET',
+      headers: {
+        ...headers,
+        'Authorization': `${tokenData.tokenType} ${tokenData.accessToken}`
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+
+    const responseData = await response.json();
+
+    res.status(response.status).json(responseData);
+
+  } catch (error) {
+    console.error('[OAuth V2 Proxy Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * ===========================================
+ * OAUTH & AUTHENTICATION ENDPOINTS (LEGACY - INSECURE)
+ * ===========================================
+ */
+
+// OAuth: Generic token refresh endpoint
+app.post('/api/oauth/refresh', async (req, res) => {
+  try {
+    const { providerId, refreshToken } = req.body;
+
+    if (!providerId || !refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing providerId or refreshToken'
+      });
+    }
+
+    // Provider-specific token refresh logic
+    let tokenUrl, clientId, clientSecret;
+
+    switch (providerId) {
+      case 'coinbase':
+        tokenUrl = 'https://api.coinbase.com/oauth/token';
+        clientId = process.env.COINBASE_CLIENT_ID;
+        clientSecret = process.env.COINBASE_CLIENT_SECRET;
+        break;
+      case 'google':
+        tokenUrl = 'https://oauth2.googleapis.com/token';
+        clientId = process.env.GOOGLE_CLIENT_ID;
+        clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown provider: ${providerId}`
+        });
+    }
+
+    if (!clientId || !clientSecret) {
+      return res.status(503).json({
+        success: false,
+        error: `${providerId} OAuth not configured`,
+        requiresSetup: true
+      });
+    }
+
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      return res.status(response.status).json({
+        success: false,
+        error: `Token refresh failed: ${error}`
+      });
+    }
+
+    const data = await response.json();
+
+    res.json({
+      success: true,
+      token: {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || refreshToken,
+        expiresAt: data.expires_in ? Date.now() + (data.expires_in * 1000) : undefined,
+        tokenType: data.token_type || 'Bearer',
+        scope: data.scope
+      }
+    });
+  } catch (error) {
+    console.error('[OAuth Refresh Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Token refresh failed'
+    });
+  }
+});
+
+// Coinbase: Initiate OAuth authorization
+app.post('/api/coinbase/oauth/authorize', async (req, res) => {
+  try {
+    const clientId = process.env.COINBASE_CLIENT_ID;
+    const redirectUri = process.env.COINBASE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+
+    if (!clientId) {
+      return res.status(503).json({
+        success: false,
+        error: 'Coinbase OAuth not configured',
+        requiresSetup: true,
+        setupInstructions: 'Add COINBASE_CLIENT_ID and COINBASE_CLIENT_SECRET to .env'
+      });
+    }
+
+    const { scopes } = req.body;
+    const scopeString = scopes?.join(',') || 'wallet:accounts:read,wallet:transactions:read';
+
+    const authUrl = `https://www.coinbase.com/oauth/authorize?` +
+      `response_type=code&` +
+      `client_id=${clientId}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scopeString)}&` +
+      `state=${Math.random().toString(36).substring(7)}`;
+
+    res.json({
+      success: true,
+      authUrl
+    });
+  } catch (error) {
+    console.error('[Coinbase OAuth Authorize Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate auth URL'
+    });
+  }
+});
+
+// Coinbase: Handle OAuth callback
+app.post('/api/coinbase/oauth/callback', async (req, res) => {
+  try {
+    const { code } = req.body;
+    const clientId = process.env.COINBASE_CLIENT_ID;
+    const clientSecret = process.env.COINBASE_CLIENT_SECRET;
+    const redirectUri = process.env.COINBASE_REDIRECT_URI || 'http://localhost:5000/oauth/callback';
+
+    if (!clientId || !clientSecret) {
+      return res.status(503).json({
+        success: false,
+        error: 'Coinbase OAuth not configured',
+        requiresSetup: true
+      });
+    }
+
+    // Exchange code for access token
+    const tokenResponse = await fetch('https://api.coinbase.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      return res.status(tokenResponse.status).json({
+        success: false,
+        error: `Token exchange failed: ${error}`
+      });
+    }
+
+    const tokenData = await tokenResponse.json();
+
+    // Get user info
+    const userResponse = await fetch('https://api.coinbase.com/v2/user', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`
+      }
+    });
+
+    let accountInfo = {};
+    if (userResponse.ok) {
+      const userData = await userResponse.json();
+      accountInfo = {
+        id: userData.data?.id,
+        name: userData.data?.name,
+        email: userData.data?.email
+      };
+    }
+
+    res.json({
+      success: true,
+      token: {
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        expiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : undefined,
+        tokenType: tokenData.token_type || 'Bearer',
+        scope: tokenData.scope
+      },
+      accountInfo
+    });
+  } catch (error) {
+    console.error('[Coinbase OAuth Callback Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'OAuth callback failed'
+    });
+  }
+});
+
+// Coinbase: Get user accounts
+app.get('/api/coinbase/accounts', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        error: 'Missing authorization header'
+      });
+    }
+
+    const response = await fetch('https://api.coinbase.com/v2/accounts', {
+      headers: {
+        'Authorization': authHeader,
+        'CB-VERSION': '2024-11-01'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      return res.status(response.status).json({
+        success: false,
+        error: `Failed to fetch accounts: ${error}`
+      });
+    }
+
+    const data = await response.json();
+    res.json({
+      success: true,
+      data: data.data
+    });
+  } catch (error) {
+    console.error('[Coinbase Accounts Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch accounts'
+    });
+  }
+});
+
+// Coinbase: Get account transactions
+app.get('/api/coinbase/accounts/:accountId/transactions', async (req, res) => {
+  try {
+    const { accountId } = req.params;
+    const { limit = 25 } = req.query;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        error: 'Missing authorization header'
+      });
+    }
+
+    const response = await fetch(
+      `https://api.coinbase.com/v2/accounts/${accountId}/transactions?limit=${limit}`,
+      {
+        headers: {
+          'Authorization': authHeader,
+          'CB-VERSION': '2024-11-01'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      return res.status(response.status).json({
+        success: false,
+        error: `Failed to fetch transactions: ${error}`
+      });
+    }
+
+    const data = await response.json();
+    res.json({
+      success: true,
+      data: data.data
+    });
+  } catch (error) {
+    console.error('[Coinbase Transactions Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch transactions'
     });
   }
 });
