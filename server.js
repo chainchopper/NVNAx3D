@@ -141,7 +141,7 @@ if (process.env.CSP_DIRECTIVES) {
   cspDirectives = "default-src 'self'; " +
     "script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'; " +
     "script-src-elem 'self' https://esm.sh 'unsafe-inline'; " +
-    "connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss: *; " +
+    "connect-src 'self' http://localhost:* https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss: *; " +
     "worker-src 'self' blob:; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: blob: https: *; " +

@@ -72,6 +72,20 @@ Nirvana is an advanced AI companion system featuring multiple AI personas (Perso
 - **Genius API**: For song lyrics.
 - **Plaid/Yodlee (planned)**: For financial transaction and account data.
 
+## Recent Development (November 1, 2025)
+### OAuth Security & Plugin Sandbox Hardening
+- **DOMPurify Integration**: Battle-tested HTML sanitization for plugin system (replaced custom sanitizer)
+- **OAuth Vault V2 Backend**: Server-side token storage with PKCE + CSRF protection
+  - Backend endpoints: `/api/oauth/initiate`, `/api/oauth/callback`, `/api/oauth/status`, `/api/oauth/disconnect`, `/api/oauth/proxy`
+  - State validation with 10-minute expiry
+  - Provider-specific auth flows (Coinbase, Google)
+  - ⚠️ **CRITICAL**: No user/session binding - any client can access all tokens (deferred for production auth layer)
+- **Coinbase OAuth Integration**: Updated to use secure OAuth Vault V2 with backend-proxied API calls
+- **CSP Camera Fix**: Added `media-src 'self' blob: mediastream:` for getUserMedia support
+- **CSP Backend Communication**: Added `http://localhost:*` to connect-src for dev environment
+- **WebSocket Real-Time Feeds**: Crypto price streams (CoinGecko polling), stock streams (planned Finnhub), connection pooling
+- **UI Cleanup**: Removed Box/cube geometry - ADAM uses TorusKnot, BILLY uses Icosahedron
+
 ## Recent Development (October 30, 2025)
 ### UI/UX Cleanup Sprint
 - Simplified camera controls to minimalist 2-icon design (👁️ preview, 📷 camera)

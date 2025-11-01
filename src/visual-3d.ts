@@ -266,10 +266,8 @@ export class GdmLiveAudioVisuals3D extends LitElement {
         texture.repeat.set(8, 2);
       } else if (shape === 'Icosahedron') {
         texture.repeat.set(3, 2);
-      } else if (shape === 'Box') {
-        texture.repeat.set(2, 2);
       } else {
-        texture.repeat.set(1, 1);
+        texture.repeat.set(2, 2);
       }
 
       this.sphereMaterial.map = texture;
@@ -337,8 +335,6 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     switch (shape) {
       case 'TorusKnot':
         return new THREE.TorusKnotGeometry(0.6, 0.25, 200, 32);
-      case 'Box':
-        return new THREE.BoxGeometry(1.5, 1.5, 1.5);
       case 'Icosahedron':
       default:
         return new THREE.IcosahedronGeometry(1, 10);
