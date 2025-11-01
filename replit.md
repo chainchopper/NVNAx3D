@@ -62,3 +62,56 @@ Nirvana is an advanced, local-first AI companion system designed for highly cust
 - **Genius API**: Song lyrics.
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 - **LMStudio, vLLM, LocalAI**: For local AI model inference.
+
+## Recent Development (November 1, 2025)
+### Latest Fixes (Current Session - Part 8) - VERCEL BUILD & CAMERA PERSISTENCE
+- **VERCEL BUILD OPTIMIZATION**: ✅ ARCHITECT-APPROVED (Production-ready deployment)
+  - **Lazy Loading Implementation**: Removed static imports, converted to dynamic imports:
+    - `reminder-manager`: Now lazy-loaded on firstUpdated() for notification system
+    - `object-recognition`: Lazy-loaded only when object detection is enabled
+    - Eliminates Vite dynamic import warnings completely
+  - **Manual Code Splitting**: Optimized build with strategic chunking:
+    - Before: 1 huge chunk (4,344 kB) causing 500 kB warnings
+    - After: 11 optimized chunks with intelligent splitting:
+      - `tensorflow.js` (1,863 kB) - Loads only for object detection
+      - `transformers.js` (815 kB) - Loads only for Whisper STT
+      - `three.js` (579 kB) - Loads for 3D visualization
+      - `index.js` (589 kB) - Main app, reduced by 86%
+      - `ai-providers.js`, `lit-framework.js` - Core dependencies
+  - **Build Results**: Zero dynamic import warnings, optimized chunk sizes, Vercel-ready
+- **CAMERA PERSISTENCE ACROSS SESSIONS**: ✅ ARCHITECT-APPROVED (Auto-initialization)
+  - **Permissions API Integration**: Checks browser permission state on app startup
+  - **localStorage State**: Saves camera enabled/disabled preference (nirvana-camera-enabled)
+  - **Auto-Initialization Flow**:
+    1. App checks permission state using `navigator.permissions.query()`
+    2. Reads previous session state from localStorage
+    3. Auto-requests camera stream if permission granted AND camera was enabled
+    4. Automatically starts environmental observer if active PersonI has vision
+  - **User Experience**: Camera "just works" across browser refreshes - no re-prompting needed
+  - **Results**: Camera persists seamlessly, environmental observer auto-starts, zero LSP errors
+
+### Latest Fixes (Current Session - Part 7) - MULTI-MODEL PERSONI & LOCAL AI SUPPORT
+- **COMPLETE PERSONI MODEL CONFIGURATION**: ✅ ARCHITECT-APPROVED (Vision, Embed, TTS, Function-Calling models per PersonI)
+  - **Multi-Model Architecture**: Enhanced PersonI configuration with dedicated model assignments for:
+    - **Conversation Model**: Primary chat/thinking model (renamed from "thinking model")
+    - **Vision Model**: Dedicated multimodal model (optional, falls back to conversation)
+    - **Embedding Model**: RAG memory embeddings (optional, auto-detects from provider)
+    - **Function Calling Model**: Tool/function execution (optional, uses conversation model)
+    - **TTS Model**: Text-to-speech with full voice selection (Google voices, OpenAI voices, custom models)
+  - **PersonI Edit UI**: Added comprehensive model configuration fields in PersonI editor:
+    - Dropdowns for each model type populated from all configured providers
+    - Voice selection with organized groups (Google/OpenAI/Custom)
+    - Backward compatibility maintained with legacy thinkingModel field
+  - **Local AI Support**: Full integration with LMStudio, vLLM, and LocalAI:
+    - Custom endpoints show ALL models from `/v1/models` endpoint
+    - Enhanced capability detection from model names (llava, pixtral, qwen, cogvlm, internvl for vision)
+    - Function calling detection (mistral, llama-3, command, tools keywords)
+    - Works with any OpenAI-compatible local inference server
+  - **Environmental Observer Re-Enabled**: Observer now generates LLM-powered contextual speech:
+    - Removed preset phrases, replaced with generateContextualSpeech() using active provider
+    - Creates natural observations matching urgency/context (calm for general, alert for safety)
+    - Integrates seamlessly with PersonI voice and RAG memory
+  - **Backend Payload Fix**: Increased body-parser limit to 50MB for camera vision:
+    - Fixes PayloadTooLargeError when sending base64-encoded camera frames
+    - Supports large multimodal requests with images
+  - **Results**: Complete multi-model PersonI system, local AI providers fully supported, environmental observer speaks naturally, zero LSP errors
