@@ -1178,6 +1178,15 @@ export class GdmLiveAudio extends LitElement {
       await providerManager.initialize();
       console.log('[ProviderManager] ✅ Provider system initialized');
       
+      // Debug: check what providers are available
+      const allProviders = providerManager.getAllProviders();
+      console.log('[ProviderManager] DEBUG: Total providers:', allProviders.length);
+      allProviders.forEach(p => {
+        console.log(`[ProviderManager] DEBUG: ${p.name} (${p.id}): enabled=${p.enabled}, verified=${p.verified}, models=${p.models.length}`);
+      });
+      const availableModels = providerManager.getAvailableModels();
+      console.log('[ProviderManager] DEBUG: Available models:', availableModels.map(m => `${m.id} from ${m.providerId}`).join(', '));
+      
       console.log('[RAG] Initializing memory system...');
       await ragMemoryManager.initialize();
       this.ragInitialized = true;
