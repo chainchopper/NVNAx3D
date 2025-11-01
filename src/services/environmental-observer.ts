@@ -215,7 +215,10 @@ ${this.lastObservation ? `Previous observation: ${this.lastObservation.descripti
 
       const response = await this.provider.sendMessage(messages);
 
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      // Handle dual return type (string or {text, functionCalls})
+      const responseText = typeof response === 'string' ? response : response.text;
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.warn('[EnvironmentalObserver] No JSON in response');
         return null;
@@ -278,11 +281,11 @@ ${this.lastObservation ? `Previous observation: ${this.lastObservation.descripti
       }
     }
 
-    // Speak if appropriate
-    if (observation.shouldSpeak && !this.config.silentMode && this.speakCallback) {
-      const speechText = this.generateSpeech(observation);
-      this.speakCallback(speechText);
-    }
+    // Speak if appropriate - DISABLED: Using idle-speech-manager.ts for all idle speech instead
+    // if (observation.shouldSpeak && !this.config.silentMode && this.speakCallback) {
+    //   const speechText = this.generateSpeech(observation);
+    //   this.speakCallback(speechText);
+    // }
 
     // Dispatch event
     window.dispatchEvent(
