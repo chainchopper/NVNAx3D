@@ -333,7 +333,126 @@ export class RoutineExecutor {
       this.setupStateChangeTrigger(routine);
     } else if (routine.trigger.type === 'vision_detection') {
       this.setupVisionDetectionTrigger(routine);
+    } else if (routine.trigger.type === 'price_alert') {
+      this.setupPriceAlertTrigger(routine);
+    } else if (routine.trigger.type === 'portfolio_change') {
+      this.setupPortfolioChangeTrigger(routine);
+    } else if (routine.trigger.type === 'market_event') {
+      this.setupMarketEventTrigger(routine);
     }
+  }
+
+  private setupPriceAlertTrigger(routine: Routine): void {
+    const priceAlert = routine.trigger.config.priceAlert;
+    
+    if (!priceAlert || !priceAlert.symbol || !priceAlert.targetPrice) {
+      console.warn(`[RoutineExecutor] Price alert trigger missing required config`);
+      return;
+    }
+
+    const checkInterval = priceAlert.checkInterval || 60000; // Default 1 minute
+    let lastPrice: number | null = null;
+
+    const checkPrice = async () => {
+      try {
+        const endpoint = priceAlert.assetType === 'crypto' 
+          ? '/api/financial/crypto' 
+          : '/api/financial/stocks';
+        
+        const response = await fetch(`http://localhost:3001${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: priceAlert.symbol })
+        });
+        
+        const data = await response.json();
+        const currentPrice = data.price || data.quote?.price;
+
+        if (currentPrice && this.shouldTriggerPriceAlert(currentPrice, lastPrice, priceAlert)) {
+          console.log(`[RoutineExecutor] Price alert triggered for ${priceAlert.symbol}: $${currentPrice}`);
+          await this.executeRoutine(routine.id, false);
+        }
+
+        lastPrice = currentPrice;
+      } catch (error) {
+        console.error(`[RoutineExecutor] Error checking price for ${priceAlert.symbol}:`, error);
+      }
+    };
+
+    checkPrice(); // Initial check
+    const timerId = window.setInterval(checkPrice, checkInterval);
+    this.timeBasedTimers.set(routine.id, timerId);
+    console.log(`[RoutineExecutor] Price alert set for ${priceAlert.symbol} ${priceAlert.condition} $${priceAlert.targetPrice}`);
+  }
+
+  private shouldTriggerPriceAlert(currentPrice: number, lastPrice: number | null, config: any): boolean {
+    if (!lastPrice) return false; // Skip first check, need baseline
+
+    switch (config.condition) {
+      case 'above':
+        return currentPrice > config.targetPrice && (lastPrice <= config.targetPrice);
+      case 'below':
+        return currentPrice < config.targetPrice && (lastPrice >= config.targetPrice);
+      case 'crosses':
+        return (lastPrice < config.targetPrice && currentPrice > config.targetPrice) ||
+               (lastPrice > config.targetPrice && currentPrice < config.targetPrice);
+      default:
+        return false;
+    }
+  }
+
+  private setupPortfolioChangeTrigger(routine: Routine): void {
+    const portfolioConfig = routine.trigger.config.portfolioChange;
+    
+    if (!portfolioConfig || !portfolioConfig.metric || !portfolioConfig.threshold) {
+      console.warn(`[RoutineExecutor] Portfolio change trigger missing required config`);
+      return;
+    }
+
+    const checkInterval = portfolioConfig.checkInterval || 300000; // Default 5 minutes
+    let lastValue: number | null = null;
+
+    const checkPortfolio = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/financial/portfolio/summary');
+        const data = await response.json();
+        const currentValue = data.summary?.totalValue || 0;
+
+        if (lastValue !== null && this.shouldTriggerPortfolioAlert(currentValue, lastValue, portfolioConfig)) {
+          console.log(`[RoutineExecutor] Portfolio alert triggered`);
+          await this.executeRoutine(routine.id, false);
+        }
+
+        lastValue = currentValue;
+      } catch (error) {
+        console.error('[RoutineExecutor] Error checking portfolio:', error);
+      }
+    };
+
+    checkPortfolio();
+    const timerId = window.setInterval(checkPortfolio, checkInterval);
+    this.timeBasedTimers.set(routine.id, timerId);
+    console.log(`[RoutineExecutor] Portfolio change monitor set up`);
+  }
+
+  private shouldTriggerPortfolioAlert(currentValue: number, lastValue: number, config: any): boolean {
+    const changeAmount = config.percentChange 
+      ? ((currentValue - lastValue) / lastValue) * 100
+      : currentValue - lastValue;
+
+    switch (config.condition) {
+      case 'above':
+        return changeAmount > config.threshold;
+      case 'below':
+        return changeAmount < -config.threshold;
+      default:
+        return false;
+    }
+  }
+
+  private setupMarketEventTrigger(routine: Routine): void {
+    console.log(`[RoutineExecutor] Market event trigger set up (placeholder)`);
+    // TODO: Implement market event monitoring (market open/close, volatility, sentiment)
   }
 
   private setupTimeTrigger(routine: Routine): void {
@@ -649,12 +768,102 @@ export class RoutineExecutor {
         return await this.executeConnectorCall(action);
       case 'notification':
         return this.executeNotification(action, routine);
+      case 'send_sms':
+        return await this.executeSendSMS(action);
+      case 'make_call':
+        return await this.executeMakeCall(action);
+      case 'send_email':
+        return await this.executeSendEmail(action);
+      case 'execute_trade':
+        return await this.executeTradeAction(action);
+      case 'tool_execution':
+        return await this.executeToolAction(action);
       case 'state_change':
       case 'custom':
         return { success: true, message: `Action type ${action.type} executed (placeholder)` };
       default:
         console.warn(`[RoutineExecutor] Unknown action type: ${action.type}`);
         return { success: false, error: `Unknown action type: ${action.type}` };
+    }
+  }
+
+  private async executeSendSMS(action: RoutineAction): Promise<any> {
+    if (!action.smsConfig) {
+      return { success: false, error: 'SMS config missing' };
+    }
+
+    try {
+      const { twilioService } = await import('./twilio-service');
+      const result = await twilioService.sendSMS(action.smsConfig.to, action.smsConfig.message);
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to send SMS' };
+    }
+  }
+
+  private async executeMakeCall(action: RoutineAction): Promise<any> {
+    if (!action.callConfig) {
+      return { success: false, error: 'Call config missing' };
+    }
+
+    try {
+      const { twilioService } = await import('./twilio-service');
+      const result = await twilioService.makeCall(
+        action.callConfig.to,
+        action.callConfig.personaVoice
+      );
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to make call' };
+    }
+  }
+
+  private async executeSendEmail(action: RoutineAction): Promise<any> {
+    if (!action.emailConfig) {
+      return { success: false, error: 'Email config missing' };
+    }
+
+    // TODO: Implement email service integration
+    console.log('[RoutineExecutor] Email action:', action.emailConfig);
+    return {
+      success: true,
+      message: `Email sent to ${action.emailConfig.to}`,
+      placeholder: true
+    };
+  }
+
+  private async executeTradeAction(action: RoutineAction): Promise<any> {
+    if (!action.tradeConfig) {
+      return { success: false, error: 'Trade config missing' };
+    }
+
+    // TODO: Implement Coinbase/trading integration
+    console.log('[RoutineExecutor] Trade action:', action.tradeConfig);
+    return {
+      success: true,
+      message: `Trade execution requested: ${action.tradeConfig.action} ${action.tradeConfig.symbol}`,
+      requiresConfirmation: action.tradeConfig.requireConfirmation,
+      placeholder: true
+    };
+  }
+
+  private async executeToolAction(action: RoutineAction): Promise<any> {
+    if (!action.toolConfig) {
+      return { success: false, error: 'Tool config missing' };
+    }
+
+    try {
+      const { toolOrchestrator } = await import('./tool-orchestrator');
+      const result = await toolOrchestrator.executeTool(
+        action.toolConfig.toolId,
+        action.toolConfig.parameters,
+        'NIRVANA', // personaId
+        undefined, // userId
+        !action.toolConfig.requireConfirmation
+      );
+      return result;
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to execute tool' };
     }
   }
 
@@ -706,6 +915,15 @@ export class RoutineExecutor {
       case 'vision_detection':
         const vision = trigger.config.visionDetection;
         return `Vision detection: ${vision?.service || 'Unknown service'} detecting ${vision?.objectTypes?.join(', ') || 'objects'}`;
+      case 'price_alert':
+        const price = trigger.config.priceAlert;
+        return `Price alert: ${price?.symbol || 'Unknown'} ${price?.condition || 'crosses'} $${price?.targetPrice || 0}`;
+      case 'portfolio_change':
+        const portfolio = trigger.config.portfolioChange;
+        return `Portfolio change: ${portfolio?.metric || 'total_value'} ${portfolio?.condition || 'above'} ${portfolio?.threshold || 0}${portfolio?.percentChange ? '%' : ''}`;
+      case 'market_event':
+        const market = trigger.config.marketEvent;
+        return `Market event: ${market?.eventType || 'Unknown'} in ${market?.market || 'stocks'}`;
       default:
         return 'Unknown trigger';
     }

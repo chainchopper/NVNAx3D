@@ -173,6 +173,7 @@ class TwilioService {
   /**
    * Connect PersonI audio to Twilio media stream
    * This allows bidirectional audio: PersonI speaks to caller, caller speaks to PersonI
+   * Uses Twilio Media Streams protocol with JSON envelopes
    */
   async connectPersonIAudio(callSid: string, audioStream: MediaStream): Promise<void> {
     const wsUrl = `${this.backendUrl.replace('http', 'ws')}/api/twilio/voice/media/${callSid}`;
@@ -196,8 +197,18 @@ class TwilioService {
         // Convert Float32Array to mulaw (Twilio format)
         const mulawData = this.encodeToMulaw(inputData);
         
+        // Encode to base64 for Twilio Media Streams protocol
+        const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(mulawData)));
+        
         if (this.mediaWebSocket?.readyState === WebSocket.OPEN) {
-          this.mediaWebSocket.send(mulawData);
+          // Send using Twilio Media Streams JSON envelope format
+          this.mediaWebSocket.send(JSON.stringify({
+            event: 'media',
+            streamSid: callSid,
+            media: {
+              payload: base64Audio
+            }
+          }));
         }
       };
 
@@ -206,9 +217,30 @@ class TwilioService {
     };
 
     this.mediaWebSocket.onmessage = (event) => {
-      // Receive audio from caller (for PersonI STT processing)
-      console.log('[Twilio Service] Received audio from caller');
-      // This can be sent to PersonI's STT system for processing
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.event === 'connected') {
+          console.log('[Twilio Service] Stream connected:', data.protocol);
+        } else if (data.event === 'start') {
+          console.log('[Twilio Service] Stream started:', data.streamSid);
+        } else if (data.event === 'media') {
+          // Receive audio from caller (decode base64 mulaw)
+          const mulawPayload = atob(data.media.payload);
+          const mulawArray = new Uint8Array(mulawPayload.length);
+          for (let i = 0; i < mulawPayload.length; i++) {
+            mulawArray[i] = mulawPayload.charCodeAt(i);
+          }
+          
+          // This can be sent to PersonI's STT system for processing
+          console.log('[Twilio Service] Received audio from caller:', mulawArray.length, 'bytes');
+        } else if (data.event === 'stop') {
+          console.log('[Twilio Service] Stream stopped');
+          this.disconnectMediaStream();
+        }
+      } catch (error) {
+        console.error('[Twilio Service] Error processing message:', error);
+      }
     };
 
     this.mediaWebSocket.onerror = (error) => {
