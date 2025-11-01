@@ -34,13 +34,9 @@ export class ProviderManager {
     if (googleProvider && (!googleProvider.enabled || !googleProvider.models || googleProvider.models.length === 0)) {
       console.log('[ProviderManager] CRITICAL FIX: Attempting to enable Google provider with Gemini models');
       
-      // Use same backend URL logic as autoConfigureFromEnvironment
-      const backendUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001'
-        : `${window.location.protocol}//${window.location.hostname}:3001`;
-      
+      // Use relative URL (Vite proxy handles routing to backend)
       try {
-        const response = await fetch(`${backendUrl}/api/config/env`);
+        const response = await fetch('/api/config/env');
         if (response.ok) {
           const data = await response.json();
           if (data.config && data.config.geminiApiKey) {
@@ -158,13 +154,9 @@ export class ProviderManager {
     console.log('[ProviderManager] === autoConfigureFromEnvironment() called ===');
     try {
       // Fetch environment configuration from backend
-      // In Replit, use relative URL or construct from current origin
-      const backendUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001'
-        : `${window.location.protocol}//${window.location.hostname}:3001`;
-      
-      console.log('[ProviderManager] Fetching environment config from backend:', backendUrl);
-      const response = await fetch(`${backendUrl}/api/config/env`);
+      // Use relative URL (Vite proxy handles routing to backend)
+      console.log('[ProviderManager] Fetching environment config from backend: /api/config/env');
+      const response = await fetch('/api/config/env');
       console.log('[ProviderManager] Backend response status:', response.status, response.ok);
       
       if (!response.ok) {

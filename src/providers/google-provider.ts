@@ -1,44 +1,41 @@
 /**
  * Google Gemini provider implementation
+ * SECURITY: Uses backend proxy to prevent API key exposure in browser
  */
 
 import { BaseProvider, ProviderMessage, StreamingResponse } from './base-provider';
 import { ModelInfo } from '../types/providers';
-import { GoogleGenAI } from '@google/genai';
 
 export class GoogleProvider extends BaseProvider {
-  private client: GoogleGenAI | null = null;
+  constructor(config: any) {
+    super(config);
+  }
 
   async verify(): Promise<boolean> {
-    if (!this.config.apiKey) return false;
-
     try {
-      this.client = new GoogleGenAI({ apiKey: this.config.apiKey });
-      
-      // Actually verify by making a simple API call
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{
-          role: 'user',
-          parts: [{ text: 'test' }],
-        }],
+      // Verify by making a test API call through backend proxy (Vite proxy handles routing)
+      const response = await fetch('/api/gemini/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gemini-2.5-flash',
+          contents: [{
+            role: 'user',
+            parts: [{ text: 'test' }],
+          }],
+        }),
       });
 
-      // If we get here without error, the API key is valid
-      return !!response;
+      const data = await response.json();
+      return data.success === true;
     } catch (error) {
       console.error('Google provider verification failed:', error);
-      this.client = null;
       return false;
     }
   }
 
   async getAvailableModels(): Promise<ModelInfo[]> {
-    if (!this.client) {
-      throw new Error('Provider not initialized');
-    }
-
-    // Gemini available models
+    // Gemini available models (no backend call needed - static list)
     return [
       {
         id: 'gemini-2.5-flash',
@@ -83,10 +80,6 @@ export class GoogleProvider extends BaseProvider {
     messages: ProviderMessage[],
     onChunk?: (chunk: StreamingResponse) => void
   ): Promise<string> {
-    if (!this.client) {
-      throw new Error('Provider not initialized');
-    }
-
     const contents = messages.map(msg => {
       const role = msg.role === 'assistant' ? 'model' : 'user';
       
@@ -103,12 +96,28 @@ export class GoogleProvider extends BaseProvider {
       }
     });
 
-    const response = await this.client.models.generateContent({
-      model: this.config.model,
-      contents,
+    // Call backend proxy endpoint instead of using API key directly (Vite proxy handles routing)
+    const response = await fetch('/api/gemini/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: this.config.model,
+        contents,
+      }),
     });
 
-    const text = response.text || '';
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || `Backend returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Backend request failed');
+    }
+
+    const text = data.data.text || '';
 
     if (onChunk) {
       onChunk({ text, done: true });
