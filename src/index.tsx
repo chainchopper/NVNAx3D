@@ -53,6 +53,7 @@ import {
   switchPersonaDeclaration,
   TextureName,
   DEFAULT_CAPABILITIES,
+  getPersoniModel,
 } from './personas';
 import { providerManager } from './services/provider-manager';
 import { ProviderFactory } from './providers/provider-factory';
@@ -1630,7 +1631,7 @@ export class GdmLiveAudio extends LitElement {
       case 'configured':
         return 'Provider configured and ready';
       case 'missing':
-        return `Provider for ${this.activePersoni?.thinkingModel || 'current model'} not configured`;
+        return `Provider for ${getPersoniModel(this.activePersoni, 'conversation') || 'current model'} not configured`;
       case 'unconfigured':
         return 'No providers configured - click to configure';
       default:
@@ -1752,15 +1753,20 @@ export class GdmLiveAudio extends LitElement {
     
     let updated = false;
     this.personis = this.personis.map(personi => {
-      const modelExists = availableModels.some(m => m.id === personi.thinkingModel);
+      const currentModel = getPersoniModel(personi, 'conversation');
+      const modelExists = availableModels.some(m => m.id === currentModel);
       
       if (!modelExists) {
         const firstModel = availableModels[0];
-        console.log(`[PersonI] Auto-updating ${personi.name} from "${personi.thinkingModel}" to "${firstModel.id}" (model not found in configured providers)`);
+        console.log(`[PersonI] Auto-updating ${personi.name} from "${currentModel}" to "${firstModel.id}" (model not found in configured providers)`);
         updated = true;
         return {
           ...personi,
-          thinkingModel: firstModel.id,
+          thinkingModel: firstModel.id, // Backward compat
+          models: {
+            ...personi.models,
+            conversation: firstModel.id,
+          },
         };
       }
       
@@ -2391,7 +2397,7 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private getProviderForPersoni(personi: PersoniConfig): BaseProvider | null {
-    const modelId = personi.thinkingModel;
+    const modelId = getPersoniModel(personi, 'conversation');
     
     const availableModels = providerManager.getAvailableModels();
     const modelInfo = availableModels.find(m => m.id === modelId);
@@ -2674,11 +2680,6 @@ export class GdmLiveAudio extends LitElement {
       }
 
       if (provider instanceof GoogleProvider) {
-        const googleProvider = provider as any;
-        if (!googleProvider.client) {
-          await googleProvider.verify();
-        }
-
         const userContext = userProfileManager.getSystemPromptContext();
         let systemInstruction = userContext 
           ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
@@ -2688,23 +2689,27 @@ export class GdmLiveAudio extends LitElement {
           systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
         }
 
-        const response = await googleProvider.client.models.generateContent({
-          model: this.activePersoni.thinkingModel,
-          contents: transcript,
-          config: {
-            systemInstruction,
-            tools: [{functionDeclarations: enabledDeclarations}],
-          },
-        });
+        const messages = [
+          { role: 'system' as const, content: systemInstruction },
+          { role: 'user' as const, content: transcript },
+        ];
 
-        const functionCalls = response.functionCalls;
-        if (functionCalls && functionCalls.length > 0) {
-          for (const fc of functionCalls) {
-            await this.handleFunctionCall(fc);
-          }
+        const response = await provider.sendMessage(messages, { 
+          tools: enabledDeclarations 
+        } as any);
+        
+        // Handle both string and object responses
+        if (typeof response === 'string') {
+          await this.speakText(response);
         } else {
-          const responseText = response.text;
-          await this.speakText(responseText);
+          // Response contains functionCalls
+          if (response.functionCalls && response.functionCalls.length > 0) {
+            for (const fc of response.functionCalls) {
+              await this.handleFunctionCall(fc);
+            }
+          } else {
+            await this.speakText(response.text);
+          }
         }
       } else {
         const userContext = userProfileManager.getSystemPromptContext();
@@ -2721,7 +2726,8 @@ export class GdmLiveAudio extends LitElement {
           { role: 'user' as const, content: transcript },
         ];
 
-        const responseText = await provider.sendMessage(messages);
+        const response = await provider.sendMessage(messages);
+        const responseText = typeof response === 'string' ? response : response.text;
         await this.speakText(responseText);
       }
     } catch (e) {
@@ -3611,7 +3617,8 @@ export class GdmLiveAudio extends LitElement {
           { type: 'image' as const, data: frame.dataUrl }
         ]}
       ];
-      const analysis = await provider.sendMessage(messages);
+      const response = await provider.sendMessage(messages);
+      const analysis = typeof response === 'string' ? response : response.text;
       await this.speakText(analysis);
     } catch (error) {
       console.error('[Vision] Analysis failed:', error);
@@ -4970,11 +4977,6 @@ export class GdmLiveAudio extends LitElement {
           .enabled=${this.objectDetectionEnabled}
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
-
-        <!-- File Upload -->
-        <file-upload
-          @file-uploaded=${this.handleFileUploaded}
-        ></file-upload>
 
         <!-- Calendar View -->
         ${this.showCalendar ? html`
