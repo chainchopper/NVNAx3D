@@ -75,11 +75,10 @@ import { connectorHandlers, ConnectorResult } from './services/connector-handler
 import { routineExecutor } from './services/routine-executor';
 import { routinePatternDetector } from './services/routine-pattern-detector';
 import type { RoutinePattern } from './types/routine-types';
-import { reminderManager } from './services/reminder-manager';
 import { environmentalObserver } from './services/environmental-observer';
 import { chatterboxTTS } from './services/chatterbox-tts';
 import { audioRecordingManager } from './services/audio-recording-manager';
-import { objectRecognitionService, DetectionResult } from './services/object-recognition';
+import type { DetectionResult } from './services/object-recognition';
 import { voiceCommandSystem } from './services/voice-command-system';
 import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
 import './components/object-detection-overlay';
@@ -1133,7 +1132,7 @@ export class GdmLiveAudio extends LitElement {
     sharedMic.unregisterConsumer('music-detector');
   }
 
-  protected firstUpdated() {
+  protected async firstUpdated() {
     console.log('[Lifecycle] firstUpdated called, ensuring dual mode system is initialized');
     // Ensure dual mode system is initialized after first render
     // This is a safety net in case init() hasn't completed yet
@@ -1143,13 +1142,17 @@ export class GdmLiveAudio extends LitElement {
       console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
     }
     
-    // Initialize reminder notification checks
+    // Initialize reminder notification checks (lazy loaded)
+    const { reminderManager } = await import('./services/reminder-manager');
     reminderManager.startNotificationChecks((message) => {
       this.speakText(message);
     });
     
     // Request notification permission for reminders
     reminderManager.requestNotificationPermission();
+    
+    // Auto-initialize camera if permission was previously granted
+    await this.autoInitializeCamera();
     
     // Add ESCAPE key handler to close panels
     document.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -2024,6 +2027,48 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
+  private async autoInitializeCamera() {
+    try {
+      // Check if camera permission was previously granted using Permissions API
+      const permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+      
+      console.log('[CameraManager] Camera permission state:', permissionStatus.state);
+      
+      if (permissionStatus.state === 'granted') {
+        console.log('[CameraManager] Camera permission already granted, auto-initializing...');
+        
+        // Check if camera was enabled in previous session
+        const cameraWasEnabled = localStorage.getItem('nirvana-camera-enabled') === 'true';
+        
+        if (cameraWasEnabled && this.cameraManager) {
+          // Auto-request camera stream
+          const granted = await this.cameraManager.requestPermissions();
+          if (granted) {
+            this.cameraHasPermission = true;
+            this.cameraEnabled = true;
+            this.cameraError = null;
+            console.log('[CameraManager] Camera auto-initialized successfully');
+            
+            // Start environmental observer if active PersonI has vision
+            if (this.activePersoni) {
+              const provider = this.getProviderForPersoni(this.activePersoni);
+              if (provider) {
+                environmentalObserver.start(
+                  () => this.cameraManager?.captureFrame() || null,
+                  provider,
+                  this.activePersoni.name,
+                  (text) => this.speakText(text)
+                );
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.log('[CameraManager] Auto-initialization skipped:', error);
+    }
+  }
+
   private async handleToggleCameraControl() {
     if (!this.cameraEnabled && !this.cameraHasPermission) {
       console.log('[Camera] Requesting permissions before enabling...');
@@ -2056,6 +2101,10 @@ export class GdmLiveAudio extends LitElement {
     }
     
     this.cameraEnabled = !this.cameraEnabled;
+    
+    // Save camera state for auto-initialization on next session
+    localStorage.setItem('nirvana-camera-enabled', this.cameraEnabled.toString());
+    
     console.log('[Camera] Camera toggled:', this.cameraEnabled ? 'ON' : 'OFF');
   }
 
@@ -2086,6 +2135,8 @@ export class GdmLiveAudio extends LitElement {
     }
 
     try {
+      // Lazy load object recognition service
+      const { objectRecognitionService } = await import('./services/object-recognition');
       await objectRecognitionService.initialize();
       
       objectRecognitionService.startContinuousDetection(
@@ -2133,7 +2184,9 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
-  private stopObjectDetection() {
+  private async stopObjectDetection() {
+    // Lazy load object recognition service
+    const { objectRecognitionService } = await import('./services/object-recognition');
     objectRecognitionService.stopContinuousDetection();
     this.currentDetections = null;
     
