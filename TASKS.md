@@ -1,12 +1,12 @@
 # NIRVANA Development Tasks
 
 ## Critical Regressions (MUST FIX NOW)
-- [ ] **App not listening to user input** - microphone/audio input broken
-- [ ] **Webcam not working** - camera feed not displaying
-- [ ] **Incoherent speech** - using preprogrammed responses instead of configured TTS endpoints
-- [ ] **Voice consistency broken** - voices switching between PersonI instead of using configured voices
-- [ ] **Spinning box on NIRVANA PersonI** - 3D visual bug persists
-- [ ] **PersonI backgrounds too transparent** - 95% opacity makes spheres invisible, need balance with camera visibility
+- [x] **Provider not found error** - OpenAI provider disabled/not configured (ROOT CAUSE)
+- [ ] **TTS broken** - can't call provider.generateSpeech() without configured provider
+- [ ] **Voice consistency broken** - voices switching between PersonI
+- [ ] **App not listening to user input** - microphone/audio input wiring
+- [ ] **Webcam background** - camera feed wired but may not be rendering
+- [ ] **Spinning box** - investigate 3D visuals (config looks correct)
 
 ## UI/UX Fixes
 - [x] Remove volume control (devices have this built-in)
