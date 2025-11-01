@@ -4455,7 +4455,17 @@ export class GdmLiveAudio extends LitElement {
 
     return html`
       <div>
-        <!-- Camera feed is ONLY background - no gradients, no special backgrounds -->
+        <!-- Camera video as background (direct, not through Three.js) -->
+        ${this.cameraManager?.getVideoElement() 
+          ? html`<video
+              style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                     object-fit: cover; z-index: -1;"
+              .srcObject=${this.cameraManager.getVideoElement()?.srcObject}
+              autoplay
+              muted
+              playsinline></video>`
+          : html`<div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                              background: #000; z-index: -1;"></div>`}
 
         <div class="transcription-log-container">
           ${this.transcriptHistory.map(
