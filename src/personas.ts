@@ -58,7 +58,7 @@ export interface PersoniConfig {
   capabilities?: PersoniCapabilities;
   avatarUrl?: string;
   visuals: {
-    shape: 'Icosahedron' | 'TorusKnot' | 'Box';
+    shape: 'Icosahedron' | 'TorusKnot';
     accentColor: string; // hex string e.g., '#87ceeb'
     textureName?: TextureName;
     idleAnimation?: IdleAnimation;
@@ -850,7 +850,7 @@ export const personaTemplates: PersonaTemplate[] = [
     enabledConnectors: ['github'],
     avatarUrl: '/avatars/adam.png',
     visuals: {
-      shape: 'Box',
+      shape: 'TorusKnot',
       accentColor: '#00ff00',
       idleAnimation: 'code',
     },
@@ -952,7 +952,7 @@ export const personaTemplates: PersonaTemplate[] = [
     },
     avatarUrl: '/avatars/billy.png',
     visuals: {
-      shape: 'Box',
+      shape: 'Icosahedron',
       accentColor: '#2e8b57', // Sea Green (financial green)
       textureName: 'metallic_brushed',
       idleAnimation: 'contemplative',
