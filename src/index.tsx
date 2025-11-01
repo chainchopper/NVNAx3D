@@ -4361,47 +4361,31 @@ export class GdmLiveAudio extends LitElement {
           </div>
         </div>
 
-        <div class="controls" style="opacity: ${showControls ? 1 : 0}">
-          ${this.isAiSpeaking
-            ? html`<button
-                id="interruptButton"
-                @click=${this.handleInterrupt}
-                title="Interrupt">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="32px"
-                  viewBox="0 -960 960 960"
-                  width="32px"
-                  fill="#ffffff">
-                  <path d="M320-320v-320h320v320H320Z" />
-                </svg>
-              </button>`
-            : nothing}
-          <button
-            id="muteButton"
-            @click=${this.toggleMute}
-            title=${this.isMuted ? 'Unmute' : 'Mute'}>
-            ${this.isMuted
-              ? html`<svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="40px"
-                  viewBox="0 -960 960 960"
-                  width="40px"
-                  fill="#c80000">
-                  <path
-                    d="M528-480q0-20-14-34t-34-14q-20 0-34 14t-14 34q0 20 14 34t34 14q20 0 34-14t14-34Zm-82-208-46-46q-27-21-52.5-31.5T280-780v-80q52 0 101.5 15T470-798l50 50-42 42ZM312-320 80-552v-168h168l232-232v126l-84 84-46-46v-50L182-668h-62v88l198 198 42-42Zm398 230L560-240v-86l-46-46-42 42v126l232 232h-40l-98-98-254-254-152-152 42-42 628 628-42 42Zm-78-230-94-94 94-94v188Z" />
-                </svg>`
-              : html`<svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  height="40px"
-                  viewBox="0 -960 960 960"
-                  width="40px"
-                  fill="#ffffff">
-                  <path
-                    d="M280-560v-168h168l232-232v798L448-392H280v-168Zm400 80h80v-240h-80v240Zm-88-288q70 20 115 75t45 133q0 78-45 133t-115 75v80q104-20 172-95t68-193q0-118-68-193t-172-95v80Z" />
-                </svg>`}
-          </button>
-        </div>
+        <ui-controls
+          style="opacity: ${showControls ? 1 : 0}"
+          .isMuted=${this.isMuted}
+          .isSpeaking=${this.isSpeaking}
+          .isAiSpeaking=${this.isAiSpeaking}
+          .inputMode=${this.inputMode}
+          .currentTextInput=${this.textInput}
+          .volume=${1.0}
+          .showVolumeControl=${false}
+          .status=${this.status}
+          @mic-toggle=${this.toggleMute}
+          @interrupt=${this.handleInterrupt}
+          @mode-change=${(e: CustomEvent) => {
+            this.inputMode = e.detail.mode;
+          }}
+          @text-submit=${(e: CustomEvent) => {
+            this.textInput = '';
+            if (e.detail.text.trim()) {
+              this.handleUserMessage(e.detail.text);
+            }
+          }}
+          @volume-change=${(e: CustomEvent) => {
+            console.log('Volume change:', e.detail.volume);
+          }}
+        ></ui-controls>
 
         <div
           class="settings-fab ${this.settingsButtonVisible ? 'visible' : ''} ${this.isDraggingFab ? 'dragging' : ''}"
