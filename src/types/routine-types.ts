@@ -3,9 +3,9 @@
  * IF-THEN-THAT automation system for NIRVANA
  */
 
-export type TriggerType = 'time' | 'event' | 'state_change' | 'user_action' | 'completion' | 'vision_detection';
-export type ConditionType = 'time_range' | 'state_check' | 'comparison' | 'custom';
-export type ActionType = 'connector_call' | 'notification' | 'state_change' | 'custom';
+export type TriggerType = 'time' | 'event' | 'state_change' | 'user_action' | 'completion' | 'vision_detection' | 'price_alert' | 'portfolio_change' | 'market_event';
+export type ConditionType = 'time_range' | 'state_check' | 'comparison' | 'custom' | 'price_threshold' | 'percent_change';
+export type ActionType = 'connector_call' | 'notification' | 'state_change' | 'custom' | 'send_sms' | 'make_call' | 'send_email' | 'execute_trade' | 'tool_execution';
 
 export interface RoutineTrigger {
   type: TriggerType;
@@ -28,6 +28,26 @@ export interface RoutineTrigger {
       imageSource?: string;
       checkInterval?: number;
     };
+    priceAlert?: {
+      symbol: string;
+      assetType: 'crypto' | 'stock';
+      condition: 'above' | 'below' | 'crosses';
+      targetPrice: number;
+      dataSource?: 'coingecko' | 'coinmarketcap' | 'alphavantage';
+      checkInterval?: number;
+    };
+    portfolioChange?: {
+      metric: 'total_value' | 'daily_change' | 'asset_allocation';
+      condition: 'above' | 'below';
+      threshold: number;
+      percentChange?: boolean;
+      checkInterval?: number;
+    };
+    marketEvent?: {
+      eventType: 'market_open' | 'market_close' | 'volatility_spike' | 'news_sentiment';
+      market?: 'stocks' | 'crypto' | 'forex';
+      sentimentThreshold?: number;
+    };
   };
 }
 
@@ -41,6 +61,35 @@ export interface RoutineAction {
   service?: string;
   method?: string;
   parameters?: any;
+  smsConfig?: {
+    to: string;
+    message: string;
+    includeData?: boolean;
+  };
+  callConfig?: {
+    to: string;
+    personaVoice?: string;
+    message?: string;
+  };
+  emailConfig?: {
+    to: string;
+    subject: string;
+    body: string;
+    includeData?: boolean;
+  };
+  tradeConfig?: {
+    exchange: 'coinbase' | 'alpaca';
+    action: 'buy' | 'sell';
+    symbol: string;
+    amount?: number;
+    percentage?: number;
+    requireConfirmation: boolean;
+  };
+  toolConfig?: {
+    toolId: string;
+    parameters: any;
+    requireConfirmation?: boolean;
+  };
 }
 
 export interface Routine {

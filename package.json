@@ -17,7 +17,9 @@
     "express": "^5.1.0",
     "lit": "^3.3.0",
     "postprocessing": "^6.36.0",
-    "three": "^0.176.0"
+    "three": "^0.176.0",
+    "twilio": "^5.10.4",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

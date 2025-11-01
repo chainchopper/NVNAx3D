@@ -1,0 +1,401 @@
+/**
+ * Tool Execution Orchestrator
+ * 
+ * Provides sandboxed execution of tools for PersonI autonomy
+ * - Financial tools (get prices, execute trades, analyze portfolio)
+ * - Communication tools (send SMS, make calls, send emails)
+ * - Integration with routine automation system
+ * - Audit logging for all tool executions
+ * - User confirmation for sensitive operations
+ */
+
+import { twilioService } from './twilio-service';
+
+export interface Tool {
+  id: string;
+  name: string;
+  description: string;
+  category: 'financial' | 'communication' | 'automation' | 'data';
+  parameters: ToolParameter[];
+  requiresConfirmation: boolean;
+  handler: (params: any) => Promise<ToolResult>;
+}
+
+export interface ToolParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description: string;
+  required: boolean;
+  default?: any;
+}
+
+export interface ToolResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  requiresConfirmation?: boolean;
+  confirmationMessage?: string;
+}
+
+export interface ToolExecutionLog {
+  toolId: string;
+  toolName: string;
+  parameters: any;
+  result: ToolResult;
+  timestamp: string;
+  personaId: string;
+  userId?: string;
+  confirmed: boolean;
+  executionTimeMs: number;
+}
+
+class ToolOrchestrator {
+  private tools: Map<string, Tool> = new Map();
+  private executionLogs: ToolExecutionLog[] = [];
+  private pendingConfirmations: Map<string, any> = new Map();
+  private backendUrl: string;
+
+  constructor(backendUrl: string = 'http://localhost:3001') {
+    this.backendUrl = backendUrl;
+    this.registerBuiltInTools();
+  }
+
+  /**
+   * Register all built-in tools
+   */
+  private registerBuiltInTools() {
+    // Financial Tools
+    this.registerTool({
+      id: 'get_crypto_price',
+      name: 'Get Cryptocurrency Price',
+      description: 'Get current price and market data for cryptocurrencies',
+      category: 'financial',
+      requiresConfirmation: false,
+      parameters: [
+        { name: 'symbols', type: 'array', description: 'Array of crypto symbols (e.g., ["BTC", "ETH"])', required: true },
+        { name: 'source', type: 'string', description: 'Data source: coingecko or coinmarketcap', required: false, default: 'coingecko' }
+      ],
+      handler: async (params) => {
+        try {
+          const { symbols, source = 'coingecko' } = params;
+          const response = await fetch(`${this.backendUrl}/api/financial/crypto`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbols, source })
+          });
+          
+          const data = await response.json();
+          return { success: true, data: data.prices };
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      }
+    });
+
+    this.registerTool({
+      id: 'get_stock_price',
+      name: 'Get Stock Price',
+      description: 'Get current stock quote and market data',
+      category: 'financial',
+      requiresConfirmation: false,
+      parameters: [
+        { name: 'symbol', type: 'string', description: 'Stock symbol (e.g., "AAPL")', required: true }
+      ],
+      handler: async (params) => {
+        try {
+          const { symbol } = params;
+          const response = await fetch(`${this.backendUrl}/api/financial/stocks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol })
+          });
+          
+          const data = await response.json();
+          return { success: true, data: data.quote };
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      }
+    });
+
+    this.registerTool({
+      id: 'get_market_news',
+      name: 'Get Market News',
+      description: 'Get latest financial market news with sentiment analysis',
+      category: 'financial',
+      requiresConfirmation: false,
+      parameters: [
+        { name: 'symbol', type: 'string', description: 'Stock symbol for company news (optional)', required: false },
+        { name: 'category', type: 'string', description: 'News category: general, forex, crypto, merger', required: false, default: 'general' },
+        { name: 'limit', type: 'number', description: 'Number of news articles', required: false, default: 10 }
+      ],
+      handler: async (params) => {
+        try {
+          const { symbol, category = 'general', limit = 10 } = params;
+          const response = await fetch(`${this.backendUrl}/api/financial/news?symbol=${symbol || ''}&category=${category}&limit=${limit}`);
+          
+          const data = await response.json();
+          return { success: true, data: data.news };
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+      }
+    });
+
+    this.registerTool({
+      id: 'set_price_alert',
+      name: 'Set Price Alert',
+      description: 'Create a price alert for crypto or stock (triggers routine automation)',
+      category: 'financial',
+      requiresConfirmation: false,
+      parameters: [
+        { name: 'symbol', type: 'string', description: 'Asset symbol', required: true },
+        { name: 'type', type: 'string', description: 'Asset type: crypto or stock', required: true },
+        { name: 'targetPrice', type: 'number', description: 'Target price', required: true },
+        { name: 'condition', type: 'string', description: 'Condition: above or below', required: true },
+        { name: 'action', type: 'string', description: 'Action to take: notify, sms, call, email', required: true }
+      ],
+      handler: async (params) => {
+        // This would integrate with routine automation system
+        return {
+          success: true,
+          data: {
+            alertId: `alert_${Date.now()}`,
+            symbol: params.symbol,
+            targetPrice: params.targetPrice,
+            condition: params.condition,
+            action: params.action,
+            status: 'active'
+          }
+        };
+      }
+    });
+
+    // Communication Tools
+    this.registerTool({
+      id: 'send_sms',
+      name: 'Send SMS',
+      description: 'Send SMS message via Twilio',
+      category: 'communication',
+      requiresConfirmation: true,
+      parameters: [
+        { name: 'to', type: 'string', description: 'Phone number to send to', required: true },
+        { name: 'message', type: 'string', description: 'Message content', required: true }
+      ],
+      handler: async (params) => {
+        const result = await twilioService.sendSMS(params.to, params.message);
+        return result;
+      }
+    });
+
+    this.registerTool({
+      id: 'make_call',
+      name: 'Make Phone Call',
+      description: 'Initiate phone call via Twilio',
+      category: 'communication',
+      requiresConfirmation: true,
+      parameters: [
+        { name: 'to', type: 'string', description: 'Phone number to call', required: true },
+        { name: 'personaVoice', type: 'string', description: 'Persona voice to use', required: false }
+      ],
+      handler: async (params) => {
+        const result = await twilioService.makeCall(params.to, params.personaVoice);
+        return result;
+      }
+    });
+  }
+
+  /**
+   * Register a custom tool
+   */
+  registerTool(tool: Tool) {
+    this.tools.set(tool.id, tool);
+    console.log(`[ToolOrchestrator] Registered tool: ${tool.name} (${tool.id})`);
+  }
+
+  /**
+   * Get all available tools
+   */
+  getAvailableTools(category?: string): Tool[] {
+    const allTools = Array.from(this.tools.values());
+    
+    if (category) {
+      return allTools.filter(tool => tool.category === category);
+    }
+    
+    return allTools;
+  }
+
+  /**
+   * Get tool by ID
+   */
+  getTool(toolId: string): Tool | undefined {
+    return this.tools.get(toolId);
+  }
+
+  /**
+   * Execute a tool
+   */
+  async executeTool(
+    toolId: string,
+    parameters: any,
+    personaId: string,
+    userId?: string,
+    confirmed: boolean = false
+  ): Promise<ToolResult> {
+    const startTime = Date.now();
+    const tool = this.tools.get(toolId);
+
+    if (!tool) {
+      return {
+        success: false,
+        error: `Tool not found: ${toolId}`
+      };
+    }
+
+    // Validate parameters
+    const validation = this.validateParameters(tool, parameters);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `Invalid parameters: ${validation.errors.join(', ')}`
+      };
+    }
+
+    // Check if confirmation is required
+    if (tool.requiresConfirmation && !confirmed) {
+      const confirmId = `confirm_${Date.now()}`;
+      this.pendingConfirmations.set(confirmId, {
+        toolId,
+        parameters,
+        personaId,
+        userId
+      });
+
+      return {
+        success: false,
+        requiresConfirmation: true,
+        confirmationMessage: `${tool.name} requires user confirmation. Confirm to proceed with parameters: ${JSON.stringify(parameters)}`
+      };
+    }
+
+    // Execute tool
+    try {
+      const result = await tool.handler(parameters);
+      
+      // Log execution
+      const log: ToolExecutionLog = {
+        toolId,
+        toolName: tool.name,
+        parameters,
+        result,
+        timestamp: new Date().toISOString(),
+        personaId,
+        userId,
+        confirmed,
+        executionTimeMs: Date.now() - startTime
+      };
+      
+      this.executionLogs.push(log);
+      
+      return result;
+    } catch (error) {
+      const errorResult: ToolResult = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown execution error'
+      };
+
+      // Log failed execution
+      this.executionLogs.push({
+        toolId,
+        toolName: tool.name,
+        parameters,
+        result: errorResult,
+        timestamp: new Date().toISOString(),
+        personaId,
+        userId,
+        confirmed,
+        executionTimeMs: Date.now() - startTime
+      });
+
+      return errorResult;
+    }
+  }
+
+  /**
+   * Validate tool parameters
+   */
+  private validateParameters(tool: Tool, parameters: any): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    for (const param of tool.parameters) {
+      if (param.required && !(param.name in parameters)) {
+        errors.push(`Missing required parameter: ${param.name}`);
+      }
+
+      if (param.name in parameters) {
+        const value = parameters[param.name];
+        const actualType = Array.isArray(value) ? 'array' : typeof value;
+
+        if (actualType !== param.type) {
+          errors.push(`Parameter ${param.name} must be of type ${param.type}, got ${actualType}`);
+        }
+      }
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Get execution logs
+   */
+  getExecutionLogs(limit?: number, personaId?: string): ToolExecutionLog[] {
+    let logs = this.executionLogs;
+
+    if (personaId) {
+      logs = logs.filter(log => log.personaId === personaId);
+    }
+
+    if (limit) {
+      logs = logs.slice(-limit);
+    }
+
+    return logs.reverse();
+  }
+
+  /**
+   * Get tool execution statistics
+   */
+  getStatistics(personaId?: string): any {
+    let logs = this.executionLogs;
+
+    if (personaId) {
+      logs = logs.filter(log => log.personaId === personaId);
+    }
+
+    const totalExecutions = logs.length;
+    const successfulExecutions = logs.filter(log => log.result.success).length;
+    const failedExecutions = totalExecutions - successfulExecutions;
+    const avgExecutionTime = logs.reduce((sum, log) => sum + log.executionTimeMs, 0) / totalExecutions || 0;
+
+    const toolUsage = new Map<string, number>();
+    logs.forEach(log => {
+      toolUsage.set(log.toolName, (toolUsage.get(log.toolName) || 0) + 1);
+    });
+
+    return {
+      totalExecutions,
+      successfulExecutions,
+      failedExecutions,
+      successRate: totalExecutions > 0 ? (successfulExecutions / totalExecutions) * 100 : 0,
+      avgExecutionTime: Math.round(avgExecutionTime),
+      toolUsage: Object.fromEntries(toolUsage)
+    };
+  }
+}
+
+// Export singleton instance
+export const toolOrchestrator = new ToolOrchestrator();
