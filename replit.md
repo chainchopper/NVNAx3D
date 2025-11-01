@@ -66,3 +66,22 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **AudD API**: Song identification.
 - **Genius API**: Song lyrics.
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
+
+## Recent Development (November 1, 2025)
+### Critical UX & Provider Flexibility Fixes
+- **UI Controls Always Visible**: ✅ Removed opacity fade that was hiding controls - keyboard input, mic mute, and volume buttons now always accessible
+- **Keyboard Text Input**: Text mode toggle button (⌨️) fully functional - click to type messages without using voice
+- **Camera Toggle Fixed**: Camera button now properly requests permissions when clicked, not just on initial load
+- **Multi-Provider Support**: ✅ System no longer forces Gemini provider - auto-updates PersonI to use first available model from any configured provider
+  - Added `autoUpdatePersonIModels()` method that runs on startup
+  - PersonI automatically adapt to OpenAI/Google/custom providers as configured
+  - Clear provider status indicator (✓/⚠️) shows when models are missing
+- **Mute Controls**: Mic mute button (🔇/🎤) and volume control (🔊) confirmed present and functional
+
+### OpenAI TTS Integration (Earlier Nov 1)
+- **Full OpenAI TTS Support**: ✅ PRODUCTION-READY via `/v1/audio/speech` endpoint
+  - Supports all 6 OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
+  - PersonI voiceName settings correctly applied for both Google and OpenAI providers
+  - Added `generateSpeech()` method to OpenAIProvider class
+  - Dual PersonI mode uses correct voice per slot (fixed critical bug)
+- **Calendar Panel**: Added missing calendar-view component rendering with close event listener
