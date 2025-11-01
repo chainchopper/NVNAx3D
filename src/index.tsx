@@ -1590,6 +1590,7 @@ export class GdmLiveAudio extends LitElement {
     const storedPersonis = localStorage.getItem(PERSONIS_KEY);
     if (storedPersonis) {
       this.personis = JSON.parse(storedPersonis);
+      
       // Ensure all loaded PersonI have capabilities and avatarUrl from templates
       this.personis = this.personis.map(p => {
         const template = personaTemplates.find(t => t.templateName === p.templateName);
@@ -1599,7 +1600,37 @@ export class GdmLiveAudio extends LitElement {
           avatarUrl: p.avatarUrl || template?.avatarUrl,
         };
       });
-      this.savePersonis(); // Save with updated capabilities and avatarUrl
+      
+      // SYNC NEW TEMPLATES: Check if any templates are missing and add them
+      const existingTemplateNames = this.personis.map(p => p.templateName);
+      const missingTemplates = personaTemplates.filter(
+        template => !existingTemplateNames.includes(template.name)
+      );
+      
+      if (missingTemplates.length > 0) {
+        console.log(`[PersonI] Adding ${missingTemplates.length} new PersonI from templates:`, 
+          missingTemplates.map(t => t.name).join(', '));
+        
+        const newPersonis = missingTemplates.map((template) => {
+          return {
+            id: crypto.randomUUID(),
+            name: template.name,
+            tagline: template.tagline,
+            systemInstruction: template.systemInstruction,
+            templateName: template.name,
+            voiceName: template.voiceName,
+            thinkingModel: template.thinkingModel,
+            enabledConnectors: template.enabledConnectors,
+            capabilities: template.capabilities || { ...DEFAULT_CAPABILITIES },
+            avatarUrl: template.avatarUrl,
+            visuals: template.visuals,
+          };
+        });
+        
+        this.personis = [...this.personis, ...newPersonis];
+      }
+      
+      this.savePersonis(); // Save with updated capabilities, avatarUrl, and new PersonI
     } else {
       // First time setup: create Personis from templates
       this.personis = personaTemplates.map((template) => {
@@ -1612,7 +1643,7 @@ export class GdmLiveAudio extends LitElement {
           voiceName: template.voiceName,
           thinkingModel: template.thinkingModel,
           enabledConnectors: template.enabledConnectors,
-          capabilities: { ...DEFAULT_CAPABILITIES },
+          capabilities: template.capabilities || { ...DEFAULT_CAPABILITIES },
           avatarUrl: template.avatarUrl,
           visuals: template.visuals,
         };
