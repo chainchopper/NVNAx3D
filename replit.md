@@ -68,19 +68,33 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 1, 2025)
-### Latest Fixes (Current Session)
+### Latest Fixes (Current Session - Part 2)
+- **Always-Active PersonI System**: ✅ CRITICAL ARCHITECTURAL FIX
+  - PersonI is now **always active** from app startup (requirement: app does nothing without PersonI)
+  - Auto-selects default PersonI on initialization (NIRVANA or last used)
+  - Persists last active PersonI to localStorage for session continuity
+  - Removed all conditional checks that assumed PersonI could be inactive
+- **Text Input + File Upload UI**: ✅ Fixed placement and UX
+  - Text input and file upload now **permanently positioned below PersonI carousel**
+  - Both components fade in/out with carousel (clean fading UI design maintained)
+  - Replaced modal overlay approach with inline, always-accessible input bar
+  - File upload button integrated directly into input bar alongside text field
+  - Enter key submits text input (no modifier keys needed)
+
+### Latest Fixes (Current Session - Part 1)
 - **PersonI Backgrounds Disabled**: ✅ All PersonI 3D sphere backgrounds temporarily disabled (5% opacity, 95% transparency) so camera feed is clearly visible
 - **Google OAuth Token Optional**: ✅ Google connector access tokens now optional when using "Connect with Google" OAuth button - no manual token entry required
 
 ### Critical UX & Provider Flexibility Fixes
-- **UI Controls Always Visible**: ✅ Removed opacity fade that was hiding controls - keyboard input, mic mute, and volume buttons now always accessible
-- **Keyboard Text Input**: Text mode toggle button (⌨️) fully functional - click to type messages without using voice
+- **Fading UI Design**: Clean interface where controls (carousel, input bar, settings) fade out when user hasn't interacted with screen
+- **PersonI Carousel**: Major feature - always fades in on mouse movement, allows switching between 6 PersonI (NIRVANA, ATHENA, ADAM, THEO, GHOST, BILLY)
+- **Keyboard Text Input**: Text input bar with file upload below carousel - respects fading design
 - **Camera Toggle Fixed**: Camera button now properly requests permissions when clicked, not just on initial load
 - **Multi-Provider Support**: ✅ System no longer forces Gemini provider - auto-updates PersonI to use first available model from any configured provider
   - Added `autoUpdatePersonIModels()` method that runs on startup
   - PersonI automatically adapt to OpenAI/Google/custom providers as configured
   - Clear provider status indicator (✓/⚠️) shows when models are missing
-- **Mute Controls**: Mic mute button (🔇/🎤) and volume control (🔊) confirmed present and functional
+- **Mute Controls**: Mic mute button (🔇/🎤) confirmed present and functional in ui-controls component
 
 ### OpenAI TTS Integration (Earlier Nov 1)
 - **Full OpenAI TTS Support**: ✅ PRODUCTION-READY via `/v1/audio/speech` endpoint
