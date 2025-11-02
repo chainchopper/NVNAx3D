@@ -1,0 +1,226 @@
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-jHRymoWpX/G1UN93sLvOZ0jns2+9joiABzpMmVTyQaM=') or a nonce. inpage.js:1:372464
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-JwljvYOabZdR6SQr4zYcRMEqCicju79BDb7AU+wSfCo=') or a nonce. contentScript.js:66:24
+If you do not provide children, you must specify an aria-label for accessibility 16 <anonymous code>:1:147461
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-jHRymoWpX/G1UN93sLvOZ0jns2+9joiABzpMmVTyQaM=') or a nonce. inpage.js:1:372464
+Content-Security-Policy: (Report-Only policy) The page’s settings would block an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-jHRymoWpX/G1UN93sLvOZ0jns2+9joiABzpMmVTyQaM=') or a nonce. inpage.js:1:372464
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-JwljvYOabZdR6SQr4zYcRMEqCicju79BDb7AU+wSfCo=') or a nonce. contentScript.js:66:24
+Content-Security-Policy: (Report-Only policy) The page’s settings would block an inline script (script-src-elem) from being executed because it violates the following directive: “script-src 'self'”. Consider using a hash ('sha256-JwljvYOabZdR6SQr4zYcRMEqCicju79BDb7AU+wSfCo=') or a nonce. contentScript.js:66:24
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src https://m.stripe.network 'sha256-e357n1PxCJ8d03/QCSKaHFmHF1JADyvSHdSfshxM494=' 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls='”. Consider using a hash ('sha256-jHRymoWpX/G1UN93sLvOZ0jns2+9joiABzpMmVTyQaM=') or a nonce. inpage.js:1:372464
+Content-Security-Policy: The page’s settings blocked an inline script (script-src-elem) from being executed because it violates the following directive: “script-src https://m.stripe.network 'sha256-e357n1PxCJ8d03/QCSKaHFmHF1JADyvSHdSfshxM494=' 'sha256-5DA+a07wxWmEka9IdoWjSPVHb17Cp5284/lJzfbl8KA=' 'sha256-/5Guo2nzv5n/w6ukZpOBZOtTJBJPSkJ6mhHpnBgm3Ls='”. Consider using a hash ('sha256-JwljvYOabZdR6SQr4zYcRMEqCicju79BDb7AU+wSfCo=') or a nonce. contentScript.js:66:24
+[Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer 
+Object { 0: MutationRecord }
+<anonymous code>:1:147461
+Content-Security-Policy warnings 4
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Ignoring unsupported entryTypes: longtask. recaptcha__en.js:245:394
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Feature Policy: Skipping unsupported feature name “accelerometer”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “ambient-light-sensor”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “autoplay”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “battery”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “encrypted-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-not-rendered”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-out-of-viewport”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “gyroscope”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “layout-animations”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “legacy-image-formats”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “magnetometer”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “midi”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “navigation-override”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “oversized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “payment”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “picture-in-picture”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “publickey-credentials”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “sync-xhr”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unoptimized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unsized-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “usb”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “xr-spatial-tracking”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-read”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-write”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “accelerometer”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “ambient-light-sensor”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “autoplay”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “battery”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “encrypted-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-not-rendered”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “execution-while-out-of-viewport”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “gyroscope”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “layout-animations”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “legacy-image-formats”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “magnetometer”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “midi”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “navigation-override”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “oversized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “payment”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “picture-in-picture”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “publickey-credentials”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “sync-xhr”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unoptimized-images”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “unsized-media”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “usb”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “xr-spatial-tracking”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-read”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “clipboard-write”. workspace_iframe.html
+Feature Policy: Skipping unsupported feature name “accelerometer”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “ambient-light-sensor”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “autoplay”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “battery”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “encrypted-media”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “execution-while-not-rendered”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “execution-while-out-of-viewport”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “gyroscope”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “layout-animations”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “legacy-image-formats”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “magnetometer”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “midi”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “navigation-override”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “oversized-images”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “payment”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “picture-in-picture”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “publickey-credentials”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “sync-xhr”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “unoptimized-images”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “unsized-media”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “usb”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “xr-spatial-tracking”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “clipboard-read”. workspace_iframe.html:151:20
+Feature Policy: Skipping unsupported feature name “clipboard-write”. workspace_iframe.html:151:20
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+The script from “https://130f27b3-c593-4f40-a08c-16eea5be0b10-00-3sswq4qkeoz3i.janeway.replit.dev/__replco/static/devtools/injected.js” was loaded even though its MIME type (“text/plain”) is not a valid JavaScript MIME type. 130f27b3-c593-4f40-a08c-16eea5be0b10-00-3sswq4qkeoz3i.janeway.replit.dev
+Lit is in dev mode. Not recommended for production! See https://lit.dev/msg/dev-mode for more information. injected.js:27:27
+Content-Security-Policy: The page’s settings blocked a JavaScript eval (script-src) from being executed because it violates the following directive: “script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'” (Missing 'unsafe-eval') 2 @xenova_transformers.js:3112:23
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+Loading failed for the <script> with source “https://replit.com/public/js/beacon.js”. 130f27b3-c593-4f40-a08c-16eea5be0b10-00-3sswq4qkeoz3i.janeway.replit.dev:1:1
+Content-Security-Policy: The page’s settings blocked a script (script-src-elem) at https://replit.com/public/js/beacon.js from being executed because it violates the following directive: “script-src-elem 'self' https://esm.sh 'unsafe-inline'” workspace_iframe.html:142:39
+Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource at http://localhost:3001/api/config/env. (Reason: CORS request did not succeed). Status code: (null).
+[ProviderManager] Error auto-configuring from environment: TypeError: NetworkError when attempting to fetch resource. injected.js:27:27
+[Whisper] Failed to load model: JSON.parse: unexpected character at line 1 column 1 of the JSON data injected.js:27:27
+Failed to load Whisper model on init: JSON.parse: unexpected character at line 1 column 1 of the JSON data injected.js:27:27
+    get injected.js:27
+    init index.tsx:1210
+WebGL warning: generateMipmap: Tex image TEXTURE_2D level 0 is incurring lazy initialization. 2
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:74:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://130f27b3-c593-4f40-a08c-16eea5be0b10-00-3sswq4qkeoz3i.janeway.replit.dev/node_modules/.vite/deps/chunk-5TCJUVAD.js?v=849e06ef%20line%201030%20%3E%20WebAssembly.Module
+Source Map URL: null
+Source map error: Error: request failed with status 404
+Stack in the worker:networkRequest@resource://devtools/client/shared/source-map-loader/utils/network-request.js:43:9
+
+Resource URL: https://replit.com/@iamentincllc/%3Canonymous%20code%3E
+Source Map URL: installHook.js.map
+XHRPOST
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+[HTTP/3 400  149ms]
+
+Google provider verification failed: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    _ApiError errors.ts:25
+    throwErrorIfNotOK _api_client.ts:764
+    unaryApiCall _api_client.ts:493
+    promise callback*unaryApiCall _api_client.ts:492
+    request _api_client.ts:383
+    generateContentInternal models.ts:656
+    generateContent models.ts:76
+    verify google-provider.ts:19
+    speakText index.tsx:3145
+    triggerIdlePrompt index.tsx:3756
+    idlePromptTimeout index.tsx:3725
+injected.js:27:27
+Transcription error: Error: Model not loaded. Call loadModel() first.
+    transcribe local-whisper.ts:98
+    transcribeAudio index.tsx:2438
+    setupVadListeners index.tsx:3606
+    handleSilence utils.ts:130
+    silenceTimeout utils.ts:122
+    setTimeout handler*process utils.ts:121
+    onaudioprocess index.tsx:3658
+injected.js:27:27
+XHRPOST
+https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents
+[HTTP/3 400  45ms]
+
+[EmbeddingGenerator] Gemini API error: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    _ApiError errors.ts:25
+    throwErrorIfNotOK _api_client.ts:764
+    unaryApiCall _api_client.ts:493
+    promise callback*unaryApiCall _api_client.ts:492
+    request _api_client.ts:383
+    embedContent @google_genai.js:10930
+    generateGeminiEmbedding embedding-generator.ts:54
+    generateEmbedding embedding-generator.ts:34
+    addMemory rag-memory-manager.ts:67
+    speakText index.tsx:3207
+    triggerIdlePrompt index.tsx:3756
+    idlePromptTimeout index.tsx:3725
+injected.js:27:27
+[EmbeddingGenerator] Gemini embedding failed, using fallback: ApiError: {"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"API_KEY_INVALID","domain":"googleapis.com","metadata":{"service":"generativelanguage.googleapis.com"}},{"@type":"type.googleapis.com/google.rpc.LocalizedMessage","locale":"en-US","message":"API key not valid. Please pass a valid API key."}]}}
+    _ApiError errors.ts:25
+    throwErrorIfNotOK _api_client.ts:764
+    unaryApiCall _api_client.ts:493
+    promise callback*unaryApiCall _api_client.ts:492
+    request _api_client.ts:383
+    embedContent @google_genai.js:10930
+    generateGeminiEmbedding embedding-generator.ts:54
+    generateEmbedding embedding-generator.ts:34
+    addMemory rag-memory-manager.ts:67
+    speakText index.tsx:3207
+    triggerIdlePrompt index.tsx:3756
+    idlePromptTimeout index.tsx:3725
+injected.js:27:27
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save local-memory-fallback.ts:32
+    addMemory local-memory-fallback.ts:40
+    addMemory rag-memory-manager.ts:123
+    speakText index.tsx:3207
+    triggerIdlePrompt index.tsx:3756
+    idlePromptTimeout index.tsx:3725
+injected.js:27:27
