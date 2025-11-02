@@ -4992,6 +4992,7 @@ export class GdmLiveAudio extends LitElement {
         <camera-manager
           .enabled=${this.cameraEnabled}
           .showPreview=${this.cameraShowPreview}
+          .renderMode=${'native'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
         ></camera-manager>
@@ -5046,7 +5047,8 @@ export class GdmLiveAudio extends LitElement {
           .musicBpm=${this.musicBpm}
           .musicBeatDetected=${this.musicBeatDetected}
           .musicConfidence=${this.musicConfidence}
-          .cameraVideoElement=${this.cameraManager?.getVideoElement()}></gdm-live-audio-visuals-3d>
+          .cameraVideoElement=${this.cameraManager?.getVideoElement()}
+          .cameraRenderMode=${'native'}></gdm-live-audio-visuals-3d>
       </div>
     `;
   }
