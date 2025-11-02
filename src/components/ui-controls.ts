@@ -5,6 +5,7 @@
 
 import { LitElement, css, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import './file-upload';
 
 export type InputMode = 'voice' | 'text';
 
@@ -220,6 +221,12 @@ export class UIControls extends LitElement {
 
         ${isTextMode ? html`
           <div class="text-input-container">
+            <file-upload
+              @file-uploaded=${(e: CustomEvent) => {
+                this.dispatchEvent(new CustomEvent('file-uploaded', { detail: e.detail }));
+              }}
+              style="flex-shrink: 0; margin: 0 8px 0 0;"
+            ></file-upload>
             <input 
               type="text" 
               class="text-input"
