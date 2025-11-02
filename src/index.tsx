@@ -234,7 +234,6 @@ export class GdmLiveAudio extends LitElement {
   private identificationTimeout: number | undefined;
 
   private settingsTimeout: number | undefined;
-  private idlePromptTimeout: number | undefined;
   private nirvanaGradientInterval: number | undefined;
   private idleSpeechManager = new IdleSpeechManager();
   
@@ -1094,7 +1093,6 @@ export class GdmLiveAudio extends LitElement {
     window.removeEventListener('mousemove', this.handleUserActivity);
     window.removeEventListener('touchstart', this.handleUserActivity);
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
-    if (this.idlePromptTimeout) clearTimeout(this.idlePromptTimeout);
     this.stopNirvanaGradientUpdates();
     
     // Cleanup music detector
@@ -1226,7 +1224,6 @@ export class GdmLiveAudio extends LitElement {
       this.updateStatus('Current provider not configured - go to Settings → Models');
     } else {
       this.updateStatus('Idle');
-      this.resetIdlePromptTimer();
     }
 
     if (this.activePersoni?.name === 'NIRVANA') {
@@ -1550,7 +1547,6 @@ export class GdmLiveAudio extends LitElement {
       this.recognition.onspeechstart = () => {
         this.isSpeaking = true;
         this.status = 'Listening (browser microphone)...';
-        clearTimeout(this.idlePromptTimeout);
         this.idleSpeechManager.pause();
       };
       
@@ -2290,7 +2286,6 @@ export class GdmLiveAudio extends LitElement {
       return;
     }
 
-    clearTimeout(this.idlePromptTimeout);
     this.isSwitchingPersona = true;
     this.updateStatus(`Switching to ${personi.name}...`);
 
@@ -2337,7 +2332,6 @@ export class GdmLiveAudio extends LitElement {
     this.isSwitchingPersona = false;
     this.checkProviderStatus();
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
-    this.resetIdlePromptTimer();
 
     if (provider && !this.isMuted) {
       this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
@@ -2700,7 +2694,6 @@ export class GdmLiveAudio extends LitElement {
     } finally {
       if (!this.isAiSpeaking) {
         this.updateStatus('Idle');
-        this.resetIdlePromptTimer();
         
         if (this.activePersoni && !this.isMuted) {
           const provider = this.getProviderForPersoni(this.activePersoni);
@@ -3009,7 +3002,6 @@ export class GdmLiveAudio extends LitElement {
   private async playAudio(base64Audio: string) {
     this.isAiSpeaking = true;
     this.updateStatus('Speaking...');
-    clearTimeout(this.idlePromptTimeout);
 
     this.nextStartTime = Math.max(
       this.nextStartTime,
@@ -3029,7 +3021,6 @@ export class GdmLiveAudio extends LitElement {
       if (this.sources.size === 0) {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
-        this.resetIdlePromptTimer();
       }
     });
 
@@ -3246,7 +3237,6 @@ export class GdmLiveAudio extends LitElement {
     return new Promise((resolve) => {
       this.isAiSpeaking = true;
       this.updateStatus('Speaking (browser voice)...');
-      clearTimeout(this.idlePromptTimeout);
 
       const utterance = new SpeechSynthesisUtterance(text);
       
@@ -3291,7 +3281,6 @@ export class GdmLiveAudio extends LitElement {
       utterance.onend = () => {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
-        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3299,7 +3288,6 @@ export class GdmLiveAudio extends LitElement {
         console.error('Speech synthesis error:', event);
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
-        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3588,7 +3576,6 @@ export class GdmLiveAudio extends LitElement {
       // Only use VAD for blob-based STT (provider/Whisper)
       if (this.useBrowserStt) return;
       
-      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.pause();
       this.isSpeaking = true;
       this.status = 'Listening...';
@@ -3609,13 +3596,11 @@ export class GdmLiveAudio extends LitElement {
           await this.processTranscript(transcript);
         } else {
           this.updateStatus('Idle');
-          this.resetIdlePromptTimer();
         }
       } else {
         this.updateStatus('No speech detected.');
         setTimeout(() => {
           this.updateStatus('Idle');
-          this.resetIdlePromptTimer();
         }, 2000);
       }
     });
@@ -3679,7 +3664,6 @@ export class GdmLiveAudio extends LitElement {
       }
       this.vad.reset();
       this.isSpeaking = false;
-      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.stop();
       this.updateStatus('Muted');
     } else {
@@ -3688,7 +3672,6 @@ export class GdmLiveAudio extends LitElement {
         this.startBrowserSttRecognition();
       }
       this.updateStatus('Idle');
-      this.resetIdlePromptTimer();
       
       if (this.activePersoni) {
         const provider = this.getProviderForPersoni(this.activePersoni);
@@ -3709,52 +3692,8 @@ export class GdmLiveAudio extends LitElement {
     this.nextStartTime = 0;
     this.isAiSpeaking = false;
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
-    this.resetIdlePromptTimer();
   }
 
-  // Idle Prompt Logic
-  private resetIdlePromptTimer() {
-    clearTimeout(this.idlePromptTimeout);
-
-    if (this.isMuted || this.isSpeaking || this.isAiSpeaking) {
-      return;
-    }
-
-    const randomDelay = 20000 + Math.random() * 10000; // 20-30 seconds
-    this.idlePromptTimeout = window.setTimeout(() => {
-      this.triggerIdlePrompt();
-    }, randomDelay);
-  }
-
-  private async triggerIdlePrompt() {
-    if (
-      this.isMuted ||
-      this.isSpeaking ||
-      this.isAiSpeaking ||
-      !this.activePersoni
-    ) {
-      this.resetIdlePromptTimer();
-      return;
-    }
-
-    const template = personaTemplates.find(
-      (t) => t.name === this.activePersoni.templateName,
-    );
-    if (
-      !template ||
-      !template.idlePrompts ||
-      template.idlePrompts.length === 0
-    ) {
-      this.resetIdlePromptTimer();
-      return;
-    }
-
-    const prompt =
-      template.idlePrompts[
-        Math.floor(Math.random() * template.idlePrompts.length)
-      ];
-    await this.speakText(prompt);
-  }
 
   private async handleIdleSpeech(text: string) {
     if (this.isSpeaking || this.isAiSpeaking || this.isMuted) {
@@ -3834,7 +3773,6 @@ export class GdmLiveAudio extends LitElement {
     if (this.showOnboarding && this.providerStatus !== 'unconfigured') {
       this.showOnboarding = false;
       this.updateStatus('Idle');
-      this.resetIdlePromptTimer();
     }
   }
 
