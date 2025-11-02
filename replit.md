@@ -69,6 +69,8 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Development (November 1, 2025)
 ### Latest Fixes (Current Session)
+- **Microphone Permission Mutex**: ✅ Fixed double permission prompt bug - added mutex lock to SharedMicrophoneManager ensuring single browser permission request even when multiple audio consumers (music detector, recorder, song ID) initialize simultaneously
+- **Mobile Camera Switching**: ✅ Added front/back camera toggle button (🔄) for mobile devices with proper stream teardown/restart and camera-switched event emission - switchCamera() method properly calls stop() to clear isActive flag before requesting new facingMode
 - **PersonI Backgrounds Disabled**: ✅ All PersonI 3D sphere backgrounds temporarily disabled (5% opacity, 95% transparency) so camera feed is clearly visible
 - **Google OAuth Token Optional**: ✅ Google connector access tokens now optional when using "Connect with Google" OAuth button - no manual token entry required
 
