@@ -17,6 +17,7 @@ export interface CameraFrame {
 export class CameraManager extends LitElement {
   @property({ type: Boolean }) enabled = false;
   @property({ type: Boolean }) showPreview = false;
+  @property({ type: String }) renderMode: 'native' | 'texture' | 'both' = 'native'; // native = hardware-accelerated HTML5 video, texture = 3D background
   
   @state() private hasPermission = false;
   @state() private isActive = false;
@@ -46,10 +47,22 @@ export class CameraManager extends LitElement {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      transform: scaleX(-1); /* Mirror for front-facing camera */
     }
 
-    video.preview {
+    video.preview,
+    video.native {
       display: block;
+    }
+    
+    video.native {
+      /* Native rendering mode - full screen background with hardware acceleration */
+      width: 100vw;
+      height: 100vh;
     }
 
     canvas {
@@ -273,10 +286,16 @@ export class CameraManager extends LitElement {
   }
 
   render() {
+    const videoClass = this.renderMode === 'native' || this.renderMode === 'both'
+      ? 'native'
+      : this.showPreview
+      ? 'preview'
+      : '';
+    
     return html`
       <div class="camera-container">
         <video 
-          class="${this.showPreview ? 'preview' : ''}"
+          class="${videoClass}"
           autoplay 
           playsinline 
           muted

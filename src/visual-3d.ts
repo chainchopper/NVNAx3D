@@ -95,6 +95,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   @property({type: Boolean}) musicBeatDetected = false;
   @property({type: Number}) musicConfidence = 0;
   @property({type: Object}) cameraVideoElement: HTMLVideoElement | null = null;
+  @property({type: String}) cameraRenderMode: 'native' | 'texture' | 'both' = 'native'; // Control whether camera is rendered as 3D texture
   @property({type: Boolean}) dualModeActive = false;
   @property({type: Object}) secondaryVisuals: PersoniConfig['visuals'] | null = null;
 
@@ -172,10 +173,11 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.cameraVideoTexture = null;
     }
 
-    // Add new camera background if video element is provided
-    if (this.cameraVideoElement && this.scene) {
+    // Add new camera background if video element is provided AND render mode is texture/both
+    // Native mode = HTML5 video element (hardware accelerated), Texture mode = 3D plane background (for external feeds/widgets)
+    if (this.cameraVideoElement && this.scene && (this.cameraRenderMode === 'texture' || this.cameraRenderMode === 'both')) {
       try {
-        console.log('[Visual3D] Creating camera background from video element');
+        console.log('[Visual3D] Creating camera background texture (render mode:', this.cameraRenderMode, ')');
         
         // Create video texture
         this.cameraVideoTexture = new THREE.VideoTexture(this.cameraVideoElement);
@@ -196,10 +198,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
         this.cameraBackgroundPlane.position.z = -10; // Behind the view (farther than camera orbit radius)
         this.camera.add(this.cameraBackgroundPlane); // Attach to camera so it moves with the view
 
-        console.log('[Visual3D] Camera background added to camera (fixed position)');
+        console.log('[Visual3D] Camera background texture created (for external feeds/widgets)');
       } catch (error) {
         console.error('[Visual3D] Failed to create camera background:', error);
       }
+    } else if (this.cameraVideoElement && this.cameraRenderMode === 'native') {
+      console.log('[Visual3D] Using native HTML5 video rendering (hardware accelerated) - no 3D texture created');
     }
   }
 
