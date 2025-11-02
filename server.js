@@ -2423,6 +2423,106 @@ app.post('/api/gemini/generate-speech', async (req, res) => {
 });
 
 // ============================================================================
+// OPENAI PROXY - Secure Backend API Proxy
+// ============================================================================
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+app.post('/api/chat/openai', async (req, res) => {
+  if (!OPENAI_API_KEY) {
+    return res.status(503).json({
+      success: false,
+      error: 'OpenAI API not configured. Add OPENAI_API_KEY to environment.',
+    });
+  }
+
+  try {
+    const { messages, model = 'gpt-4o-mini', stream = false } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: messages (array)',
+      });
+    }
+
+    const endpoint = 'https://api.openai.com/v1';
+    const response = await fetch(`${endpoint}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `OpenAI API error: ${response.statusText}`);
+    }
+
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') {
+                res.write('data: [DONE]\n\n');
+                continue;
+              }
+
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  res.write(`data: ${JSON.stringify({ text: content })}\n\n`);
+                }
+              } catch (e) {
+                console.error('[OpenAI Proxy] Parse error:', e);
+              }
+            }
+          }
+        }
+      } finally {
+        res.end();
+      }
+    } else {
+      const data = await response.json();
+      res.json({
+        success: true,
+        text: data.choices[0].message.content,
+      });
+    }
+  } catch (error) {
+    console.error('[OpenAI Proxy Error]', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: error.message || 'Failed to complete chat',
+      });
+    }
+  }
+});
+
+// ============================================================================
 // TWILIO INTEGRATION - Voice & SMS
 // ============================================================================
 // Required environment variables:
