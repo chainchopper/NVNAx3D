@@ -67,12 +67,20 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Genius API**: Song lyrics.
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
-## Recent Development (November 1, 2025)
+## Recent Development (November 2, 2025)
 ### Latest Fixes (Current Session)
+- **Avatar Size Reduction**: ✅ Reduced all PersonI avatar geometries by 50% - Icosahedron radius from 1.0 to 0.5, TorusKnot from (0.6, 0.25) to (0.3, 0.125)
+- **Box/Cube Geometry Removed**: ✅ Confirmed no Box geometry exists in codebase - spinning cube that showed camera feed has been permanently removed
 - **Microphone Permission Mutex**: ✅ Fixed double permission prompt bug - added mutex lock to SharedMicrophoneManager ensuring single browser permission request even when multiple audio consumers (music detector, recorder, song ID) initialize simultaneously
 - **Mobile Camera Switching**: ✅ Added front/back camera toggle button (🔄) for mobile devices with proper stream teardown/restart and camera-switched event emission - switchCamera() method properly calls stop() to clear isActive flag before requesting new facingMode
-- **PersonI Backgrounds Disabled**: ✅ All PersonI 3D sphere backgrounds temporarily disabled (5% opacity, 95% transparency) so camera feed is clearly visible
-- **Google OAuth Token Optional**: ✅ Google connector access tokens now optional when using "Connect with Google" OAuth button - no manual token entry required
+
+### Feature Audit Completed (November 2, 2025)
+- **24 Active Connectors Discovered**: Gmail, Google Calendar, Google Docs, Google Sheets, GitHub, Notion, Linear, Jira, Asana, Slack, Home Assistant (3 ops), Frigate (3 ops), CodeProject.AI, YOLO, Reminders (4 ops), Finance APIs (8 ops)
+- **2 Connectors NOT Wired to PersonI**: Outlook and Confluence have handlers in connector-handlers.ts but are missing from AVAILABLE_CONNECTORS in personas.ts
+- **Plugin System Fully Implemented**: Dynamic UI plugin architecture with registry, sandbox, persistence, and PersonI-generated plugin support
+- **Dual PersonI Manager Active**: Collaborative, debate, teaching, and single modes implemented with turn-taking and conversation flow
+- **MCP Capability Flag Only**: PersoniCapabilities has `mcp` boolean but no actual Model Context Protocol server implementation
+- **Voice Profiling Missing**: No speaker diarization, voice fingerprinting, or audio separation implemented yet
 
 ### Critical UX & Provider Flexibility Fixes
 - **UI Controls Always Visible**: ✅ Removed opacity fade that was hiding controls - keyboard input, mic mute, and volume buttons now always accessible
