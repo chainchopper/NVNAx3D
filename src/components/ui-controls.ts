@@ -21,19 +21,23 @@ export class UIControls extends LitElement {
   static styles = css`
     :host {
       display: block;
-      position: relative;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      pointer-events: none;
+      z-index: 2000;
     }
 
     .controls-container {
-      position: absolute;
+      position: relative;
       bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      z-index: 1500;
+      pointer-events: all;
     }
 
     .main-controls {
