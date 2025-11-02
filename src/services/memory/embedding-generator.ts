@@ -1,24 +1,26 @@
 /**
- * EmbeddingGenerator Service
- * Generates embeddings using Gemini text-embedding-004 with fallback
+ * EmbeddingGenerator Service - Backend Proxy Mode
+ * Generates embeddings using Gemini via backend proxy at http://localhost:3001/api/gemini/embeddings
+ * All API calls go through backend to keep API keys secure
  */
 
-import { GoogleGenAI } from '@google/genai';
 import { providerManager } from '../provider-manager';
+
+const BACKEND_URL = 'http://localhost:3001';
 
 export class EmbeddingGenerator {
   private cache: Map<string, number[]> = new Map();
-  private client: GoogleGenAI | null = null;
+  private useBackendProxy = false;
   private embedModel = 'text-embedding-004';
 
   async initialize(): Promise<boolean> {
     try {
       const providers = providerManager.getAllProviders();
-      const googleProvider = providers.find(p => p.type === 'google' && p.enabled && p.verified && p.apiKey);
+      const googleProvider = providers.find(p => p.type === 'google' && p.enabled && p.verified);
 
-      if (googleProvider && googleProvider.apiKey) {
-        this.client = new GoogleGenAI({ apiKey: googleProvider.apiKey });
-        console.log('[EmbeddingGenerator] Initialized with Gemini API');
+      if (googleProvider) {
+        this.useBackendProxy = true;
+        console.log('[EmbeddingGenerator] Initialized with Gemini API (backend proxy)');
         return true;
       } else {
         console.warn('[EmbeddingGenerator] No valid Google provider found, using fallback embeddings');
@@ -40,7 +42,7 @@ export class EmbeddingGenerator {
     let embedding: number[];
 
     try {
-      if (this.client) {
+      if (this.useBackendProxy) {
         embedding = await this.generateGeminiEmbedding(text);
       } else {
         embedding = this.generateFallbackEmbedding(text);
@@ -61,21 +63,30 @@ export class EmbeddingGenerator {
   }
 
   private async generateGeminiEmbedding(text: string): Promise<number[]> {
-    if (!this.client) {
-      throw new Error('Gemini client not initialized');
+    if (!this.useBackendProxy) {
+      throw new Error('Backend proxy not available');
     }
 
     try {
-      const result = await this.client.models.embedContent({
-        model: this.embedModel,
-        contents: [{ parts: [{ text }] }],
+      const response = await fetch(`${BACKEND_URL}/api/gemini/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          model: this.embedModel,
+        }),
       });
 
-      if (result.embeddings && result.embeddings.length > 0) {
-        return result.embeddings[0].values;
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.statusText}`);
       }
 
-      throw new Error('No embedding returned from Gemini');
+      const data = await response.json();
+      if (!data.success || !data.embedding) {
+        throw new Error(data.error || 'No embedding returned');
+      }
+
+      return data.embedding;
     } catch (error) {
       console.error('[EmbeddingGenerator] Gemini API error:', error);
       throw error;
@@ -127,6 +138,6 @@ export class EmbeddingGenerator {
   }
 
   isGeminiAvailable(): boolean {
-    return this.client !== null;
+    return this.useBackendProxy;
   }
 }

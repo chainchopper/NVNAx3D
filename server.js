@@ -52,6 +52,7 @@ import express from 'express';
 import cors from 'cors';
 import http from 'http';
 import { WebSocketServer } from 'ws';
+import { GoogleGenAI } from '@google/genai';
 import { stockDataService } from './src/services/financial/stock-data-service.js';
 import { cryptoDataService } from './src/services/financial/crypto-data-service.js';
 import { portfolioManager } from './src/services/financial/portfolio-manager.js';
@@ -2260,6 +2261,163 @@ app.get('/api/config/env', (req, res) => {
       twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
     },
   });
+});
+
+// ============================================================================
+// GEMINI AI PROXY - Secure server-side API calls
+// ============================================================================
+// Required environment variable: GEMINI_API_KEY
+// All Gemini API calls go through this proxy to keep API keys secure
+// ============================================================================
+
+const geminiClient = process.env.GEMINI_API_KEY
+  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+  : null;
+
+app.post('/api/chat/gemini', async (req, res) => {
+  if (!geminiClient) {
+    return res.status(503).json({
+      success: false,
+      error: 'Gemini API not configured. Add GEMINI_API_KEY to environment.',
+    });
+  }
+
+  try {
+    const { model, messages, stream = false } = req.body;
+
+    if (!model || !messages || !Array.isArray(messages)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: model, messages (array)',
+      });
+    }
+
+    const contents = messages.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: typeof msg.content === 'string'
+        ? [{ text: msg.content }]
+        : msg.content,
+    }));
+
+    if (stream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const streamResponse = await geminiClient.models.generateContentStream({
+        model,
+        contents,
+      });
+
+      for await (const chunk of streamResponse) {
+        const text = chunk.text || '';
+        res.write(`data: ${JSON.stringify({ text, done: false })}\n\n`);
+      }
+
+      res.write(`data: ${JSON.stringify({ text: '', done: true })}\n\n`);
+      res.end();
+    } else {
+      const response = await geminiClient.models.generateContent({
+        model,
+        contents,
+      });
+
+      const text = response.text || '';
+
+      res.json({
+        success: true,
+        text,
+      });
+    }
+  } catch (error) {
+    console.error('[Gemini Chat Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate response',
+    });
+  }
+});
+
+app.post('/api/gemini/embeddings', async (req, res) => {
+  if (!geminiClient) {
+    return res.status(503).json({
+      success: false,
+      error: 'Gemini API not configured. Add GEMINI_API_KEY to environment.',
+    });
+  }
+
+  try {
+    const { text, model = 'text-embedding-004' } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: text',
+      });
+    }
+
+    const response = await geminiClient.models.embedContent({
+      model,
+      content: {
+        parts: [{ text }],
+      },
+    });
+
+    res.json({
+      success: true,
+      embedding: response.embedding.values,
+    });
+  } catch (error) {
+    console.error('[Gemini Embeddings Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate embedding',
+    });
+  }
+});
+
+app.post('/api/gemini/generate-speech', async (req, res) => {
+  if (!geminiClient) {
+    return res.status(503).json({
+      success: false,
+      error: 'Gemini API not configured. Add GEMINI_API_KEY to environment.',
+    });
+  }
+
+  try {
+    const { text, personaName, personaVoice } = req.body;
+
+    if (!text) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: text',
+      });
+    }
+
+    const prompt = `You are ${personaName || 'an AI assistant'}. Convert the following text into a natural, conversational spoken format. Remove any markdown, code formatting, or technical notation. Make it sound natural as if being spoken out loud:\n\n${text}`;
+
+    const response = await geminiClient.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }],
+      }],
+    });
+
+    const spokenText = response.text || text;
+
+    res.json({
+      success: true,
+      spokenText,
+      voice: personaVoice || 'default',
+    });
+  } catch (error) {
+    console.error('[Gemini TTS Generation Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to generate speech text',
+    });
+  }
 });
 
 // ============================================================================
