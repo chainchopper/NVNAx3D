@@ -74,11 +74,10 @@ import { connectorHandlers, ConnectorResult } from './services/connector-handler
 import { routineExecutor } from './services/routine-executor';
 import { routinePatternDetector } from './services/routine-pattern-detector';
 import type { RoutinePattern } from './types/routine-types';
-import { reminderManager } from './services/reminder-manager';
 import { environmentalObserver } from './services/environmental-observer';
 import { chatterboxTTS } from './services/chatterbox-tts';
 import { audioRecordingManager } from './services/audio-recording-manager';
-import { objectRecognitionService, DetectionResult } from './services/object-recognition';
+import type { DetectionResult } from './services/object-recognition';
 import { voiceCommandSystem } from './services/voice-command-system';
 import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
 import './components/object-detection-overlay';
@@ -1102,7 +1101,7 @@ export class GdmLiveAudio extends LitElement {
     sharedMic.unregisterConsumer('music-detector');
   }
 
-  protected firstUpdated() {
+  protected async firstUpdated() {
     console.log('[Lifecycle] firstUpdated called, ensuring dual mode system is initialized');
     // Ensure dual mode system is initialized after first render
     // This is a safety net in case init() hasn't completed yet
@@ -1111,6 +1110,9 @@ export class GdmLiveAudio extends LitElement {
     } else {
       console.warn('[DualMode] firstUpdated: activePersoni not yet set, will initialize when available');
     }
+    
+    // IMPORTANT: Lazy load reminderManager to reduce initial bundle size (saves ~200 KB)
+    const { reminderManager } = await import('./services/reminder-manager');
     
     // Initialize reminder notification checks
     reminderManager.startNotificationChecks((message) => {
@@ -2029,6 +2031,8 @@ export class GdmLiveAudio extends LitElement {
     }
 
     try {
+      // IMPORTANT: Lazy load objectRecognitionService to reduce initial bundle size (saves ~1.8 MB TensorFlow.js)
+      const { objectRecognitionService } = await import('./services/object-recognition');
       await objectRecognitionService.initialize();
       
       objectRecognitionService.startContinuousDetection(
@@ -2076,7 +2080,9 @@ export class GdmLiveAudio extends LitElement {
     }
   }
 
-  private stopObjectDetection() {
+  private async stopObjectDetection() {
+    // Lazy load service to stop detection
+    const { objectRecognitionService } = await import('./services/object-recognition');
     objectRecognitionService.stopContinuousDetection();
     this.currentDetections = null;
     
