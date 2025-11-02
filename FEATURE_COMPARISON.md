@@ -1,10 +1,10 @@
 # NIRVANA Feature Comparison & Progress Tracker
 
-**Last Updated: November 2, 2025 (Post-Regression Fix)**
+**Last Updated: November 2, 2025**
 
 ---
 
-## ✅ COMPLETED FEATURES (71/120 tasks - 59%)
+## ✅ COMPLETED FEATURES (68/120 tasks - 57%)
 
 ### Core AI & Provider System
 - ✅ Multi-provider support (Google Gemini, OpenAI, Anthropic, xAI, Deepseek, custom endpoints)
@@ -77,8 +77,8 @@
 ### Speech & Audio
 - ✅ Local Whisper STT (on-device, @xenova/transformers)
 - ✅ Browser fallback STT (SpeechRecognition API)
-- ✅ **FIXED: 100% LLM-generated contextual idle speech** (NO preset prompts!)
-- ✅ Idle speech with RAG memory context, camera vision, time-of-day awareness
+- ✅ LLM-generated contextual idle speech (NO preset prompts)
+- ✅ Idle speech with RAG memory context
 - ✅ Random intervals (2-5 minutes configurable)
 - ✅ EnhancedAudioRecorder class with microphone buffering
 - ✅ SharedMicrophoneManager with mutex lock (no double permission prompts)
@@ -90,7 +90,6 @@
 - ✅ Lyrics display with Genius API integration
 - ✅ Album art bubble display
 - ✅ Voice command system for hands-free control
-- ✅ **FIXED: Keyboard text input** always accessible via ⌨️ toggle button
 
 ### Camera & Vision
 - ✅ Camera-as-3D-Background integration
@@ -102,14 +101,8 @@
 - ✅ Environmental Observer Service with LLM-generated contextual speech
 - ✅ Multi-format file upload with RAG integration
 - ✅ Camera feed stored in RAG memory for contextual awareness
-- ✅ **NEW: Camera Thumbnail Orbs** - 3D bubble orbs for monitoring:
-  - Multiple camera feeds in real-time
-  - Other Nirvana instances
-  - Live video streams (RTSP, Frigate, etc)
-  - Click to expand, hover for labels
-  - Active/inactive status indicators
 
-### External Service Connectors (26 Active - All Wired!)
+### External Service Connectors (24 Active)
 
 #### Google Workspace
 - ✅ Gmail - Search and read emails
@@ -124,8 +117,6 @@
 - ✅ Jira - JQL issue search
 - ✅ Asana - Task management
 - ✅ Slack - Message sending (Web API)
-- ✅ **Outlook** - Email search (via connector backend)
-- ✅ **Confluence** - Page search (via connector backend)
 
 #### Smart Home & Vision
 - ✅ Home Assistant (3 operations):

@@ -36,7 +36,6 @@ import './components/code-flow-bg';
 import './components/static-noise-bg';
 import './components/camera-manager';
 import './components/camera-controls';
-import './components/camera-thumbnail-orbs';
 import './components/rag-toggle';
 import './components/file-upload';
 import './components/financial-dashboard';
@@ -94,7 +93,7 @@ const DETECTED_PATTERNS_KEY = 'detected-patterns';
 const DISMISSED_PATTERNS_KEY = 'dismissed-patterns';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
-const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot'];
+const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
 const AVAILABLE_TEXTURES: TextureName[] = [
   'none',
   'lava',
@@ -222,10 +221,6 @@ export class GdmLiveAudio extends LitElement {
   // Calendar state
   @state() showCalendar = false;
   
-  // Camera thumbnail orbs state
-  @state() thumbnailFeeds: any[] = [];
-  @state() showThumbnailOrbs = false;
-  
   // Dual PersonI advanced controls
   @state() dualModeActive = false;
   @state() dualModeType: DualMode = 'collaborative';
@@ -239,6 +234,7 @@ export class GdmLiveAudio extends LitElement {
   private identificationTimeout: number | undefined;
 
   private settingsTimeout: number | undefined;
+  private idlePromptTimeout: number | undefined;
   private nirvanaGradientInterval: number | undefined;
   private idleSpeechManager = new IdleSpeechManager();
   
@@ -1098,6 +1094,7 @@ export class GdmLiveAudio extends LitElement {
     window.removeEventListener('mousemove', this.handleUserActivity);
     window.removeEventListener('touchstart', this.handleUserActivity);
     if (this.settingsTimeout) clearTimeout(this.settingsTimeout);
+    if (this.idlePromptTimeout) clearTimeout(this.idlePromptTimeout);
     this.stopNirvanaGradientUpdates();
     
     // Cleanup music detector
@@ -1229,6 +1226,7 @@ export class GdmLiveAudio extends LitElement {
       this.updateStatus('Current provider not configured - go to Settings → Models');
     } else {
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
     }
 
     if (this.activePersoni?.name === 'NIRVANA') {
@@ -1552,6 +1550,7 @@ export class GdmLiveAudio extends LitElement {
       this.recognition.onspeechstart = () => {
         this.isSpeaking = true;
         this.status = 'Listening (browser microphone)...';
+        clearTimeout(this.idlePromptTimeout);
         this.idleSpeechManager.pause();
       };
       
@@ -2291,6 +2290,7 @@ export class GdmLiveAudio extends LitElement {
       return;
     }
 
+    clearTimeout(this.idlePromptTimeout);
     this.isSwitchingPersona = true;
     this.updateStatus(`Switching to ${personi.name}...`);
 
@@ -2337,6 +2337,7 @@ export class GdmLiveAudio extends LitElement {
     this.isSwitchingPersona = false;
     this.checkProviderStatus();
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+    this.resetIdlePromptTimer();
 
     if (provider && !this.isMuted) {
       this.idleSpeechManager.start(this.activePersoni, provider, (text) => {
@@ -2699,6 +2700,7 @@ export class GdmLiveAudio extends LitElement {
     } finally {
       if (!this.isAiSpeaking) {
         this.updateStatus('Idle');
+        this.resetIdlePromptTimer();
         
         if (this.activePersoni && !this.isMuted) {
           const provider = this.getProviderForPersoni(this.activePersoni);
@@ -3007,6 +3009,7 @@ export class GdmLiveAudio extends LitElement {
   private async playAudio(base64Audio: string) {
     this.isAiSpeaking = true;
     this.updateStatus('Speaking...');
+    clearTimeout(this.idlePromptTimeout);
 
     this.nextStartTime = Math.max(
       this.nextStartTime,
@@ -3026,6 +3029,7 @@ export class GdmLiveAudio extends LitElement {
       if (this.sources.size === 0) {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
       }
     });
 
@@ -3242,6 +3246,7 @@ export class GdmLiveAudio extends LitElement {
     return new Promise((resolve) => {
       this.isAiSpeaking = true;
       this.updateStatus('Speaking (browser voice)...');
+      clearTimeout(this.idlePromptTimeout);
 
       const utterance = new SpeechSynthesisUtterance(text);
       
@@ -3286,6 +3291,7 @@ export class GdmLiveAudio extends LitElement {
       utterance.onend = () => {
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3293,6 +3299,7 @@ export class GdmLiveAudio extends LitElement {
         console.error('Speech synthesis error:', event);
         this.isAiSpeaking = false;
         this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+        this.resetIdlePromptTimer();
         resolve();
       };
 
@@ -3581,6 +3588,7 @@ export class GdmLiveAudio extends LitElement {
       // Only use VAD for blob-based STT (provider/Whisper)
       if (this.useBrowserStt) return;
       
+      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.pause();
       this.isSpeaking = true;
       this.status = 'Listening...';
@@ -3601,11 +3609,13 @@ export class GdmLiveAudio extends LitElement {
           await this.processTranscript(transcript);
         } else {
           this.updateStatus('Idle');
+          this.resetIdlePromptTimer();
         }
       } else {
         this.updateStatus('No speech detected.');
         setTimeout(() => {
           this.updateStatus('Idle');
+          this.resetIdlePromptTimer();
         }, 2000);
       }
     });
@@ -3669,6 +3679,7 @@ export class GdmLiveAudio extends LitElement {
       }
       this.vad.reset();
       this.isSpeaking = false;
+      clearTimeout(this.idlePromptTimeout);
       this.idleSpeechManager.stop();
       this.updateStatus('Muted');
     } else {
@@ -3677,6 +3688,7 @@ export class GdmLiveAudio extends LitElement {
         this.startBrowserSttRecognition();
       }
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
       
       if (this.activePersoni) {
         const provider = this.getProviderForPersoni(this.activePersoni);
@@ -3697,8 +3709,48 @@ export class GdmLiveAudio extends LitElement {
     this.nextStartTime = 0;
     this.isAiSpeaking = false;
     this.updateStatus(this.isMuted ? 'Muted' : 'Idle');
+    this.resetIdlePromptTimer();
   }
 
+  // Idle Prompt Logic
+  private resetIdlePromptTimer() {
+    clearTimeout(this.idlePromptTimeout);
+
+    if (this.isMuted || this.isSpeaking || this.isAiSpeaking) {
+      return;
+    }
+
+    const randomDelay = 20000 + Math.random() * 10000; // 20-30 seconds
+    this.idlePromptTimeout = window.setTimeout(() => {
+      this.triggerIdlePrompt();
+    }, randomDelay);
+  }
+
+  private async triggerIdlePrompt() {
+    if (
+      this.isMuted ||
+      this.isSpeaking ||
+      this.isAiSpeaking ||
+      !this.activePersoni
+    ) {
+      this.resetIdlePromptTimer();
+      return;
+    }
+
+    // Use IdleSpeechManager to generate LLM-based idle speech instead of preset prompts
+    const provider = this.getProviderForPersoni(this.activePersoni);
+    if (!provider) {
+      console.log('[IdlePrompt] No provider available, skipping idle prompt');
+      this.resetIdlePromptTimer();
+      return;
+    }
+
+    // Trigger IdleSpeechManager directly for immediate LLM-generated speech
+    this.idleSpeechManager.pause();
+    this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
+      this.handleIdleSpeech(text);
+    }, this.cameraManager?.captureFrame?.bind(this.cameraManager));
+  }
 
   private async handleIdleSpeech(text: string) {
     if (this.isSpeaking || this.isAiSpeaking || this.isMuted) {
@@ -3778,6 +3830,7 @@ export class GdmLiveAudio extends LitElement {
     if (this.showOnboarding && this.providerStatus !== 'unconfigured') {
       this.showOnboarding = false;
       this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
     }
   }
 
@@ -4812,18 +4865,6 @@ export class GdmLiveAudio extends LitElement {
           .lastRetrievedCount=${this.lastRetrievedMemories}
           @rag-toggle=${this.handleRAGToggle}
         ></rag-toggle>
-
-        <!-- Camera Thumbnail Orbs -->
-        <camera-thumbnail-orbs
-          .feeds=${this.thumbnailFeeds}
-          .visible=${this.showThumbnailOrbs}
-          @orb-click=${(e: CustomEvent) => {
-            console.log('[ThumbnailOrbs] Feed clicked:', e.detail.feed);
-          }}
-          @orb-expand=${(e: CustomEvent) => {
-            console.log('[ThumbnailOrbs] Feed expand requested:', e.detail.feed);
-          }}
-        ></camera-thumbnail-orbs>
 
         <!-- Camera Controls -->
         <camera-controls
