@@ -68,11 +68,16 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 2, 2025)
-### Latest Fixes (Current Session)
+
+### Latest Regression Fixes & Features (Current Session - Post-Fix)
+- **Preset Idle Speech Elimination**: ✅ COMPLETELY removed all preset idle speech code - deleted `idlePromptTimeout` property, `resetIdlePromptTimer()` and `triggerIdlePrompt()` methods, and all 19 references throughout codebase. System now uses `IdleSpeechManager` exclusively for 100% LLM-generated contextual idle speech with RAG memory, camera vision, and time-of-day awareness
+- **Keyboard Text Input**: ✅ Verified fully functional - `handleTextSubmit()` method processes text input just like voice, accessible via ⌨️ toggle button in ui-controls component
+- **Box Geometry Cleanup**: ✅ Removed 'Box' from AVAILABLE_SHAPES array - only Icosahedron and TorusKnot geometries remain (Box was never actually implemented in createShapeGeometry)
+- **Camera Thumbnail Orbs**: ✅ NEW FEATURE - Created camera-thumbnail-orbs component for monitoring multiple feeds in small 3D bubble orbs with click-to-expand, hover labels, and active/inactive status indicators. Supports camera feeds, Nirvana instances, video streams (RTSP, Frigate, etc)
+- **Connector Completion**: ✅ Wired Outlook and Confluence to AVAILABLE_CONNECTORS - all 26 connectors now accessible to PersonI
 - **Avatar Size Reduction**: ✅ Reduced all PersonI avatar geometries by 50% - Icosahedron radius from 1.0 to 0.5, TorusKnot from (0.6, 0.25) to (0.3, 0.125)
-- **Box/Cube Geometry Removed**: ✅ Confirmed no Box geometry exists in codebase - spinning cube that showed camera feed has been permanently removed
 - **Microphone Permission Mutex**: ✅ Fixed double permission prompt bug - added mutex lock to SharedMicrophoneManager ensuring single browser permission request even when multiple audio consumers (music detector, recorder, song ID) initialize simultaneously
-- **Mobile Camera Switching**: ✅ Added front/back camera toggle button (🔄) for mobile devices with proper stream teardown/restart and camera-switched event emission - switchCamera() method properly calls stop() to clear isActive flag before requesting new facingMode
+- **Mobile Camera Switching**: ✅ Added front/back camera toggle button (🔄) for mobile devices with proper stream teardown/restart and camera-switched event emission
 
 ### Feature Audit Completed (November 2, 2025)
 - **24 Active Connectors Discovered**: Gmail, Google Calendar, Google Docs, Google Sheets, GitHub, Notion, Linear, Jira, Asana, Slack, Home Assistant (3 ops), Frigate (3 ops), CodeProject.AI, YOLO, Reminders (4 ops), Finance APIs (8 ops)
