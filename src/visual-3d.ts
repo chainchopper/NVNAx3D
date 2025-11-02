@@ -163,7 +163,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private updateCameraBackground(): void {
     // Remove existing camera background
     if (this.cameraBackgroundPlane) {
-      this.scene?.remove(this.cameraBackgroundPlane);
+      this.camera?.remove(this.cameraBackgroundPlane);
       this.cameraBackgroundPlane = null;
     }
     
@@ -193,10 +193,10 @@ export class GdmLiveAudioVisuals3D extends LitElement {
         });
 
         this.cameraBackgroundPlane = new THREE.Mesh(planeGeometry, planeMaterial);
-        this.cameraBackgroundPlane.position.z = -5; // Behind the orb
-        this.scene.add(this.cameraBackgroundPlane);
+        this.cameraBackgroundPlane.position.z = -10; // Behind the view (farther than camera orbit radius)
+        this.camera.add(this.cameraBackgroundPlane); // Attach to camera so it moves with the view
 
-        console.log('[Visual3D] Camera background added to scene');
+        console.log('[Visual3D] Camera background added to camera (fixed position)');
       } catch (error) {
         console.error('[Visual3D] Failed to create camera background:', error);
       }
