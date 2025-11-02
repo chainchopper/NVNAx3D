@@ -3737,23 +3737,19 @@ export class GdmLiveAudio extends LitElement {
       return;
     }
 
-    const template = personaTemplates.find(
-      (t) => t.name === this.activePersoni.templateName,
-    );
-    if (
-      !template ||
-      !template.idlePrompts ||
-      template.idlePrompts.length === 0
-    ) {
+    // Use IdleSpeechManager to generate LLM-based idle speech instead of preset prompts
+    const provider = this.getProviderForPersoni(this.activePersoni);
+    if (!provider) {
+      console.log('[IdlePrompt] No provider available, skipping idle prompt');
       this.resetIdlePromptTimer();
       return;
     }
 
-    const prompt =
-      template.idlePrompts[
-        Math.floor(Math.random() * template.idlePrompts.length)
-      ];
-    await this.speakText(prompt);
+    // Trigger IdleSpeechManager directly for immediate LLM-generated speech
+    this.idleSpeechManager.pause();
+    this.idleSpeechManager.resume(this.activePersoni, provider, (text) => {
+      this.handleIdleSpeech(text);
+    }, this.cameraManager?.captureFrame?.bind(this.cameraManager));
   }
 
   private async handleIdleSpeech(text: string) {
