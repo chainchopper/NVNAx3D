@@ -36,6 +36,7 @@ import './components/code-flow-bg';
 import './components/static-noise-bg';
 import './components/camera-manager';
 import './components/camera-controls';
+import './components/camera-thumbnail-orbs';
 import './components/rag-toggle';
 import './components/file-upload';
 import './components/financial-dashboard';
@@ -93,7 +94,7 @@ const DETECTED_PATTERNS_KEY = 'detected-patterns';
 const DISMISSED_PATTERNS_KEY = 'dismissed-patterns';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
 const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
-const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
+const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot'];
 const AVAILABLE_TEXTURES: TextureName[] = [
   'none',
   'lava',
@@ -220,6 +221,10 @@ export class GdmLiveAudio extends LitElement {
   
   // Calendar state
   @state() showCalendar = false;
+  
+  // Camera thumbnail orbs state
+  @state() thumbnailFeeds: any[] = [];
+  @state() showThumbnailOrbs = false;
   
   // Dual PersonI advanced controls
   @state() dualModeActive = false;
@@ -4807,6 +4812,18 @@ export class GdmLiveAudio extends LitElement {
           .lastRetrievedCount=${this.lastRetrievedMemories}
           @rag-toggle=${this.handleRAGToggle}
         ></rag-toggle>
+
+        <!-- Camera Thumbnail Orbs -->
+        <camera-thumbnail-orbs
+          .feeds=${this.thumbnailFeeds}
+          .visible=${this.showThumbnailOrbs}
+          @orb-click=${(e: CustomEvent) => {
+            console.log('[ThumbnailOrbs] Feed clicked:', e.detail.feed);
+          }}
+          @orb-expand=${(e: CustomEvent) => {
+            console.log('[ThumbnailOrbs] Feed expand requested:', e.detail.feed);
+          }}
+        ></camera-thumbnail-orbs>
 
         <!-- Camera Controls -->
         <camera-controls
