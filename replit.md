@@ -68,7 +68,29 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 2, 2025)
-### Camera Rendering & UI Integration Fixes (Current Session)
+### Backend Gemini Proxy Implementation (Current Session - CRITICAL SECURITY FIX)
+- **Backend API Proxy System**: ✅ MAJOR SECURITY FIX - Implemented secure server-side Gemini API proxy to keep API keys out of browser:
+  - Created 3 backend proxy endpoints at http://localhost:3001:
+    - `POST /api/chat/gemini` - Streaming chat completions with Server-Sent Events (SSE)
+    - `POST /api/gemini/embeddings` - RAG embeddings generation (fixed: uses `contents` array not `content` object)
+    - `POST /api/gemini/generate-speech` - LLM-generated TTS text processing
+  - Added GoogleGenAI import to server.js with GEMINI_API_KEY from environment
+  - All Gemini API calls now go through backend - API keys stay server-side ✅
+- **GoogleProvider Refactor**: ✅ Updated src/providers/google-provider.ts to use backend proxy:
+  - Removed direct GoogleGenAI client instantiation with API key (security vulnerability)
+  - Changed verify() to call backend via fetch() instead of direct API calls
+  - Changed sendMessage() to support streaming via Server-Sent Events from backend
+  - Added generateSpeech() method for LLM-based TTS text generation
+- **EmbeddingGenerator Refactor**: ✅ Updated src/services/memory/embedding-generator.ts to use backend proxy:
+  - Removed direct GoogleGenAI client instantiation
+  - Changed generateGeminiEmbedding() to call `/api/gemini/embeddings` via fetch()
+  - Uses backend proxy flag instead of client instance
+  - Console logs confirm: `[EmbeddingGenerator] Initialized with Gemini API (backend proxy)`
+- **Security**: ✅ No API keys exposed in browser JavaScript - all sensitive operations handled server-side
+  - ⚠️ For production deployment: Add authentication/sessions, restrict CORS origins, implement request scoping per user
+  - Current implementation acceptable for local-first personal AI system
+
+### Camera Rendering & UI Integration Fixes (Earlier in Session)
 - **Native Camera Rendering**: ✅ MAJOR FEATURE - Implemented hardware-accelerated HTML5 video rendering for on-device camera (not 3D texture):
   - Added `renderMode` property to camera-manager: 'native' (hardware-accelerated HTML5), 'texture' (3D background), or 'both'
   - Default mode is 'native' - on-device camera uses full-screen HTML5 video element at z-index:-1 with hardware acceleration
