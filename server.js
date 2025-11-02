@@ -2358,15 +2358,17 @@ app.post('/api/gemini/embeddings', async (req, res) => {
 
     const response = await geminiClient.models.embedContent({
       model,
-      content: {
-        parts: [{ text }],
-      },
+      contents: [{ parts: [{ text }] }],
     });
 
-    res.json({
-      success: true,
-      embedding: response.embedding.values,
-    });
+    if (response.embeddings && response.embeddings.length > 0) {
+      res.json({
+        success: true,
+        embedding: response.embeddings[0].values,
+      });
+    } else {
+      throw new Error('No embedding returned from Gemini');
+    }
   } catch (error) {
     console.error('[Gemini Embeddings Error]', error);
     res.status(500).json({
