@@ -15,37 +15,31 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Framework**: Lit (Web Components)
 - **Build Tool**: Vite
 - **AI Provider**: Google Gemini API (@google/genai), with multi-provider support
-- **3D Graphics**: Three.js (WebGL, planned WebGPU migration)
+- **3D Graphics**: Three.js (planned WebGPU migration)
 - **Language**: TypeScript
 - **Backend**: Express.js (Node.js) for secure connector API proxy
 
 ### UI/UX Decisions
-- **Minimalist Design Philosophy**: Clean, uncluttered interfaces.
-- **Glass-morphism**: Consistent design across panels.
-- **Intuitive settings**: Configuration for AI providers and PersonI capabilities.
-- **Visual indicators**: Provider status, PersonI selection, detection stats.
-- **Unique AI-generated avatars**: Liquid-themed avatars for each PersonI.
-- **Comprehensive panels**: Notes, Tasks, Memory Management, User Profile.
-- **Object Detection Overlay**: Green bounding boxes with class labels and confidence percentages.
-- **Calendar Views**: Month, week, day, and agenda views with natural language quick-add.
+- **Design Philosophy**: Minimalist, glass-morphism, clean, and uncluttered interfaces.
+- **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays.
+- **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
+- **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status.
 
 ### System Design Choices
-- **PersonI System**: Defines AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system for custom creation. Includes a financial advisor PersonI, BILLY.
-- **3D Visualization**: Animated 3D objects with dynamic backgrounds and audio-reactive visuals.
-- **Connector Backend Proxy**: Secure Express.js server for external service integrations (e.g., Gmail, Google Calendar, GitHub, financial APIs), handling OAuth tokens.
-- **Model Provider System**: Manages configuration and integration of multiple AI providers (OpenAI, Google, custom).
-- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model. Supports 17 memory types with semantic search and temporal queries.
+- **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system. Supports a financial advisor PersonI, BILLY.
+- **Connector Backend Proxy**: Secure Express.js server for external service integrations (e.g., Gmail, Google Calendar, GitHub, financial APIs) with OAuth token handling.
+- **Model Provider System**: Configures and integrates multiple AI providers (OpenAI, Google, custom) with flexible model selection for conversation, vision, embedding, function calling, and TTS.
+- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
-- **Enhanced Audio System**: SharedMicrophoneManager, audio recording, and real-time music detection.
-- **Environmental Awareness Suite**: Real-time camera-based contextual observation, including Camera-as-3D-Background, Vision-Enhanced Idle Speech, and an Environmental Observer Service. Features multi-format file upload with RAG integration.
+- **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and full OpenAI TTS integration.
+- **Environmental Awareness Suite**: Real-time camera-based contextual observation, including Camera-as-3D-Background, Vision-Enhanced Idle Speech, Environmental Observer Service, and multi-format file upload with RAG.
 - **Object Recognition System**: Real-time object detection using TensorFlow.js and COCO-SSD model (80 object classes).
-- **Voice Command System**: Hands-free control with natural language commands for system functions.
-- **Routine Automation System**: IF-THEN-THAT automation supporting time-based, event-driven, state monitoring, user actions, and vision detection triggers. Vision triggers support 'local' (TensorFlow.js), 'frigate', 'codeprojectai', and 'yolo' services.
-- **Dual PersonI Manager**: Multi-AI collaboration system with four modes (collaborative, debate, teaching, single), managing turn-taking and conversation flow.
-- **Calendar System**: Visual calendar component with natural language event creation and Google Calendar integration.
-- **CSP Security Hardening**: Content Security Policy implemented.
-- **Chatterbox-TTS Integration**: Custom TTS API support with configurable endpoint, voice synthesis, and voice cloning capabilities.
-- **OAuth Security**: OAuth Vault V2 Backend for server-side token storage with PKCE + CSRF protection.
+- **Voice Command System**: Hands-free control with natural language commands.
+- **Routine Automation System**: IF-THEN-THAT automation supporting time-based, event-driven, state monitoring, user actions, and vision detection triggers.
+- **Dual PersonI Manager**: Multi-AI collaboration system with four modes: collaborative, debate, teaching, and single.
+- **Calendar System**: Visual component with natural language event creation and Google Calendar integration.
+- **Security**: CSP hardening, OAuth Vault V2 Backend with PKCE + CSRF protection.
+- **Plugin System**: Dynamic UI plugin architecture with registry, sandbox, and persistence.
 
 ## External Dependencies
 - **Google Gemini API**: Conversational AI and embeddings.
@@ -66,91 +60,3 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **AudD API**: Song identification.
 - **Genius API**: Song lyrics.
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
-
-## Recent Development (November 2, 2025)
-### Backend Gemini Proxy Implementation (Current Session - CRITICAL SECURITY FIX)
-- **Backend API Proxy System**: ✅ MAJOR SECURITY FIX - Implemented secure server-side Gemini API proxy to keep API keys out of browser:
-  - Created 3 backend proxy endpoints at http://localhost:3001:
-    - `POST /api/chat/gemini` - Streaming chat completions with Server-Sent Events (SSE)
-    - `POST /api/gemini/embeddings` - RAG embeddings generation (fixed: uses `contents` array not `content` object)
-    - `POST /api/gemini/generate-speech` - LLM-generated TTS text processing
-  - Added GoogleGenAI import to server.js with GEMINI_API_KEY from environment
-  - All Gemini API calls now go through backend - API keys stay server-side ✅
-- **GoogleProvider Refactor**: ✅ Updated src/providers/google-provider.ts to use backend proxy:
-  - Removed direct GoogleGenAI client instantiation with API key (security vulnerability)
-  - Changed verify() to call backend via fetch() instead of direct API calls
-  - Changed sendMessage() to support streaming via Server-Sent Events from backend
-  - Added generateSpeech() method for LLM-based TTS text generation
-- **EmbeddingGenerator Refactor**: ✅ Updated src/services/memory/embedding-generator.ts to use backend proxy:
-  - Removed direct GoogleGenAI client instantiation
-  - Changed generateGeminiEmbedding() to call `/api/gemini/embeddings` via fetch()
-  - Uses backend proxy flag instead of client instance
-  - Console logs confirm: `[EmbeddingGenerator] Initialized with Gemini API (backend proxy)`
-- **Security**: ✅ No API keys exposed in browser JavaScript - all sensitive operations handled server-side
-  - ⚠️ For production deployment: Add authentication/sessions, restrict CORS origins, implement request scoping per user
-  - Current implementation acceptable for local-first personal AI system
-
-### Camera Rendering & UI Integration Fixes (Earlier in Session)
-- **Native Camera Rendering**: ✅ MAJOR FEATURE - Implemented hardware-accelerated HTML5 video rendering for on-device camera (not 3D texture):
-  - Added `renderMode` property to camera-manager: 'native' (hardware-accelerated HTML5), 'texture' (3D background), or 'both'
-  - Default mode is 'native' - on-device camera uses full-screen HTML5 video element at z-index:-1 with hardware acceleration
-  - Texture mode preserved for future external camera feeds and widgets (3D background plane)
-  - visual-3d skips THREE.VideoTexture creation when renderMode='native' to avoid performance overhead
-  - Logs confirm: "[Visual3D] Using native HTML5 video rendering (hardware accelerated) - no 3D texture created"
-- **File Upload Integration**: ✅ Moved file-upload component from standalone floating button into ui-controls text-input-container - now appears inline with text input field when in text mode
-- **3D Background Restoration**: ✅ Removed TEMPORARY code (commit a20ed90) that made PersonI sphere 95% transparent/invisible - restored proper crystal material properties:
-  - emissiveIntensity: 0.02 → 0.1 (10x brighter)
-  - transmission: 0.95 → 0.3 (significantly less transparent)
-  - thickness: 0.1 → 0.5 (5x thicker material)
-  - opacity: 0.05 → baseOpacity (0.7) - 14x more opaque
-- **Camera Background Rotation Fix**: ✅ CRITICAL FIX - Resolved "rotating background" issue caused by cameraBackgroundPlane being attached to scene while camera orbits:
-  - Changed attachment from `scene.add()` to `camera.add()` so background moves WITH camera view
-  - Increased z-offset from -5 to -10 (farther than camera orbit radius) to prevent z-fighting/overlap with PersonI sphere
-  - Background now stays properly fixed behind view regardless of camera movement
-- **UI Cleanup**: ✅ Removed duplicate standalone file-upload from index.tsx - single unified input bar with integrated upload button
-- **Text Input Confirmed**: ✅ Keyboard text input fully functional - click ⌨️ button to toggle text mode, type messages, press Enter to send to LLM
-- **Idle Speech Confirmed**: ✅ LLM-generated environmental awareness idle speech fully implemented and active - uses RAG memory and camera vision for contextual observations
-
-### Multi-Model PersonI System Restoration (Earlier Session)
-- **PersonI Interface Enhancement**: ✅ Restored comprehensive multi-model configuration system supporting 5 specialized model types:
-  - Conversation Model (required) - primary chat and reasoning
-  - Vision Model (optional) - image understanding, defaults to conversation model
-  - Embedding Model (optional) - semantic search and RAG, auto-detects from provider
-  - Function Calling Model (optional) - tool execution, defaults to conversation model
-  - Text-to-Speech Model (optional) - voice synthesis with Google/OpenAI voice support
-- **PersonI Editor UI Restored**: ✅ Complete PersonI editor with all 5 model dropdown fields, organized voice selection (Google voices, OpenAI voices, custom models), and backward compatibility with legacy thinkingModel configs
-- **Build Optimization**: ✅ Restored vite.config.ts manual chunk splitting for three.js, tensorflow.js, transformers.js - enables lazy loading and prevents 500kB chunk warnings for Vercel deployment
-- **Backward Compatibility**: ✅ getPersoniModel() helper function ensures graceful fallback from models.conversation to legacy thinkingModel field
-- **Critical Bug Fix**: ✅ Fixed TypeError in autoUpdatePersonIModels() when spreading undefined models object - now uses null coalescing operator `...(personi.models ?? {})` for safe migration
-
-### Earlier Fixes (Current Session)
-- **Avatar Size Reduction**: ✅ Reduced all PersonI avatar geometries by 50% - Icosahedron radius from 1.0 to 0.5, TorusKnot from (0.6, 0.25) to (0.3, 0.125)
-- **Box/Cube Geometry Removed**: ✅ Confirmed no Box geometry exists in codebase - spinning cube that showed camera feed has been permanently removed
-- **Microphone Permission Mutex**: ✅ Fixed double permission prompt bug - added mutex lock to SharedMicrophoneManager ensuring single browser permission request even when multiple audio consumers (music detector, recorder, song ID) initialize simultaneously
-- **Mobile Camera Switching**: ✅ Added front/back camera toggle button (🔄) for mobile devices with proper stream teardown/restart and camera-switched event emission - switchCamera() method properly calls stop() to clear isActive flag before requesting new facingMode
-
-### Feature Audit Completed (November 2, 2025)
-- **24 Active Connectors Discovered**: Gmail, Google Calendar, Google Docs, Google Sheets, GitHub, Notion, Linear, Jira, Asana, Slack, Home Assistant (3 ops), Frigate (3 ops), CodeProject.AI, YOLO, Reminders (4 ops), Finance APIs (8 ops)
-- **2 Connectors NOT Wired to PersonI**: Outlook and Confluence have handlers in connector-handlers.ts but are missing from AVAILABLE_CONNECTORS in personas.ts
-- **Plugin System Fully Implemented**: Dynamic UI plugin architecture with registry, sandbox, persistence, and PersonI-generated plugin support
-- **Dual PersonI Manager Active**: Collaborative, debate, teaching, and single modes implemented with turn-taking and conversation flow
-- **MCP Capability Flag Only**: PersoniCapabilities has `mcp` boolean but no actual Model Context Protocol server implementation
-- **Voice Profiling Missing**: No speaker diarization, voice fingerprinting, or audio separation implemented yet
-
-### Critical UX & Provider Flexibility Fixes
-- **UI Controls Always Visible**: ✅ Removed opacity fade that was hiding controls - keyboard input, mic mute, and volume buttons now always accessible
-- **Keyboard Text Input**: Text mode toggle button (⌨️) fully functional - click to type messages without using voice
-- **Camera Toggle Fixed**: Camera button now properly requests permissions when clicked, not just on initial load
-- **Multi-Provider Support**: ✅ System no longer forces Gemini provider - auto-updates PersonI to use first available model from any configured provider
-  - Added `autoUpdatePersonIModels()` method that runs on startup
-  - PersonI automatically adapt to OpenAI/Google/custom providers as configured
-  - Clear provider status indicator (✓/⚠️) shows when models are missing
-- **Mute Controls**: Mic mute button (🔇/🎤) and volume control (🔊) confirmed present and functional
-
-### OpenAI TTS Integration (Earlier Nov 1)
-- **Full OpenAI TTS Support**: ✅ PRODUCTION-READY via `/v1/audio/speech` endpoint
-  - Supports all 6 OpenAI voices: alloy, echo, fable, onyx, nova, shimmer
-  - PersonI voiceName settings correctly applied for both Google and OpenAI providers
-  - Added `generateSpeech()` method to OpenAIProvider class
-  - Dual PersonI mode uses correct voice per slot (fixed critical bug)
-- **Calendar Panel**: Added missing calendar-view component rendering with close event listener
