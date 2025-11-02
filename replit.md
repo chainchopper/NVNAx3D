@@ -68,7 +68,13 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 2, 2025)
-### UI/Background Integration Fixes (Current Session)
+### Camera Rendering & UI Integration Fixes (Current Session)
+- **Native Camera Rendering**: ✅ MAJOR FEATURE - Implemented hardware-accelerated HTML5 video rendering for on-device camera (not 3D texture):
+  - Added `renderMode` property to camera-manager: 'native' (hardware-accelerated HTML5), 'texture' (3D background), or 'both'
+  - Default mode is 'native' - on-device camera uses full-screen HTML5 video element at z-index:-1 with hardware acceleration
+  - Texture mode preserved for future external camera feeds and widgets (3D background plane)
+  - visual-3d skips THREE.VideoTexture creation when renderMode='native' to avoid performance overhead
+  - Logs confirm: "[Visual3D] Using native HTML5 video rendering (hardware accelerated) - no 3D texture created"
 - **File Upload Integration**: ✅ Moved file-upload component from standalone floating button into ui-controls text-input-container - now appears inline with text input field when in text mode
 - **3D Background Restoration**: ✅ Removed TEMPORARY code (commit a20ed90) that made PersonI sphere 95% transparent/invisible - restored proper crystal material properties:
   - emissiveIntensity: 0.02 → 0.1 (10x brighter)
@@ -80,6 +86,8 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
   - Increased z-offset from -5 to -10 (farther than camera orbit radius) to prevent z-fighting/overlap with PersonI sphere
   - Background now stays properly fixed behind view regardless of camera movement
 - **UI Cleanup**: ✅ Removed duplicate standalone file-upload from index.tsx - single unified input bar with integrated upload button
+- **Text Input Confirmed**: ✅ Keyboard text input fully functional - click ⌨️ button to toggle text mode, type messages, press Enter to send to LLM
+- **Idle Speech Confirmed**: ✅ LLM-generated environmental awareness idle speech fully implemented and active - uses RAG memory and camera vision for contextual observations
 
 ### Multi-Model PersonI System Restoration (Earlier Session)
 - **PersonI Interface Enhancement**: ✅ Restored comprehensive multi-model configuration system supporting 5 specialized model types:
