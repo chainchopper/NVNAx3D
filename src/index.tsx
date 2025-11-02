@@ -53,6 +53,7 @@ import {
   switchPersonaDeclaration,
   TextureName,
   DEFAULT_CAPABILITIES,
+  getPersoniModel,
 } from './personas';
 import { providerManager } from './services/provider-manager';
 import { ProviderFactory } from './providers/provider-factory';
@@ -1720,15 +1721,20 @@ export class GdmLiveAudio extends LitElement {
     
     let updated = false;
     this.personis = this.personis.map(personi => {
-      const modelExists = availableModels.some(m => m.id === personi.thinkingModel);
+      const conversationModel = getPersoniModel(personi, 'conversation');
+      const modelExists = availableModels.some(m => m.id === conversationModel);
       
-      if (!modelExists) {
+      if (!modelExists && conversationModel) {
         const firstModel = availableModels[0];
-        console.log(`[PersonI] Auto-updating ${personi.name} from "${personi.thinkingModel}" to "${firstModel.id}" (model not found in configured providers)`);
+        console.log(`[PersonI] Auto-updating ${personi.name} from "${conversationModel}" to "${firstModel.id}" (model not found in configured providers)`);
         updated = true;
         return {
           ...personi,
-          thinkingModel: firstModel.id,
+          thinkingModel: firstModel.id, // Backward compat
+          models: {
+            ...(personi.models ?? {}),
+            conversation: firstModel.id,
+          },
         };
       }
       
@@ -2362,7 +2368,12 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private getProviderForPersoni(personi: PersoniConfig): BaseProvider | null {
-    const modelId = personi.thinkingModel;
+    const modelId = getPersoniModel(personi, 'conversation');
+    
+    if (!modelId) {
+      console.warn(`No conversation model configured for PersonI "${personi.name}"`);
+      return null;
+    }
     
     const availableModels = providerManager.getAvailableModels();
     const modelInfo = availableModels.find(m => m.id === modelId);
@@ -2659,8 +2670,9 @@ export class GdmLiveAudio extends LitElement {
           systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
         }
 
+        const conversationModel = getPersoniModel(this.activePersoni, 'conversation') || this.activePersoni.thinkingModel;
         const response = await googleProvider.client.models.generateContent({
-          model: this.activePersoni.thinkingModel,
+          model: conversationModel,
           contents: transcript,
           config: {
             systemInstruction,
@@ -4211,19 +4223,112 @@ export class GdmLiveAudio extends LitElement {
         </select>
       </div>
       <div class="form-group">
-        <label for="p-model">Thinking Model</label>
+        <label for="p-model">Conversation Model</label>
         <select
           id="p-model"
-          .value=${this.editingPersoni.thinkingModel}
-          @change=${(e: Event) =>
-            (this.editingPersoni!.thinkingModel = (
-              e.target as HTMLSelectElement
-            ).value)}>
+          .value=${this.editingPersoni.models?.conversation || this.editingPersoni.thinkingModel}
+          @change=${(e: Event) => {
+            if (!this.editingPersoni!.models) {
+              this.editingPersoni!.models = {};
+            }
+            this.editingPersoni!.models.conversation = (e.target as HTMLSelectElement).value;
+            this.editingPersoni!.thinkingModel = (e.target as HTMLSelectElement).value; // Backward compat
+          }}>
           ${this.getAvailableModelsForDropdown().length > 0
             ? this.getAvailableModelsForDropdown().map(
                 (m) => html`<option .value=${m.id}>${m.name}</option>`,
               )
             : html`<option disabled>No providers configured - Go to Settings → Models</option>`}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="p-vision-model">Vision Model (optional)</label>
+        <select
+          id="p-vision-model"
+          .value=${this.editingPersoni.models?.vision || ''}
+          @change=${(e: Event) => {
+            if (!this.editingPersoni!.models) {
+              this.editingPersoni!.models = {};
+            }
+            const value = (e.target as HTMLSelectElement).value;
+            this.editingPersoni!.models.vision = value || undefined;
+          }}>
+          <option value="">Use conversation model</option>
+          ${this.getAvailableModelsForDropdown().map(
+              (m) => html`<option .value=${m.id}>${m.name}</option>`,
+            )}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="p-embed-model">Embedding Model (optional)</label>
+        <select
+          id="p-embed-model"
+          .value=${this.editingPersoni.models?.embedding || ''}
+          @change=${(e: Event) => {
+            if (!this.editingPersoni!.models) {
+              this.editingPersoni!.models = {};
+            }
+            const value = (e.target as HTMLSelectElement).value;
+            this.editingPersoni!.models.embedding = value || undefined;
+          }}>
+          <option value="">Auto-detect from provider</option>
+          ${this.getAvailableModelsForDropdown().map(
+              (m) => html`<option .value=${m.id}>${m.name}</option>`,
+            )}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="p-function-model">Function Calling Model (optional)</label>
+        <select
+          id="p-function-model"
+          .value=${this.editingPersoni.models?.functionCalling || ''}
+          @change=${(e: Event) => {
+            if (!this.editingPersoni!.models) {
+              this.editingPersoni!.models = {};
+            }
+            const value = (e.target as HTMLSelectElement).value;
+            this.editingPersoni!.models.functionCalling = value || undefined;
+          }}>
+          <option value="">Use conversation model</option>
+          ${this.getAvailableModelsForDropdown().map(
+              (m) => html`<option .value=${m.id}>${m.name}</option>`,
+            )}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="p-tts-model">Text-to-Speech Model (optional)</label>
+        <select
+          id="p-tts-model"
+          .value=${this.editingPersoni.models?.textToSpeech || this.editingPersoni.voiceName}
+          @change=${(e: Event) => {
+            if (!this.editingPersoni!.models) {
+              this.editingPersoni!.models = {};
+            }
+            const value = (e.target as HTMLSelectElement).value;
+            this.editingPersoni!.models.textToSpeech = value || undefined;
+            // Also update voiceName for backward compat
+            if (AVAILABLE_VOICES.includes(value)) {
+              this.editingPersoni!.voiceName = value;
+            }
+          }}>
+          <optgroup label="Google Voices">
+            ${AVAILABLE_VOICES.filter(v => !v.includes('alloy') && !v.includes('echo') && !v.includes('fable')).map(
+              (v) => html`<option .value=${v}>${v}</option>`,
+            )}
+          </optgroup>
+          <optgroup label="OpenAI Voices">
+            <option value="alloy">alloy</option>
+            <option value="echo">echo</option>
+            <option value="fable">fable</option>
+            <option value="onyx">onyx</option>
+            <option value="nova">nova</option>
+            <option value="shimmer">shimmer</option>
+          </optgroup>
+          <optgroup label="Models (for custom TTS)">
+            ${this.getAvailableModelsForDropdown().map(
+              (m) => html`<option .value=${m.id}>${m.name}</option>`,
+            )}
+          </optgroup>
         </select>
       </div>
       <div class="form-group">
