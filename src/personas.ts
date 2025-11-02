@@ -769,6 +769,55 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
       },
     },
   },
+  {
+    id: 'outlook',
+    name: 'Outlook',
+    description: 'Search and read emails from your Outlook/Microsoft 365 inbox.',
+    functionDeclaration: {
+      name: 'searchOutlookEmails',
+      description:
+        'Searches for emails in Outlook using a query string (supports OData query syntax).',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description:
+              'Outlook search query (supports OData query syntax, e.g., "from:user@example.com", "subject:meeting").',
+          },
+          maxResults: {
+            type: Type.NUMBER,
+            description: 'Maximum number of emails to return (default: 10).',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    id: 'confluence',
+    name: 'Confluence',
+    description: 'Search and access Confluence pages and spaces.',
+    functionDeclaration: {
+      name: 'searchConfluencePages',
+      description:
+        'Searches for pages in Confluence using a text query.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          query: {
+            type: Type.STRING,
+            description: 'Search query to find pages in Confluence.',
+          },
+          limit: {
+            type: Type.NUMBER,
+            description: 'Maximum number of pages to return (default: 25).',
+          },
+        },
+        required: ['query'],
+      },
+    },
+  },
 ];
 
 export const personaTemplates: PersonaTemplate[] = [

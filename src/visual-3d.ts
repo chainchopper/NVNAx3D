@@ -255,10 +255,12 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   private createShapeGeometry(shape: string): THREE.BufferGeometry {
     switch (shape) {
       case 'TorusKnot':
-        return new THREE.TorusKnotGeometry(0.6, 0.25, 200, 32);
+        // Reduced by 50% from (0.6, 0.25) to (0.3, 0.125)
+        return new THREE.TorusKnotGeometry(0.3, 0.125, 200, 32);
       case 'Icosahedron':
       default:
-        return new THREE.IcosahedronGeometry(1, 10);
+        // Reduced by 50% from radius 1 to 0.5
+        return new THREE.IcosahedronGeometry(0.5, 10);
     }
   }
 
