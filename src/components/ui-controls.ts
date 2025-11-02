@@ -17,6 +17,10 @@ export class UIControls extends LitElement {
   @property({ type: String }) inputMode: InputMode = 'voice';
   @property({ type: String}) currentTextInput = '';
   @property({ type: String }) status = '';
+  @property({ type: Boolean }) isVisible = true;
+
+  private inactivityTimer: number | null = null;
+  private readonly HIDE_DELAY = 5000; // 5 seconds
 
   static styles = css`
     :host {
@@ -27,6 +31,11 @@ export class UIControls extends LitElement {
       right: 0;
       pointer-events: none;
       z-index: 2000;
+      transition: opacity 0.5s ease-out;
+    }
+
+    :host(.hidden) {
+      opacity: 0;
     }
 
     .controls-container {
@@ -211,6 +220,54 @@ export class UIControls extends LitElement {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       this.handleTextSubmit();
+    }
+  }
+
+  private resetInactivityTimer() {
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
+    
+    // Show controls
+    this.isVisible = true;
+    this.classList.remove('hidden');
+    
+    // Set new timer to hide after inactivity
+    this.inactivityTimer = window.setTimeout(() => {
+      this.isVisible = false;
+      this.classList.add('hidden');
+    }, this.HIDE_DELAY);
+  }
+
+  private handleUserActivity = () => {
+    this.resetInactivityTimer();
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    
+    // Listen for user activity on document level
+    document.addEventListener('mousemove', this.handleUserActivity);
+    document.addEventListener('mousedown', this.handleUserActivity);
+    document.addEventListener('keydown', this.handleUserActivity);
+    document.addEventListener('touchstart', this.handleUserActivity);
+    
+    // Start initial timer
+    this.resetInactivityTimer();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    
+    // Clean up event listeners
+    document.removeEventListener('mousemove', this.handleUserActivity);
+    document.removeEventListener('mousedown', this.handleUserActivity);
+    document.removeEventListener('keydown', this.handleUserActivity);
+    document.removeEventListener('touchstart', this.handleUserActivity);
+    
+    // Clear timer
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
     }
   }
 

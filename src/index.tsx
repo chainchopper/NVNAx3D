@@ -2655,58 +2655,24 @@ export class GdmLiveAudio extends LitElement {
         }
       }
 
-      if (provider instanceof GoogleProvider) {
-        const googleProvider = provider as any;
-        if (!googleProvider.client) {
-          await googleProvider.verify();
-        }
-
-        const userContext = userProfileManager.getSystemPromptContext();
-        let systemInstruction = userContext 
-          ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
-          : this.activePersoni.systemInstruction;
-        
-        if (memoryContext) {
-          systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
-        }
-
-        const conversationModel = getPersoniModel(this.activePersoni, 'conversation') || this.activePersoni.thinkingModel;
-        const response = await googleProvider.client.models.generateContent({
-          model: conversationModel,
-          contents: transcript,
-          config: {
-            systemInstruction,
-            tools: [{functionDeclarations: enabledDeclarations}],
-          },
-        });
-
-        const functionCalls = response.functionCalls;
-        if (functionCalls && functionCalls.length > 0) {
-          for (const fc of functionCalls) {
-            await this.handleFunctionCall(fc);
-          }
-        } else {
-          const responseText = response.text;
-          await this.speakText(responseText);
-        }
-      } else {
-        const userContext = userProfileManager.getSystemPromptContext();
-        let systemInstruction = userContext 
-          ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
-          : this.activePersoni.systemInstruction;
-        
-        if (memoryContext) {
-          systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
-        }
-          
-        const messages = [
-          { role: 'system' as const, content: systemInstruction },
-          { role: 'user' as const, content: transcript },
-        ];
-
-        const responseText = await provider.sendMessage(messages);
-        await this.speakText(responseText);
+      const userContext = userProfileManager.getSystemPromptContext();
+      let systemInstruction = userContext 
+        ? `${this.activePersoni.systemInstruction}\n\n${userContext}`
+        : this.activePersoni.systemInstruction;
+      
+      if (memoryContext) {
+        systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
       }
+        
+      const messages = [
+        { role: 'system' as const, content: systemInstruction },
+        { role: 'user' as const, content: transcript },
+      ];
+
+      console.log('[Conversation] Sending to LLM:', { provider: provider.constructor.name, model: getPersoniModel(this.activePersoni, 'conversation') });
+      const responseText = await provider.sendMessage(messages);
+      console.log('[Conversation] LLM response received:', responseText.substring(0, 100) + '...');
+      await this.speakText(responseText);
     } catch (e) {
       if (e.message?.includes('API key')) {
         this.updateError('Check your API key in Settings → Models');
