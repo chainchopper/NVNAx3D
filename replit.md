@@ -68,7 +68,17 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 2, 2025)
-### Multi-Model PersonI System Restoration (Latest Session)
+### UI/Background Integration Fixes (Current Session)
+- **File Upload Integration**: ✅ Moved file-upload component from standalone floating button into ui-controls text-input-container - now appears inline with text input field when in text mode
+- **3D Background Restoration**: ✅ Removed TEMPORARY code (commit a20ed90) that made PersonI sphere 95% transparent/invisible - restored proper crystal material properties:
+  - emissiveIntensity: 0.02 → 0.1 (10x brighter)
+  - transmission: 0.95 → 0.3 (significantly less transparent)
+  - thickness: 0.1 → 0.5 (5x thicker material)
+  - opacity: 0.05 → baseOpacity (0.7) - 14x more opaque
+- **Camera Background System**: ✅ Confirmed updateCameraBackground() method is present and functional - creates VideoTexture plane at z=-5 behind PersonI sphere
+- **UI Cleanup**: ✅ Removed duplicate standalone file-upload from index.tsx - single unified input bar with integrated upload button
+
+### Multi-Model PersonI System Restoration (Earlier Session)
 - **PersonI Interface Enhancement**: ✅ Restored comprehensive multi-model configuration system supporting 5 specialized model types:
   - Conversation Model (required) - primary chat and reasoning
   - Vision Model (optional) - image understanding, defaults to conversation model
