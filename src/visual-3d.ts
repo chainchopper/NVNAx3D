@@ -228,8 +228,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     if (!this.visuals || !this.sphereMaterial) return;
     const {textureName, shape, idleAnimation} = this.visuals;
 
-    // TEMPORARY: Disable all backgrounds to show camera clearly
-    // Make PersonI sphere nearly invisible (5% opacity)
+    // Reset material to base crystal state
     this.sphereMaterial.map = null;
     this.sphereMaterial.emissiveMap = null;
     this.sphereMaterial.roughnessMap = null;
@@ -237,19 +236,16 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     this.sphereMaterial.normalMap = null;
     this.sphereMaterial.alphaMap = null;
     this.sphereMaterial.emissive.set(0xffffff);
-    this.sphereMaterial.emissiveIntensity = 0.02;
-    this.sphereMaterial.transmission = 0.95;
-    this.sphereMaterial.thickness = 0.1;
+    this.sphereMaterial.emissiveIntensity = 0.1;
+    this.sphereMaterial.transmission = 0.3;
+    this.sphereMaterial.thickness = 0.5;
     this.sphereMaterial.roughness = 0.05;
     this.sphereMaterial.metalness = 0.1;
     this.sphereMaterial.color.set(0xffffff);
     this.sphereMaterial.transparent = true;
-    this.sphereMaterial.opacity = 0.05;
+    this.sphereMaterial.opacity = this.baseOpacity;
     this.sphereMaterial.depthWrite = false;
     this.sphereMaterial.needsUpdate = true;
-    
-    // Note: Original background/texture loading code has been temporarily disabled above
-    // to make the PersonI sphere nearly invisible so the camera feed is clearly visible
   }
 
   private createShapeGeometry(shape: string): THREE.BufferGeometry {

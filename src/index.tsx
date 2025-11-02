@@ -5002,11 +5002,6 @@ export class GdmLiveAudio extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
-        <!-- File Upload -->
-        <file-upload
-          @file-uploaded=${this.handleFileUploaded}
-        ></file-upload>
-
         <!-- Calendar View -->
         ${this.showCalendar ? html`
           <calendar-view
