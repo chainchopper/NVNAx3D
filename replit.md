@@ -68,7 +68,19 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plaid/Yodlee (planned)**: Financial transaction and account data.
 
 ## Recent Development (November 2, 2025)
-### Latest Fixes (Current Session)
+### Multi-Model PersonI System Restoration (Latest Session)
+- **PersonI Interface Enhancement**: ✅ Restored comprehensive multi-model configuration system supporting 5 specialized model types:
+  - Conversation Model (required) - primary chat and reasoning
+  - Vision Model (optional) - image understanding, defaults to conversation model
+  - Embedding Model (optional) - semantic search and RAG, auto-detects from provider
+  - Function Calling Model (optional) - tool execution, defaults to conversation model
+  - Text-to-Speech Model (optional) - voice synthesis with Google/OpenAI voice support
+- **PersonI Editor UI Restored**: ✅ Complete PersonI editor with all 5 model dropdown fields, organized voice selection (Google voices, OpenAI voices, custom models), and backward compatibility with legacy thinkingModel configs
+- **Build Optimization**: ✅ Restored vite.config.ts manual chunk splitting for three.js, tensorflow.js, transformers.js - enables lazy loading and prevents 500kB chunk warnings for Vercel deployment
+- **Backward Compatibility**: ✅ getPersoniModel() helper function ensures graceful fallback from models.conversation to legacy thinkingModel field
+- **Critical Bug Fix**: ✅ Fixed TypeError in autoUpdatePersonIModels() when spreading undefined models object - now uses null coalescing operator `...(personi.models ?? {})` for safe migration
+
+### Earlier Fixes (Current Session)
 - **Avatar Size Reduction**: ✅ Reduced all PersonI avatar geometries by 50% - Icosahedron radius from 1.0 to 0.5, TorusKnot from (0.6, 0.25) to (0.3, 0.125)
 - **Box/Cube Geometry Removed**: ✅ Confirmed no Box geometry exists in codebase - spinning cube that showed camera feed has been permanently removed
 - **Microphone Permission Mutex**: ✅ Fixed double permission prompt bug - added mutex lock to SharedMicrophoneManager ensuring single browser permission request even when multiple audio consumers (music detector, recorder, song ID) initialize simultaneously
