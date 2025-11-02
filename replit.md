@@ -75,7 +75,10 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
   - transmission: 0.95 → 0.3 (significantly less transparent)
   - thickness: 0.1 → 0.5 (5x thicker material)
   - opacity: 0.05 → baseOpacity (0.7) - 14x more opaque
-- **Camera Background System**: ✅ Confirmed updateCameraBackground() method is present and functional - creates VideoTexture plane at z=-5 behind PersonI sphere
+- **Camera Background Rotation Fix**: ✅ CRITICAL FIX - Resolved "rotating background" issue caused by cameraBackgroundPlane being attached to scene while camera orbits:
+  - Changed attachment from `scene.add()` to `camera.add()` so background moves WITH camera view
+  - Increased z-offset from -5 to -10 (farther than camera orbit radius) to prevent z-fighting/overlap with PersonI sphere
+  - Background now stays properly fixed behind view regardless of camera movement
 - **UI Cleanup**: ✅ Removed duplicate standalone file-upload from index.tsx - single unified input bar with integrated upload button
 
 ### Multi-Model PersonI System Restoration (Earlier Session)
