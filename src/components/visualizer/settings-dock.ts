@@ -149,8 +149,11 @@ export class SettingsDock extends LitElement {
     .content {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 0;
       color: white;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Custom scrollbar */
@@ -181,7 +184,7 @@ export class SettingsDock extends LitElement {
       const state = appStateService.getState();
       
       // Panel IDs managed by this dock (all panels now opened via radial menu)
-      const dockManagedPanels = ['models', 'personis', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig'];
+      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig'];
       const isDockManaged = dockManagedPanels.includes(state.activeSidePanel);
       
       if (isDockManaged) {
@@ -290,7 +293,12 @@ export class SettingsDock extends LitElement {
       },
       'personis': {
         id: 'personis',
-        title: 'PersonI',
+        title: 'PersonI Settings',
+        content: html`<personi-settings-panel @close=${this.handlePanelCloseRequest}></personi-settings-panel>`,
+      },
+      'tts': {
+        id: 'tts',
+        title: 'Text-to-Speech',
         content: html`<chatterbox-settings @close=${this.handlePanelCloseRequest}></chatterbox-settings>`,
       },
       'notes': {

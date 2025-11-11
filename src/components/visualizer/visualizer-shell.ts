@@ -34,6 +34,7 @@ import '../routines-panel';
 import '../plugin-manager-panel';
 import '../connector-config-panel';
 import '../chatterbox-settings';
+import '../personi-settings-panel';
 import '../ui-controls';
 import '../camera-controls';
 import '../camera-manager';
