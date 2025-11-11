@@ -23,6 +23,8 @@ export class DualModeControlsHUD extends LitElement {
   @state() private currentMode: DualMode = 'single';
   
   private unsubscribeAppState: (() => void) | null = null;
+  private inactivityTimer: number | null = null;
+  private readonly HIDE_DELAY = 5000;
 
   static override styles = css`
     :host {
@@ -33,6 +35,11 @@ export class DualModeControlsHUD extends LitElement {
       transform: translateX(-50%);
       z-index: 49;
       pointer-events: none;
+      transition: opacity 0.5s ease-out;
+    }
+
+    :host(.hidden) {
+      opacity: 0;
     }
 
     .controls-container {
@@ -139,6 +146,13 @@ export class DualModeControlsHUD extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.subscribeToAppState();
+    
+    document.addEventListener('mousemove', this.handleUserActivity);
+    document.addEventListener('mousedown', this.handleUserActivity);
+    document.addEventListener('keydown', this.handleUserActivity);
+    document.addEventListener('touchstart', this.handleUserActivity);
+    
+    this.resetInactivityTimer();
   }
 
   override disconnectedCallback(): void {
@@ -146,7 +160,32 @@ export class DualModeControlsHUD extends LitElement {
     if (this.unsubscribeAppState) {
       this.unsubscribeAppState();
     }
+    
+    document.removeEventListener('mousemove', this.handleUserActivity);
+    document.removeEventListener('mousedown', this.handleUserActivity);
+    document.removeEventListener('keydown', this.handleUserActivity);
+    document.removeEventListener('touchstart', this.handleUserActivity);
+    
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
   }
+
+  private resetInactivityTimer() {
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
+    
+    this.classList.remove('hidden');
+    
+    this.inactivityTimer = window.setTimeout(() => {
+      this.classList.add('hidden');
+    }, this.HIDE_DELAY);
+  }
+
+  private handleUserActivity = () => {
+    this.resetInactivityTimer();
+  };
 
   private subscribeToAppState(): void {
     this.unsubscribeAppState = appStateService.subscribe(() => {

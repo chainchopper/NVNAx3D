@@ -12,6 +12,9 @@ export class RAGToggle extends LitElement {
   @property({type: Number}) lastRetrievedCount = 0;
   @property({type: Boolean}) initialized = false;
 
+  private inactivityTimer: number | null = null;
+  private readonly HIDE_DELAY = 5000;
+
   static styles = css`
     :host {
       display: block;
@@ -19,6 +22,12 @@ export class RAGToggle extends LitElement {
       top: 20px;
       left: 20px;
       z-index: 45; /* HUD tier - above 3D canvas (10), below UI controls (60) */
+      transition: opacity 0.5s ease-out;
+    }
+
+    :host(.hidden) {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .rag-toggle-container {
@@ -117,6 +126,46 @@ export class RAGToggle extends LitElement {
       bubbles: true,
       composed: true
     }));
+  }
+
+  private resetInactivityTimer() {
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
+    
+    this.classList.remove('hidden');
+    
+    this.inactivityTimer = window.setTimeout(() => {
+      this.classList.add('hidden');
+    }, this.HIDE_DELAY);
+  }
+
+  private handleUserActivity = () => {
+    this.resetInactivityTimer();
+  };
+
+  override connectedCallback() {
+    super.connectedCallback();
+    
+    document.addEventListener('mousemove', this.handleUserActivity);
+    document.addEventListener('mousedown', this.handleUserActivity);
+    document.addEventListener('keydown', this.handleUserActivity);
+    document.addEventListener('touchstart', this.handleUserActivity);
+    
+    this.resetInactivityTimer();
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    
+    document.removeEventListener('mousemove', this.handleUserActivity);
+    document.removeEventListener('mousedown', this.handleUserActivity);
+    document.removeEventListener('keydown', this.handleUserActivity);
+    document.removeEventListener('touchstart', this.handleUserActivity);
+    
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
   }
 
   render() {
