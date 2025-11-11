@@ -5,7 +5,25 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### UI/UX Fixes & Custom Provider Discovery (Latest)
+### Model Capability System & Dropdown Filtering (Latest)
+- **Capability Flags**: Added `conversation`, `embedding`, `imageGeneration` boolean flags to ModelCapabilities interface
+- **Capability-Based Filtering**: Each model dropdown in PersonI settings now filters by appropriate capability:
+  - Conversation dropdown → models with `conversation: true`
+  - Vision dropdown → models with `vision: true`
+  - Embedding dropdown → models with `embedding: true`
+  - Function Calling dropdown → models with `functionCalling: true`
+  - Image Generation dropdown → models with `imageGeneration: true`
+- **Automatic Capability Inference**: Custom provider discovery now infers capabilities from model names:
+  - Embedding: `includes('embed') || includes('embedding')`
+  - Image Gen: `includes('dall-e') || includes('imagen') || includes('stable-diffusion')`
+  - Vision: `includes('vision') || includes('gpt-4') || includes('gemini') || includes('claude')`
+  - Conversation: `!isEmbedding && !isImageGen`
+- **Provider Updates**: Google and OpenAI providers now properly set all capability flags including new ones
+- **Auto-Configuration Fix**: Gemini models auto-configured from environment now include all capability flags
+- **Backward Compatibility**: PersonI configs support both legacy string model IDs and new `{ providerId, modelId }` format
+- **Provider Manager APIs**: Added `getModelsByCapability()`, `getActiveProviders()`, `getProvidersByCapability()` for filtered model queries
+
+### UI/UX Fixes & Custom Provider Discovery
 - **Dropdown Styling Fix**: Model selection dropdowns now have dark backgrounds with white text for proper readability
 - **Custom Provider Model Discovery**: Fixed Ollama/local LLM integration - models now automatically discovered when adding custom providers
   - Changed from `addCustomProvider()` to `addCustomProviderWithDiscovery()` flow
