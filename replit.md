@@ -5,7 +5,15 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### Gmail & Twilio Connector Integration (Latest)
+### Backend API Fixes & SSRF Protection (Latest)
+- **Missing Endpoints Fixed**: Added `/api/config/env` (returns API key availability as booleans) and `/api/models/proxy` (custom provider model discovery with SSRF protection)
+- **Critical SSRF Security Fix**: Model proxy now resolves DNS and validates ALL resolved IPs against private/reserved ranges (prevents DNS rebinding attacks, blocks malicious domains that resolve to 127.0.0.1 or RFC1918 addresses)
+- **LocalStorage Quota Protection**: Added size monitoring, warns when provider data exceeds 100KB, implements automatic cleanup on QuotaExceededError, includes storage usage diagnostics tool
+- **Provider Auto-Config Retry Logic**: Added exponential backoff retry mechanism (500ms, 1s, 2s) with max 3 attempts to handle backend startup timing
+- **Improved Error Logging**: Provider manager errors now include message, stack trace, and raw error object for better debugging
+- **Development vs Production**: Localhost/private IPs allowed in development mode only, strict blocking in production
+
+### Gmail & Twilio Connector Integration
 - **Gmail Tools**: Added complete Gmail integration to tool orchestrator with 2 new tools:
   - `search_gmail`: Search emails by query with configurable maxResults (no confirmation required)
   - `send_gmail`: Send emails with to/cc/bcc/subject/body (requires user confirmation)
