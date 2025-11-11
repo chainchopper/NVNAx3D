@@ -22,7 +22,7 @@ export class CameraControls extends LitElement {
       position: fixed;
       bottom: 100px;
       right: 20px;
-      z-index: 900;
+      z-index: 2100;
       display: flex;
       flex-direction: column;
       gap: 10px;
