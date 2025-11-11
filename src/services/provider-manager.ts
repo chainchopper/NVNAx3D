@@ -6,6 +6,7 @@
 import { ModelProvider, STTProvider, TTSProvider, DEFAULT_PROVIDERS, ModelInfo } from '../types/providers';
 import { BaseProvider } from '../providers/base-provider';
 import { ProviderFactory } from '../providers/provider-factory';
+import { getBackendUrl } from '../config/backend-url';
 
 const PROVIDERS_KEY = 'nirvana-providers';
 const STT_CONFIG_KEY = 'nirvana-stt-config';
@@ -117,10 +118,8 @@ export class ProviderManager {
    */
   private async autoConfigureFromEnvironment() {
     try {
-      // Determine backend URL - use relative path in production, localhost in dev
-      const backendUrl = process.env.NODE_ENV === 'production' 
-        ? '/api/config/env'
-        : 'http://localhost:3001/api/config/env';
+      // Use relative path for CORS compatibility
+      const backendUrl = getBackendUrl('/api/config/env');
       
       // Retry fetch with exponential backoff (backend might not be ready yet)
       let response;
@@ -283,13 +282,11 @@ export class ProviderManager {
     };
   }): Promise<{ success: boolean; providerId?: string; error?: string }> {
     try {
-      // Determine backend URL
-      const backendUrl = process.env.NODE_ENV === 'production'
-        ? '/api/models/proxy'
-        : 'http://localhost:3001/api/models/proxy';
+      // Use relative path for CORS compatibility
+      const proxyUrl = getBackendUrl('/api/models/proxy');
       
       // Use backend proxy to discover models with SSRF protection
-      const response = await fetch(backendUrl, {
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

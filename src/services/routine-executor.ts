@@ -15,6 +15,7 @@ import type {
   RoutineDetail
 } from '../types/routine-types';
 import { connectorHandlers } from './connector-handlers';
+import { getBackendUrl } from '../config/backend-url';
 
 export class RoutineExecutor {
   private ragMemory: EnhancedRAGMemoryManager;
@@ -359,7 +360,7 @@ export class RoutineExecutor {
           ? '/api/financial/crypto' 
           : '/api/financial/stocks';
         
-        const response = await fetch(`http://localhost:3001${endpoint}`, {
+        const response = await fetch(getBackendUrl(endpoint), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ symbol: priceAlert.symbol })
@@ -414,7 +415,7 @@ export class RoutineExecutor {
 
     const checkPortfolio = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/financial/portfolio/summary');
+        const response = await fetch(getBackendUrl('/api/financial/portfolio/summary'));
         const data = await response.json();
         const currentValue = data.summary?.totalValue || 0;
 

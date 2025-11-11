@@ -1,18 +1,17 @@
 /**
  * Google Gemini provider implementation - Backend Proxy Mode
- * All API calls go through backend at http://localhost:3001/api/chat/gemini
+ * All API calls go through backend at /api/chat/gemini (relative paths for CORS compatibility)
  * This keeps API keys secure on the server side
  */
 
 import { BaseProvider, ProviderMessage, StreamingResponse } from './base-provider';
 import { ModelInfo } from '../types/providers';
-
-const BACKEND_URL = 'http://localhost:3001';
+import { getBackendUrl } from '../config/backend-url';
 
 export class GoogleProvider extends BaseProvider {
   async verify(): Promise<boolean> {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/chat/gemini`, {
+      const response = await fetch(getBackendUrl('/api/chat/gemini'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -91,7 +90,7 @@ export class GoogleProvider extends BaseProvider {
   ): Promise<string> {
     const stream = !!onChunk;
 
-    const response = await fetch(`${BACKEND_URL}/api/chat/gemini`, {
+    const response = await fetch(getBackendUrl('/api/chat/gemini'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -151,7 +150,7 @@ export class GoogleProvider extends BaseProvider {
 
   async generateSpeech(text: string, voice?: string): Promise<string> {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/gemini/generate-speech`, {
+      const response = await fetch(getBackendUrl('/api/gemini/generate-speech'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
