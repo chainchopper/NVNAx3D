@@ -16,6 +16,7 @@
     "cors": "^2.8.5",
     "dompurify": "^3.3.0",
     "express": "^5.1.0",
+    "gsap": "^3.13.0",
     "isomorphic-dompurify": "^2.30.0",
     "lit": "^3.3.0",
     "postprocessing": "^6.36.0",
