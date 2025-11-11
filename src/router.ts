@@ -38,9 +38,9 @@ function getMainRouteComponent(): string {
 }
 
 export const routes: RouteConfig[] = [
-  { path: '/', name: 'main', component: 'gdm-live-audio' }, // ORIGINAL interface as default
-  { path: '/visualizer', name: 'visualizer', component: 'visualizer-shell' }, // NEW visualizer (opt-in)
-  { path: '/legacy', name: 'legacy', component: 'gdm-live-audio' }, // Legacy fallback
+  { path: '/', name: 'main', component: 'visualizer-shell' }, // Main interface
+  { path: '/visualizer', name: 'visualizer', component: 'visualizer-shell' }, // Alias
+  { path: '/legacy', name: 'legacy', component: 'visualizer-shell' }, // Alias
 ];
 
 export class Router extends EventTarget {

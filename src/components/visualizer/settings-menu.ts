@@ -24,7 +24,7 @@ export type MenuItem =
 
 @customElement('settings-menu')
 export class SettingsMenu extends LitElement {
-  @property({ type: Boolean }) visible = false;
+  @property({ type: Boolean, reflect: true }) visible = false;
   @property({ type: Number }) fabX = 0;
   @property({ type: Number }) fabY = 0;
 
@@ -34,6 +34,10 @@ export class SettingsMenu extends LitElement {
       position: fixed;
       z-index: 99;
       pointer-events: none;
+    }
+    
+    :host([visible]) {
+      pointer-events: all;
     }
 
     .menu-item {
