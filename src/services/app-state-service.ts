@@ -9,11 +9,10 @@
 
 import type { PersoniConfig } from '../personas';
 import type { UserProfile } from '../types/user-profile';
+import { PERSONIS_KEY, USER_PROFILE_KEY } from '../constants/storage.js';
 
 // localStorage keys (matching index.tsx)
-const PERSONIS_KEY = 'gdm-personis';
 const DUAL_MODE_KEY = 'dual-mode-settings';
-const USER_PROFILE_KEY = 'userProfile';
 
 export type ActiveSidePanel = 
   | 'none'
@@ -126,6 +125,25 @@ export class AppStateService extends EventTarget {
   setActivePersoni(personi: PersoniConfig | null): void {
     this.state.activePersoni = personi;
     this.emit('active-personi-changed', { personi });
+  }
+
+  /**
+   * Update a personi in the array and save to localStorage
+   */
+  updatePersoni(updatedPersoni: PersoniConfig): void {
+    const index = this.state.personis.findIndex(p => p.id === updatedPersoni.id);
+    if (index !== -1) {
+      this.state.personis[index] = updatedPersoni;
+      this.savePersonis();
+      
+      // If this is the active personi, update it too
+      if (this.state.activePersoni?.id === updatedPersoni.id) {
+        this.state.activePersoni = updatedPersoni;
+        this.emit('active-personi-changed', { personi: updatedPersoni });
+      }
+      
+      this.emit('personis-changed', { personis: this.state.personis });
+    }
   }
 
   setSecondaryPersoni(personi: PersoniConfig | null): void {

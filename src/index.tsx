@@ -83,8 +83,8 @@ import { voiceCommandSystem } from './services/voice-command-system';
 import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
 import './components/object-detection-overlay';
 import './components/calendar-view';
+import { PERSONIS_KEY } from './constants/storage.js';
 
-const PERSONIS_KEY = 'gdm-personis';
 const CONNECTORS_KEY = 'gdm-connectors';
 const STT_PREFERENCES_KEY = 'stt-preferences';
 const SETTINGS_FAB_POSITION_KEY = 'settings-fab-position';

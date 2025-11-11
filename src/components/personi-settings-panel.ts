@@ -18,6 +18,7 @@ import { activePersonasManager } from '../services/active-personas-manager';
 import { providerManager } from '../services/provider-manager';
 import { ModelInfo } from '../types/providers';
 import { oauthService } from '../services/oauth-service';
+import { PERSONIS_KEY } from '../constants/storage.js';
 
 const VOICE_OPTIONS = [
   { id: 'Puck', name: 'Puck (Mature Male, US)' },
@@ -448,19 +449,14 @@ export class PersoniSettingsPanel extends LitElement {
       },
     };
 
-    // Update app state
+    // Update personi in app state (updates array + saves to localStorage)
+    appStateService.updatePersoni(updated);
+    
+    // Update active personi reference
     appStateService.setActivePersoni(updated);
     
     // Update active personas manager (primary slot)
     activePersonasManager.setPersona('primary', updated);
-
-    // Update personis in localStorage
-    const personis = appStateService.getState().personis;
-    const index = personis.findIndex(p => p.id === updated.id);
-    if (index !== -1) {
-      personis[index] = updated;
-      localStorage.setItem('gdm-personis', JSON.stringify(personis));
-    }
 
     this.hasChanges = false;
     this.dispatchEvent(new CustomEvent('close'));
@@ -786,13 +782,15 @@ export class PersoniSettingsPanel extends LitElement {
           </div>
         </div>
 
-        <!-- Connectors Section -->
+        <!-- OAuth Connectors Section -->
         <div class="section">
-          <h3 class="section-title">Connectors & Tools</h3>
+          <h3 class="section-title">OAuth Connectors</h3>
+          <div class="helper-text" style="margin-bottom: 12px;">
+            External services requiring OAuth authentication
+          </div>
           
           <div class="connectors-list">
-            ${AVAILABLE_CONNECTORS.map(connector => {
-              const isOAuth = oauthService.isOAuthConnector(connector.id);
+            ${AVAILABLE_CONNECTORS.filter(c => c.type === 'oauth').map(connector => {
               const isConnected = this.oauthStatuses.get(connector.id) || false;
               
               return html`
@@ -805,18 +803,37 @@ export class PersoniSettingsPanel extends LitElement {
                     <div class="connector-name">${connector.name}</div>
                     <div class="connector-description">${connector.description}</div>
                   </div>
-                  ${isOAuth ? html`
-                    <div class="connector-badge ${isConnected ? 'connected' : 'not-connected'}">
-                      ${isConnected ? '✓ Connected' : 'OAuth Required'}
-                    </div>
-                  ` : ''}
+                  <div class="connector-badge ${isConnected ? 'connected' : 'not-connected'}">
+                    ${isConnected ? '✓ Connected' : 'OAuth Required'}
+                  </div>
                 </div>
               `;
             })}
           </div>
+        </div>
+
+        <!-- API Tools Section -->
+        <div class="section">
+          <h3 class="section-title">API Tools & Commands</h3>
+          <div class="helper-text" style="margin-bottom: 12px;">
+            Built-in tools and external APIs (configure API keys in Settings)
+          </div>
           
-          <div class="helper-text" style="margin-top: 12px;">
-            Select which tools and connectors this PersonI can use
+          <div class="connectors-list">
+            ${AVAILABLE_CONNECTORS.filter(c => c.type === 'api_tool').map(connector => {
+              return html`
+                <div
+                  class="connector-item ${this.enabledConnectors.includes(connector.id) ? 'active' : ''}"
+                  @click=${() => this.toggleConnector(connector.id)}
+                >
+                  <div class="checkbox"></div>
+                  <div class="connector-info">
+                    <div class="connector-name">${connector.name}</div>
+                    <div class="connector-description">${connector.description}</div>
+                  </div>
+                </div>
+              `;
+            })}
           </div>
         </div>
       </div>
