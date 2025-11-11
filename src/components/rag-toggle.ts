@@ -18,7 +18,7 @@ export class RAGToggle extends LitElement {
       position: fixed;
       top: 20px;
       left: 20px;
-      z-index: 900;
+      z-index: 45; /* HUD tier - above 3D canvas (10), below UI controls (60) */
     }
 
     .rag-toggle-container {

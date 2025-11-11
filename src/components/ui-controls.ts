@@ -30,7 +30,7 @@ export class UIControls extends LitElement {
       left: 0;
       right: 0;
       pointer-events: none;
-      z-index: 2000;
+      z-index: 60; /* Above HUD tier (40-50), below panels (100) */
       transition: opacity 0.5s ease-out;
     }
 

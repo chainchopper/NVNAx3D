@@ -108,7 +108,7 @@ export class ObjectDetectionOverlay extends LitElement {
       font-size: 18px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       pointer-events: all;
-      z-index: 900;
+      z-index: 46; /* HUD tier */
     }
 
     .toggle-button:hover {
