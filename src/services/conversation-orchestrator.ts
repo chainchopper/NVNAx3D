@@ -69,8 +69,17 @@ export class ConversationOrchestrator {
     }
 
     const provider = providerManager.getProviderInstance(activePersoni.thinkingModel);
+    
+    // GRACEFUL FALLBACK: If no provider configured, still allow conversation with browser-only mode
     if (!provider) {
-      throw new Error(`No provider configured for model: ${activePersoni.thinkingModel}`);
+      this.updateStatus('Provider not configured - using browser voice only');
+      console.warn(`[ConversationOrchestrator] No provider for model: ${activePersoni.thinkingModel}. Using browser-only mode.`);
+      // Return a friendly message since we can't generate AI responses
+      const fallbackMessage = `I'm currently running in browser-only mode. Please configure an AI provider in Settings → Models to enable full conversation capabilities.`;
+      if (onChunk) {
+        onChunk({ text: fallbackMessage, isComplete: true });
+      }
+      return;
     }
 
     this.updateStatus('Thinking...');

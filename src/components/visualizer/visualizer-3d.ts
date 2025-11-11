@@ -38,10 +38,6 @@ export class Visualizer3D extends LitElement {
   private wireframeMaterial!: THREE.ShaderMaterial;
   private glowMaterial!: THREE.ShaderMaterial;
 
-  // Particle system
-  private particles!: THREE.Points;
-  private particleCount = 2000;
-
   // Animation state
   private animationId: number | null = null;
   private isDestroyed = false;
@@ -138,16 +134,12 @@ export class Visualizer3D extends LitElement {
     // Create dual-mesh sphere system
     this.createAudioSphere();
 
-    // Create particle field
-    this.createParticleField();
-
     // Set initial state for entrance animation
     this.camera.position.z = 15; // Start far away
     this.wireframeSphere.scale.setScalar(0); // Start invisible
     this.glowSphere.scale.setScalar(0);
-    (this.particles.material as THREE.PointsMaterial).opacity = 0;
 
-    console.log('[Visualizer3D] Scene created with dual-mesh sphere and particles');
+    console.log('[Visualizer3D] Scene created with dual-mesh sphere');
   }
 
   private playEntranceAnimation(): void {
@@ -185,13 +177,6 @@ export class Visualizer3D extends LitElement {
       duration: 1.8,
       ease: 'back.out(1.7)'
     }, 0.6);
-
-    // Particles fade in
-    tl.to(this.particles.material, {
-      opacity: 0.6,
-      duration: 2,
-      ease: 'power1.in'
-    }, 0.3);
 
     console.log('[Visualizer3D] Entrance animation started');
   }
@@ -280,48 +265,6 @@ export class Visualizer3D extends LitElement {
     console.log('[Visualizer3D] Dual-mesh audio sphere created');
   }
 
-  private createParticleField(): void {
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(this.particleCount * 3);
-    const colors = new Float32Array(this.particleCount * 3);
-    const sizes = new Float32Array(this.particleCount);
-
-    for (let i = 0; i < this.particleCount; i++) {
-      // Random positions in a cube
-      positions[i * 3] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 30;
-
-      // Random colors (cyan to blue spectrum)
-      const hue = 0.5 + Math.random() * 0.1; // Cyan-blue range
-      const color = new THREE.Color().setHSL(hue, 0.8, 0.6);
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
-
-      // Random sizes
-      sizes[i] = Math.random() * 2 + 0.5;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-
-    const material = new THREE.PointsMaterial({
-      size: 0.05,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.6,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
-    this.particles = new THREE.Points(geometry, material);
-    this.scene.add(this.particles);
-
-    console.log('[Visualizer3D] Particle field created with', this.particleCount, 'particles');
-  }
-
   private animateFrame = (): void => {
     if (this.isDestroyed) return;
 
@@ -335,9 +278,6 @@ export class Visualizer3D extends LitElement {
 
     // Update shader uniforms
     this.updateShaders(elapsedTime);
-
-    // Animate particles
-    this.updateParticles(elapsedTime, deltaTime);
 
     // Render
     this.renderer.render(this.scene, this.camera);
@@ -393,40 +333,6 @@ export class Visualizer3D extends LitElement {
     );
   }
 
-  private updateParticles(time: number, deltaTime: number): void {
-    if (!this.particles) return;
-
-    // Rotate particle field slowly
-    this.particles.rotation.y += deltaTime * 0.05;
-    this.particles.rotation.x += deltaTime * 0.02;
-
-    // Audio-reactive particle movement
-    const positions = this.particles.geometry.attributes.position.array as Float32Array;
-    
-    for (let i = 0; i < this.particleCount; i++) {
-      const i3 = i * 3;
-      
-      // Gentle floating motion
-      positions[i3 + 1] += Math.sin(time + i * 0.1) * 0.001;
-      
-      // Audio-reactive expansion
-      const distance = Math.sqrt(
-        positions[i3] ** 2 + 
-        positions[i3 + 1] ** 2 + 
-        positions[i3 + 2] ** 2
-      );
-      const expansionFactor = 1 + this.audioLevel * 0.1;
-      
-      if (distance > 0) {
-        const scale = (distance * expansionFactor) / distance;
-        positions[i3] = positions[i3] * (1 - deltaTime) + positions[i3] * scale * deltaTime;
-        positions[i3 + 2] = positions[i3 + 2] * (1 - deltaTime) + positions[i3 + 2] * scale * deltaTime;
-      }
-    }
-
-    this.particles.geometry.attributes.position.needsUpdate = true;
-  }
-
   private handleResize = (): void => {
     if (!this.canvas || !this.camera || !this.renderer) return;
 
@@ -476,11 +382,6 @@ export class Visualizer3D extends LitElement {
     if (this.glowSphere) {
       this.glowSphere.geometry.dispose();
       if (this.glowMaterial) this.glowMaterial.dispose();
-    }
-
-    if (this.particles) {
-      this.particles.geometry.dispose();
-      (this.particles.material as THREE.Material).dispose();
     }
 
     if (this.renderer) {

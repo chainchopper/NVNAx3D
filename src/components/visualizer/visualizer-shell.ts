@@ -550,9 +550,6 @@ export class VisualizerShell extends LitElement {
         <!-- 3D Audio Visualizer with Codrops shaders (z-index: 1, pointer-events: none) -->
         <visualizer-3d></visualizer-3d>
 
-        <!-- Floating Control Panel (auto-hide, draggable) -->
-        <visualizer-controls></visualizer-controls>
-
         <!-- HUD Overlays -->
         <persona-carousel-hud></persona-carousel-hud>
         <dual-mode-controls-hud></dual-mode-controls-hud>
