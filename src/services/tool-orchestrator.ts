@@ -263,8 +263,8 @@ class ToolOrchestrator {
       category: 'communication',
       requiresConfirmation: true,
       parameters: [
-        { name: 'to', type: 'string', description: 'Phone number to send to', required: true },
-        { name: 'message', type: 'string', description: 'Message content', required: true }
+        { name: 'to', type: 'string', description: 'Phone number to send to (E.164 format, e.g., +15551234567)', required: true },
+        { name: 'message', type: 'string', description: 'Message content (up to 1600 characters)', required: true }
       ],
       handler: async (params) => {
         const result = await twilioService.sendSMS(params.to, params.message);
@@ -279,12 +279,110 @@ class ToolOrchestrator {
       category: 'communication',
       requiresConfirmation: true,
       parameters: [
-        { name: 'to', type: 'string', description: 'Phone number to call', required: true },
+        { name: 'to', type: 'string', description: 'Phone number to call (E.164 format)', required: true },
         { name: 'personaVoice', type: 'string', description: 'Persona voice to use', required: false }
       ],
       handler: async (params) => {
         const result = await twilioService.makeCall(params.to, params.personaVoice);
         return result;
+      }
+    });
+
+    // Gmail Tools
+    this.registerTool({
+      id: 'search_gmail',
+      name: 'Search Gmail',
+      description: 'Search for emails in Gmail inbox',
+      category: 'communication',
+      requiresConfirmation: false,
+      parameters: [
+        { name: 'query', type: 'string', description: 'Search query (supports Gmail search syntax, e.g., "from:user@example.com subject:invoice")', required: true },
+        { name: 'maxResults', type: 'number', description: 'Maximum number of results to return (default: 10)', required: false, default: 10 }
+      ],
+      handler: async (params) => {
+        try {
+          const response = await fetch(`${this.backendUrl}/api/connectors/gmail/search`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: params.query,
+              maxResults: params.maxResults || 10
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (data.requiresSetup) {
+            return {
+              success: false,
+              error: 'Gmail not configured',
+              requiresConfirmation: false,
+              confirmationMessage: data.setupInstructions || 'Please configure GOOGLE_ACCESS_TOKEN in your .env file or app settings.'
+            };
+          }
+          
+          return { 
+            success: data.success, 
+            data: data.emails || data.data,
+            error: data.error 
+          };
+        } catch (error) {
+          return { 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Failed to search Gmail' 
+          };
+        }
+      }
+    });
+
+    this.registerTool({
+      id: 'send_gmail',
+      name: 'Send Gmail',
+      description: 'Send an email via Gmail',
+      category: 'communication',
+      requiresConfirmation: true,
+      parameters: [
+        { name: 'to', type: 'string', description: 'Recipient email address', required: true },
+        { name: 'subject', type: 'string', description: 'Email subject line', required: true },
+        { name: 'body', type: 'string', description: 'Email body content (plain text or HTML)', required: true },
+        { name: 'cc', type: 'string', description: 'CC email addresses (comma-separated)', required: false },
+        { name: 'bcc', type: 'string', description: 'BCC email addresses (comma-separated)', required: false }
+      ],
+      handler: async (params) => {
+        try {
+          const response = await fetch(`${this.backendUrl}/api/connectors/gmail/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: params.to,
+              subject: params.subject,
+              body: params.body,
+              cc: params.cc,
+              bcc: params.bcc
+            })
+          });
+          
+          const data = await response.json();
+          
+          if (data.requiresSetup) {
+            return {
+              success: false,
+              error: 'Gmail not configured',
+              confirmationMessage: data.setupInstructions || 'Please configure GOOGLE_ACCESS_TOKEN in your .env file or app settings.'
+            };
+          }
+          
+          return { 
+            success: data.success, 
+            data: data.messageId || data.data,
+            error: data.error 
+          };
+        } catch (error) {
+          return { 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Failed to send email' 
+          };
+        }
       }
     });
   }

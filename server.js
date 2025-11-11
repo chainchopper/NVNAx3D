@@ -25,6 +25,7 @@
  * - Tool execution: Sandboxed tool orchestration for PersonI autonomy
  * 
  * API ENDPOINTS:
+ * - GET  /api/twilio/status                - Check Twilio configuration status
  * - POST /api/twilio/sms/send              - Send SMS message
  * - POST /api/twilio/voice/call            - Initiate voice call
  * - GET  /api/twilio/voice/calls           - Get active calls
@@ -32,6 +33,7 @@
  * - POST /api/financial/crypto             - Get crypto data (CoinGecko)
  * - POST /api/financial/news               - Get market news (Finnhub)
  * - POST /api/connectors/gmail/search      - Search Gmail emails
+ * - POST /api/connectors/gmail/send        - Send Gmail email
  * - POST /api/connectors/calendar/events   - Get Google Calendar events
  * - POST /api/connectors/notion/search     - Search Notion pages
  * - POST /api/connectors/linear/issues     - Get Linear issues
@@ -554,6 +556,93 @@ app.post('/api/connectors/gmail/search', async (req, res) => {
       success: false,
       error: error.message,
       setupInstructions: 'Gmail integration required. Please configure Gmail access to search emails.',
+    });
+  }
+});
+
+app.post('/api/connectors/gmail/send', async (req, res) => {
+  try {
+    const { to, subject, body, cc, bcc } = req.body;
+    
+    if (!to || !subject || !body) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, body'
+      });
+    }
+    
+    const token = process.env.GOOGLE_ACCESS_TOKEN;
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Add GOOGLE_ACCESS_TOKEN to Replit Secrets panel or .env file.'
+      });
+    }
+
+    // Build email message in RFC 2822 format
+    const emailLines = [];
+    emailLines.push(`To: ${to}`);
+    if (cc) emailLines.push(`Cc: ${cc}`);
+    if (bcc) emailLines.push(`Bcc: ${bcc}`);
+    emailLines.push(`Subject: ${subject}`);
+    emailLines.push('Content-Type: text/html; charset=utf-8');
+    emailLines.push('');
+    emailLines.push(body);
+    
+    const email = emailLines.join('\r\n');
+    
+    // Base64url encode the email
+    const encodedEmail = Buffer.from(email)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const response = await fetch(
+      'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          raw: encodedEmail
+        })
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        return res.status(401).json({
+          success: false,
+          requiresSetup: true,
+          setupInstructions: 'Gmail credentials invalid or expired. Please update your credentials in the Connector Configuration panel.',
+        });
+      }
+      const errorData = await response.json();
+      throw new Error(`Gmail API error: ${errorData.error?.message || response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    res.json({
+      success: true,
+      data: {
+        messageId: data.id,
+        threadId: data.threadId,
+        to,
+        subject,
+        message: 'Email sent successfully'
+      },
+    });
+  } catch (error) {
+    console.error('[Gmail Send Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Gmail integration required. Please configure Gmail access to send emails.',
     });
   }
 });
@@ -2536,6 +2625,20 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
 // In-memory call state (use Redis in production)
 const activeCalls = new Map();
 const smsHistory = [];
+
+// Twilio: Configuration Status
+app.get('/api/twilio/status', (req, res) => {
+  const configured = twilioClient !== null;
+  
+  res.json({
+    success: true,
+    configured,
+    phoneNumber: configured ? process.env.TWILIO_PHONE_NUMBER : null,
+    message: configured 
+      ? 'Twilio is configured and ready' 
+      : 'Twilio not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to environment.'
+  });
+});
 
 // SMS: Send outgoing message
 app.post('/api/twilio/sms/send', async (req, res) => {
