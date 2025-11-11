@@ -15,10 +15,12 @@ import { ragMemoryManager } from './memory/rag-memory-manager';
 import { dualPersonIManager } from './dual-personi-manager';
 import { toolOrchestrator } from './tool-orchestrator';
 import { userProfileManager } from './user-profile-manager';
+import { cameraVisionService } from './camera-vision-service';
 import type { PersoniConfig } from '../personas';
 import { getPersoniModel } from '../personas';
 import type { BaseProvider } from '../providers/base-provider';
 import type { MemoryType } from '../types/memory';
+import type { VisionRequestOptions } from '../types/vision';
 
 export interface ConversationOptions {
   ragEnabled?: boolean;
@@ -27,6 +29,7 @@ export interface ConversationOptions {
     mimeType: string;
   };
   enableTools?: boolean;
+  visionRequest?: VisionRequestOptions;
 }
 
 export interface StreamChunk {
@@ -61,7 +64,7 @@ export class ConversationOrchestrator {
     options: ConversationOptions = {},
     onChunk?: ConversationCallback
   ): Promise<void> {
-    const { ragEnabled = true, visionData, enableTools = true } = options;
+    const { ragEnabled = true, visionData, enableTools = true, visionRequest } = options;
 
     // Get active persona and provider
     const activePersoni = activePersonasManager.getPrimaryPersona();
@@ -85,6 +88,20 @@ export class ConversationOrchestrator {
     }
 
     this.updateStatus('Thinking...');
+    
+    // Get vision context if requested
+    let visionContext: string | null = null;
+    if (visionRequest?.includeVision && activePersoni.capabilities?.vision) {
+      const freshnessMs = visionRequest.freshness || 30000;
+      const cachedVision = cameraVisionService.getCachedVision(freshnessMs);
+      
+      if (cachedVision) {
+        visionContext = `\n\n[Current Visual Context]: ${cachedVision.summary}`;
+        console.log('[ConversationOrchestrator] 👁️ Including vision context');
+      } else if (visionRequest.forceNewInference) {
+        console.warn('[ConversationOrchestrator] Vision requested but no cached data available');
+      }
+    }
 
     try {
       // 1. Retrieve RAG memories if enabled
@@ -119,6 +136,10 @@ export class ConversationOrchestrator {
 
       if (memoryContext) {
         systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
+      }
+      
+      if (visionContext) {
+        systemInstruction = `${systemInstruction}\n\n${visionContext}`;
       }
 
       // 3. Prepare messages

@@ -3525,6 +3525,121 @@ wss.on('connection', (ws, req) => {
   });
 });
 
+// Model Discovery Proxy - for custom providers (with SSRF protection)
+app.post('/api/models/proxy', async (req, res) => {
+  try {
+    const { baseUrl, apiKey, headers = {} } = req.body;
+
+    if (!baseUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'Base URL is required'
+      });
+    }
+
+    // SSRF Protection: Validate URL
+    let url;
+    try {
+      url = new URL(baseUrl);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid URL format'
+      });
+    }
+
+    // Block private network ranges
+    const hostname = url.hostname;
+    const privatePatterns = [
+      /^localhost$/i,
+      /^127\./,
+      /^10\./,
+      /^172\.(1[6-9]|2\d|3[01])\./,
+      /^192\.168\./,
+      /^::1$/,
+      /^fc00:/i,
+      /^fe80:/i
+    ];
+
+    // Allow localhost only in development
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (!isDev && privatePatterns.some(pattern => pattern.test(hostname))) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access to private network ranges is not allowed'
+      });
+    }
+
+    // Only allow HTTP/HTTPS
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only HTTP/HTTPS protocols are allowed'
+      });
+    }
+
+    // Build request to model discovery endpoint
+    const modelsUrl = `${baseUrl}/v1/models`;
+    const requestHeaders = {
+      'Content-Type': 'application/json',
+      ...headers
+    };
+
+    if (apiKey) {
+      requestHeaders['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    // Fetch with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    const response = await fetch(modelsUrl, {
+      headers: requestHeaders,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: `Model discovery failed: ${response.statusText}`
+      });
+    }
+
+    // Limit response size to 1MB
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 1048576) {
+      return res.status(413).json({
+        success: false,
+        error: 'Response too large'
+      });
+    }
+
+    const data = await response.json();
+
+    res.json({
+      success: true,
+      data
+    });
+
+  } catch (error) {
+    console.error('[Models Proxy Error]', error);
+    
+    if (error.name === 'AbortError') {
+      return res.status(504).json({
+        success: false,
+        error: 'Request timeout'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch models'
+    });
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);

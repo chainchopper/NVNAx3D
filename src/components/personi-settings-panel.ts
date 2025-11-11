@@ -17,6 +17,7 @@ import { appStateService } from '../services/app-state-service';
 import { activePersonasManager } from '../services/active-personas-manager';
 import { providerManager } from '../services/provider-manager';
 import { ModelInfo } from '../types/providers';
+import { oauthService } from '../services/oauth-service';
 
 const VOICE_OPTIONS = [
   { id: 'Puck', name: 'Puck (Mature Male, US)' },
@@ -48,6 +49,9 @@ export class PersoniSettingsPanel extends LitElement {
   @state() private idleAnimation: IdleAnimation = 'subtle_breath';
   @state() private capabilities: PersoniCapabilities = { ...DEFAULT_CAPABILITIES };
   @state() private enabledConnectors: string[] = [];
+  @state() private oauthStatuses: Map<string, boolean> = new Map();
+  
+  private oauthUnsubscribe?: () => void;
 
   static styles = css`
     :host {
@@ -261,6 +265,28 @@ export class PersoniSettingsPanel extends LitElement {
       line-height: 1.4;
     }
 
+    .connector-badge {
+      margin-left: auto;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .connector-badge.connected {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+      border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+
+    .connector-badge.not-connected {
+      background: rgba(255, 152, 0, 0.2);
+      color: #ff9800;
+      border: 1px solid rgba(255, 152, 0, 0.4);
+    }
+
     .actions {
       position: sticky;
       bottom: 0;
@@ -337,6 +363,19 @@ export class PersoniSettingsPanel extends LitElement {
     super.connectedCallback();
     this.loadPersoniData();
     this.loadAvailableModels();
+    this.loadOAuthStatuses();
+    
+    // Subscribe to OAuth status changes
+    this.oauthUnsubscribe = oauthService.subscribe(() => {
+      this.loadOAuthStatuses();
+    });
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.oauthUnsubscribe) {
+      this.oauthUnsubscribe();
+    }
   }
 
   private loadPersoniData() {
@@ -364,6 +403,19 @@ export class PersoniSettingsPanel extends LitElement {
 
   private loadAvailableModels() {
     this.availableModels = providerManager.getAvailableModels();
+  }
+
+  private async loadOAuthStatuses() {
+    const statuses = new Map<string, boolean>();
+    
+    for (const connector of AVAILABLE_CONNECTORS) {
+      if (oauthService.isOAuthConnector(connector.id)) {
+        const authState = await oauthService.getConnectorAuthState(connector.id);
+        statuses.set(connector.id, authState.isConnected);
+      }
+    }
+    
+    this.oauthStatuses = statuses;
   }
 
   private markChanged() {
@@ -739,18 +791,28 @@ export class PersoniSettingsPanel extends LitElement {
           <h3 class="section-title">Connectors & Tools</h3>
           
           <div class="connectors-list">
-            ${AVAILABLE_CONNECTORS.map(connector => html`
-              <div
-                class="connector-item ${this.enabledConnectors.includes(connector.id) ? 'active' : ''}"
-                @click=${() => this.toggleConnector(connector.id)}
-              >
-                <div class="checkbox"></div>
-                <div class="connector-info">
-                  <div class="connector-name">${connector.name}</div>
-                  <div class="connector-description">${connector.description}</div>
+            ${AVAILABLE_CONNECTORS.map(connector => {
+              const isOAuth = oauthService.isOAuthConnector(connector.id);
+              const isConnected = this.oauthStatuses.get(connector.id) || false;
+              
+              return html`
+                <div
+                  class="connector-item ${this.enabledConnectors.includes(connector.id) ? 'active' : ''}"
+                  @click=${() => this.toggleConnector(connector.id)}
+                >
+                  <div class="checkbox"></div>
+                  <div class="connector-info">
+                    <div class="connector-name">${connector.name}</div>
+                    <div class="connector-description">${connector.description}</div>
+                  </div>
+                  ${isOAuth ? html`
+                    <div class="connector-badge ${isConnected ? 'connected' : 'not-connected'}">
+                      ${isConnected ? '✓ Connected' : 'OAuth Required'}
+                    </div>
+                  ` : ''}
                 </div>
-              </div>
-            `)}
+              `;
+            })}
           </div>
           
           <div class="helper-text" style="margin-top: 12px;">
