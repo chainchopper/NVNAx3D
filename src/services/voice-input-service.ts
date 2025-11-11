@@ -62,6 +62,14 @@ export class VoiceInputService extends EventTarget {
     } catch (error: any) {
       console.error('[VoiceInput] Failed to load Whisper model:', error);
       this.updateState('error', undefined, error.message);
+      
+      // Auto-reset to idle after 3 seconds to allow retry
+      setTimeout(() => {
+        if (this.state === 'error') {
+          this.updateState('idle');
+        }
+      }, 3000);
+      
       throw error;
     }
   }
@@ -106,6 +114,14 @@ export class VoiceInputService extends EventTarget {
     } catch (error: any) {
       console.error('[VoiceInput] Failed to start recording:', error);
       this.updateState('error', undefined, error.message);
+      
+      // Auto-reset to idle after 3 seconds to allow retry
+      setTimeout(() => {
+        if (this.state === 'error') {
+          this.updateState('idle');
+        }
+      }, 3000);
+      
       throw error;
     }
   }
@@ -145,13 +161,28 @@ export class VoiceInputService extends EventTarget {
 
   /**
    * Toggle recording (start if idle, stop if recording)
+   * Allows retry after errors by resetting state
    */
   async toggleRecording(): Promise<void> {
     if (this.state === 'recording') {
       this.stopRecording();
     } else if (this.state === 'ready' || this.state === 'idle') {
       await this.startRecording();
+    } else if (this.state === 'error') {
+      // Allow retry after error - reset and try again
+      console.log('[VoiceInput] Retrying after error...');
+      this.updateState('idle');
+      await this.startRecording();
     }
+  }
+
+  /**
+   * Reset service to idle state (useful for error recovery)
+   */
+  reset(): void {
+    this.cancel();
+    this.updateState('idle');
+    console.log('[VoiceInput] Service reset to idle state');
   }
 
   /**
@@ -202,6 +233,13 @@ export class VoiceInputService extends EventTarget {
       console.error('[VoiceInput] Transcription failed:', error);
       this.updateState('error', undefined, error.message || 'Transcription failed');
       this.audioChunks = [];
+      
+      // Auto-reset to ready after 3 seconds (model already loaded)
+      setTimeout(() => {
+        if (this.state === 'error') {
+          this.updateState('ready');
+        }
+      }, 3000);
     }
   }
 
