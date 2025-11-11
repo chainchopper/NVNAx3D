@@ -22,6 +22,11 @@ export class VisualizerControls extends LitElement {
   private inactivityTimer: number | null = null;
   private hideAnimation: gsap.core.Tween | null = null;
   private draggableInstance: Draggable[] | null = null;
+  
+  // Activity listener references for cleanup
+  private handleMouseMove: (() => void) | null = null;
+  private handleClick: (() => void) | null = null;
+  private handleKeydown: (() => void) | null = null;
 
   static override styles = css`
     :host {
@@ -217,10 +222,15 @@ export class VisualizerControls extends LitElement {
       this.resetInactivityTimer();
     };
 
+    // Store references for cleanup
+    this.handleMouseMove = handleActivity;
+    this.handleClick = handleActivity;
+    this.handleKeydown = handleActivity;
+
     // Listen for mouse movement and clicks anywhere in the visualizer
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('click', handleActivity);
-    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('click', this.handleClick);
+    window.addEventListener('keydown', this.handleKeydown);
 
     console.log('[VisualizerControls] Activity listeners registered');
   }
@@ -304,6 +314,20 @@ export class VisualizerControls extends LitElement {
       this.draggableInstance = null;
     }
 
-    console.log('[VisualizerControls] Cleaned up');
+    // Remove activity listeners
+    if (this.handleMouseMove) {
+      window.removeEventListener('mousemove', this.handleMouseMove);
+      this.handleMouseMove = null;
+    }
+    if (this.handleClick) {
+      window.removeEventListener('click', this.handleClick);
+      this.handleClick = null;
+    }
+    if (this.handleKeydown) {
+      window.removeEventListener('keydown', this.handleKeydown);
+      this.handleKeydown = null;
+    }
+
+    console.log('[VisualizerControls] Cleaned up (timer, animation, draggable, listeners)');
   }
 }
