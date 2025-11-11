@@ -45,6 +45,7 @@ import { ragMemoryManager } from '../../services/memory/rag-memory-manager';
 import { conversationOrchestrator } from '../../services/conversation-orchestrator';
 import { speechOutputService } from '../../services/speech-output-service';
 import { voiceInputService } from '../../services/voice-input-service';
+import { cameraVisionService } from '../../services/camera-vision-service';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -259,6 +260,12 @@ export class VisualizerShell extends LitElement {
     console.log('[VisualizerShell] Initialized');
   }
 
+  async firstUpdated(changedProperties: Map<string, any>) {
+    super.firstUpdated(changedProperties);
+    // Initialize camera vision after camera-manager is rendered
+    this.initializeCameraVision();
+  }
+
   /**
    * Initialize AI services
    */
@@ -327,6 +334,38 @@ export class VisualizerShell extends LitElement {
     }) as EventListener);
 
     console.log('[VisualizerShell] Voice input service initialized');
+  }
+
+  /**
+   * Initialize camera vision integration
+   * Wires camera-manager's frame-captured events to camera-vision-service
+   */
+  private initializeCameraVision(): void {
+    if (!this.cameraManager) {
+      console.warn('[VisualizerShell] Camera manager not available for vision integration');
+      return;
+    }
+
+    // Listen for captured frames and analyze with vision service
+    this.cameraManager.addEventListener('frame-captured', ((event: CustomEvent) => {
+      const frame = event.detail;
+      const activePersoni = activePersonasManager.getPrimaryPersona();
+      
+      // Only analyze if PersonI has vision capability enabled
+      if (activePersoni?.capabilities?.vision) {
+        console.log('[VisualizerShell] Analyzing captured frame with vision service');
+        
+        // Use local COCO-SSD for automatic periodic analysis (fast, free)
+        // API-based vision models should be opt-in via conversation context
+        cameraVisionService.analyzeFrame(frame, {
+          modelType: 'local',
+        }).catch((error) => {
+          console.error('[VisualizerShell] Vision analysis error:', error);
+        });
+      }
+    }) as EventListener);
+
+    console.log('[VisualizerShell] Camera vision integration initialized');
   }
 
   disconnectedCallback(): void {
