@@ -110,6 +110,9 @@ export class ProviderManager {
                 vision: true,
                 streaming: true,
                 functionCalling: true,
+                conversation: true,
+                embedding: false,
+                imageGeneration: false,
                 maxTokens: 1000000,
               },
             },
@@ -122,6 +125,9 @@ export class ProviderManager {
                 vision: true,
                 streaming: true,
                 functionCalling: true,
+                conversation: true,
+                embedding: false,
+                imageGeneration: false,
                 maxTokens: 2000000,
               },
             },
@@ -134,6 +140,9 @@ export class ProviderManager {
                 vision: true,
                 streaming: true,
                 functionCalling: true,
+                conversation: true,
+                embedding: false,
+                imageGeneration: false,
                 maxTokens: 1000000,
               },
             },
@@ -259,17 +268,30 @@ export class ProviderManager {
         models: [], // Will be populated below
       });
 
-      // Now create models with the correct providerId
-      const models: ModelInfo[] = (data.data || data.models || []).map((model: any) => ({
-        id: model.id,
-        name: model.id,
-        providerId: providerId,
-        capabilities: {
-          streaming: config.capabilities?.streaming ?? true,
-          functionCalling: config.capabilities?.functionCalling ?? false,
-          vision: config.capabilities?.vision ?? false,
-        },
-      }));
+      // Now create models with the correct providerId and inferred capabilities
+      const models: ModelInfo[] = (data.data || data.models || []).map((model: any) => {
+        const modelId = model.id.toLowerCase();
+        
+        // Infer capabilities from model name/ID
+        const isEmbedding = modelId.includes('embed') || modelId.includes('embedding');
+        const isImageGen = modelId.includes('dall-e') || modelId.includes('imagen') || modelId.includes('stable-diffusion');
+        const isVision = modelId.includes('vision') || modelId.includes('gpt-4') || modelId.includes('gemini') || modelId.includes('claude');
+        const isConversation = !isEmbedding && !isImageGen; // Most models support conversation
+        
+        return {
+          id: model.id,
+          name: model.id,
+          providerId: providerId,
+          capabilities: {
+            conversation: isConversation,
+            streaming: config.capabilities?.streaming ?? true,
+            functionCalling: config.capabilities?.functionCalling ?? (modelId.includes('gpt-4') || modelId.includes('function')),
+            vision: config.capabilities?.vision ?? isVision,
+            embedding: isEmbedding,
+            imageGeneration: isImageGen,
+          },
+        };
+      });
 
       // Update provider with discovered models
       const provider = this.providers.get(providerId);
@@ -331,6 +353,45 @@ export class ProviderManager {
       });
     
     return allModels;
+  }
+
+  /**
+   * Get models filtered by capability (conversation, vision, embedding, etc.)
+   */
+  getModelsByCapability(
+    capability: 'conversation' | 'vision' | 'embedding' | 'functionCalling' | 'imageGeneration',
+    options?: { providerId?: string }
+  ): ModelInfo[] {
+    let models = this.getAvailableModels();
+    
+    // Filter by provider if specified
+    if (options?.providerId) {
+      models = models.filter(m => m.providerId === options.providerId);
+    }
+    
+    // Filter by capability
+    models = models.filter(m => m.capabilities[capability] === true);
+    
+    return models;
+  }
+
+  /**
+   * Get all enabled and verified providers
+   */
+  getActiveProviders(): ModelProvider[] {
+    return Array.from(this.providers.values())
+      .filter(p => p.enabled && p.verified);
+  }
+
+  /**
+   * Get providers that have at least one model with the specified capability
+   */
+  getProvidersByCapability(
+    capability: 'conversation' | 'vision' | 'embedding' | 'functionCalling' | 'imageGeneration'
+  ): ModelProvider[] {
+    return this.getActiveProviders().filter(provider => 
+      provider.models.some(m => m.capabilities[capability] === true)
+    );
   }
 
   /**

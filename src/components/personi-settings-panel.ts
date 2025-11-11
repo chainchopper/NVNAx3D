@@ -397,11 +397,20 @@ export class PersoniSettingsPanel extends LitElement {
       this.tagline = activePersoni.tagline;
       this.systemInstruction = activePersoni.systemInstruction;
       this.voiceName = activePersoni.voiceName || 'Puck';
-      this.conversationModel = activePersoni.models?.conversation || '';
-      this.visionModel = activePersoni.models?.vision || '';
-      this.embeddingModel = activePersoni.models?.embedding || '';
-      this.functionCallingModel = activePersoni.models?.functionCalling || '';
-      this.imageGenerationModel = activePersoni.models?.imageGeneration || '';
+      
+      // Extract model IDs (handles both string and ProviderModelSelection formats)
+      const extractModelId = (value: string | { providerId: string; modelId: string } | undefined): string => {
+        if (!value) return '';
+        if (typeof value === 'string') return value;
+        return value.modelId || '';
+      };
+      
+      this.conversationModel = extractModelId(activePersoni.models?.conversation);
+      this.visionModel = extractModelId(activePersoni.models?.vision);
+      this.embeddingModel = extractModelId(activePersoni.models?.embedding);
+      this.functionCallingModel = extractModelId(activePersoni.models?.functionCalling);
+      this.imageGenerationModel = extractModelId(activePersoni.models?.imageGeneration);
+      
       this.shape = activePersoni.visuals.shape;
       this.accentColor = activePersoni.visuals.accentColor;
       this.textureName = activePersoni.visuals.textureName || 'none';
@@ -494,13 +503,22 @@ export class PersoniSettingsPanel extends LitElement {
     this.markChanged();
   }
 
-  private renderModelDropdown(label: string, value: string, onChange: (value: string) => void, helpText?: string) {
-    if (this.availableModels.length === 0) {
+  private renderModelDropdown(
+    label: string, 
+    value: string, 
+    onChange: (value: string) => void, 
+    capability: 'conversation' | 'vision' | 'embedding' | 'functionCalling' | 'imageGeneration',
+    helpText?: string
+  ) {
+    // Filter models by capability
+    const filteredModels = providerManager.getModelsByCapability(capability);
+    
+    if (filteredModels.length === 0) {
       return html`
         <div class="field-group">
           <label class="field-label">${label}</label>
           <div class="no-models">
-            No models configured. Configure providers in the Models menu first.
+            No models with ${capability} capability found. Configure providers in the Models menu.
           </div>
         </div>
       `;
@@ -519,7 +537,7 @@ export class PersoniSettingsPanel extends LitElement {
             }}
           >
             <option value="">None</option>
-            ${this.availableModels.map(model => html`
+            ${filteredModels.map(model => html`
               <option value="${model.id}">${model.name} (${model.providerId})</option>
             `)}
           </select>
@@ -594,6 +612,7 @@ export class PersoniSettingsPanel extends LitElement {
             'Conversation Model',
             this.conversationModel,
             (value) => { this.conversationModel = value; },
+            'conversation',
             'Primary model for text conversations'
           )}
           
@@ -601,6 +620,7 @@ export class PersoniSettingsPanel extends LitElement {
             'Vision Model',
             this.visionModel,
             (value) => { this.visionModel = value; },
+            'vision',
             'Model for processing images and visual input'
           )}
           
@@ -608,6 +628,7 @@ export class PersoniSettingsPanel extends LitElement {
             'Function Calling Model',
             this.functionCallingModel,
             (value) => { this.functionCallingModel = value; },
+            'functionCalling',
             'Model for tool/function execution'
           )}
           
@@ -615,6 +636,7 @@ export class PersoniSettingsPanel extends LitElement {
             'Embedding Model',
             this.embeddingModel,
             (value) => { this.embeddingModel = value; },
+            'embedding',
             'Model for RAG memory embeddings'
           )}
           
@@ -622,6 +644,7 @@ export class PersoniSettingsPanel extends LitElement {
             'Image Generation Model',
             this.imageGenerationModel,
             (value) => { this.imageGenerationModel = value; },
+            'imageGeneration',
             'Model for generating images'
           )}
         </div>

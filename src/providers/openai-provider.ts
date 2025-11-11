@@ -48,16 +48,27 @@ export class OpenAIProvider extends BaseProvider {
         ? data.data 
         : data.data.filter((model: any) => model.id.includes('gpt'));
       
-      return filteredData.map((model: any) => ({
-        id: model.id,
-        name: model.id,
-        providerId: this.config.providerId,
-        capabilities: {
-          vision: model.id.includes('vision') || model.id.includes('gpt-4'),
-          streaming: true,
-          functionCalling: true,
-        },
-      }));
+      return filteredData.map((model: any) => {
+        const modelId = model.id.toLowerCase();
+        const isEmbedding = modelId.includes('embed');
+        const isImageGen = modelId.includes('dall-e');
+        const isVision = modelId.includes('vision') || modelId.includes('gpt-4');
+        const isConversation = !isEmbedding && !isImageGen;
+        
+        return {
+          id: model.id,
+          name: model.id,
+          providerId: this.config.providerId,
+          capabilities: {
+            vision: isVision,
+            streaming: isConversation,
+            functionCalling: isConversation && (modelId.includes('gpt-4') || modelId.includes('gpt-3.5')),
+            conversation: isConversation,
+            embedding: isEmbedding,
+            imageGeneration: isImageGen,
+          },
+        };
+      });
     } catch (error) {
       console.error('Failed to get OpenAI models:', error);
       return [];
