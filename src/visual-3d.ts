@@ -132,6 +132,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       width: 100%;
       height: 100%;
       z-index: 1;
+      pointer-events: none;
     }
     canvas {
       width: 100% !important;
@@ -139,6 +140,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       position: absolute;
       inset: 0;
       image-rendering: pixelated;
+      pointer-events: none;
     }
   `;
 
