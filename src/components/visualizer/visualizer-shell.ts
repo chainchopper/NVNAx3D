@@ -176,12 +176,18 @@ export class VisualizerShell extends LitElement {
     try {
       this.status = 'Processing...';
       
+      // Disable RAG if not initialized (race condition guard)
+      const ragEnabledForRequest = this.ragEnabled && this.ragInitialized;
+      if (this.ragEnabled && !this.ragInitialized) {
+        console.warn('[VisualizerShell] RAG requested but not initialized, disabling for this request');
+      }
+      
       // Send to ConversationOrchestrator with streaming
       let fullResponse = '';
       await conversationOrchestrator.handleUserInput(
         text,
         {
-          ragEnabled: this.ragEnabled,
+          ragEnabled: ragEnabledForRequest,
           enableTools: true,
         },
         (chunk) => {
@@ -254,9 +260,6 @@ export class VisualizerShell extends LitElement {
     this.playIntroAnimation();
     this.subscribeToAppState();
     
-    // Initialize RAG system
-    this.ragInitialized = true; // RAG is always available
-    
     console.log('[VisualizerShell] Initialized');
   }
 
@@ -281,6 +284,18 @@ export class VisualizerShell extends LitElement {
       
       // Initialize provider manager
       await providerManager.initialize();
+      
+      // Initialize RAG memory system (required before conversation orchestrator is used)
+      try {
+        console.log('[VisualizerShell] Initializing RAG memory system...');
+        await ragMemoryManager.initialize();
+        this.ragInitialized = true;
+        console.log('[VisualizerShell] ✅ RAG memory system initialized');
+      } catch (ragError) {
+        console.error('[VisualizerShell] ⚠️  RAG initialization failed:', ragError);
+        this.ragEnabled = false;
+        this.ragInitialized = false;
+      }
       
       // Initialize voice input service and listeners
       this.initializeVoiceInput();
