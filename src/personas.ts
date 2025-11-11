@@ -46,15 +46,21 @@ export const DEFAULT_CAPABILITIES: PersoniCapabilities = {
   audioOutput: true,
 };
 
+// Provider + Model selection
+export interface ProviderModelSelection {
+  providerId: string;
+  modelId: string;
+}
+
 // Model assignments for different PersonI capabilities
 export interface PersoniModels {
-  conversation?: string;        // Primary conversation/chat model
-  vision?: string;              // Vision/multimodal model
-  embedding?: string;           // Text embedding model for RAG
-  functionCalling?: string;     // Model for function/tool calling
-  imageGeneration?: string;     // Image generation model
-  objectDetection?: string;     // YOLO/object detection model
-  textToSpeech?: string;        // TTS model (voice name for now)
+  conversation?: string | ProviderModelSelection;        // Primary conversation/chat model
+  vision?: string | ProviderModelSelection;              // Vision/multimodal model
+  embedding?: string | ProviderModelSelection;           // Text embedding model for RAG
+  functionCalling?: string | ProviderModelSelection;     // Model for function/tool calling
+  imageGeneration?: string | ProviderModelSelection;     // Image generation model
+  objectDetection?: string;                              // YOLO/object detection model (legacy string)
+  textToSpeech?: string;                                 // TTS model (voice name for now)
 }
 
 // User-configured instance of a Personi
@@ -86,8 +92,9 @@ export interface PersonaTemplate extends Omit<PersoniConfig, 'id'> {
 }
 
 /**
- * Helper function to get the appropriate model for a PersonI capability
+ * Helper function to get the appropriate model ID for a PersonI capability
  * Falls back to thinkingModel for backward compatibility
+ * Handles both legacy string IDs and new ProviderModelSelection format
  */
 export function getPersoniModel(
   personi: PersoniConfig,
@@ -95,12 +102,47 @@ export function getPersoniModel(
 ): string | undefined {
   // Try new models structure first
   if (personi.models && personi.models[capability]) {
-    return personi.models[capability];
+    const modelSelection = personi.models[capability];
+    
+    // Handle new ProviderModelSelection format
+    if (typeof modelSelection === 'object' && modelSelection.modelId) {
+      return modelSelection.modelId;
+    }
+    
+    // Handle legacy string format
+    if (typeof modelSelection === 'string') {
+      return modelSelection;
+    }
   }
   
   // Fallback to thinkingModel for backward compatibility
   if (personi.thinkingModel) {
     return personi.thinkingModel;
+  }
+  
+  return undefined;
+}
+
+/**
+ * Helper function to get the full provider+model selection
+ * Returns ProviderModelSelection or creates one from model ID
+ */
+export function getPersoniModelSelection(
+  personi: PersoniConfig,
+  capability: keyof PersoniModels = 'conversation'
+): ProviderModelSelection | undefined {
+  if (personi.models && personi.models[capability]) {
+    const modelSelection = personi.models[capability];
+    
+    // Already in new format
+    if (typeof modelSelection === 'object' && modelSelection.providerId && modelSelection.modelId) {
+      return modelSelection as ProviderModelSelection;
+    }
+    
+    // Legacy string format - return undefined (needs migration)
+    if (typeof modelSelection === 'string') {
+      return undefined;
+    }
   }
   
   return undefined;

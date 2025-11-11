@@ -27,6 +27,9 @@ export interface ModelCapabilities {
   vision?: boolean;
   streaming?: boolean;
   functionCalling?: boolean;
+  conversation?: boolean;     // Text conversation/chat capability
+  embedding?: boolean;         // Text embedding capability for RAG
+  imageGeneration?: boolean;   // Image/art generation capability
   maxTokens?: number;
 }
 
