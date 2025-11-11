@@ -40,6 +40,8 @@ import '../rag-toggle';
 import '../object-detection-overlay';
 import '../file-upload';
 import { ragMemoryManager } from '../../services/memory/rag-memory-manager';
+import { conversationOrchestrator } from '../../services/conversation-orchestrator';
+import { speechOutputService } from '../../services/speech-output-service';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -152,11 +154,49 @@ export class VisualizerShell extends LitElement {
 
   private handleInterrupt = () => {
     this.isAiSpeaking = false;
+    speechOutputService.stopAll();
   };
 
-  private handleTextSubmit = (e: CustomEvent) => {
+  private handleTextSubmit = async (e: CustomEvent) => {
     const text = e.detail.text;
     console.log('[VisualizerShell] Text submitted:', text);
+    
+    if (!text || !text.trim()) return;
+
+    try {
+      this.status = 'Processing...';
+      
+      // Send to ConversationOrchestrator with streaming
+      let fullResponse = '';
+      await conversationOrchestrator.handleUserInput(
+        text,
+        {
+          ragEnabled: this.ragEnabled,
+          enableTools: true,
+        },
+        (chunk) => {
+          fullResponse += chunk.text;
+          // Update UI with streaming text if needed
+          console.log('[VisualizerShell] Streaming chunk:', chunk.text);
+        }
+      );
+
+      // Speak the response
+      this.isAiSpeaking = true;
+      const activePersona = conversationOrchestrator.getActivePersona();
+      const provider = activePersona
+        ? providerManager.getProviderInstance(activePersona.thinkingModel)
+        : null;
+
+      await speechOutputService.speak(fullResponse, provider, activePersona);
+      this.isAiSpeaking = false;
+      
+      this.status = 'Ready';
+    } catch (error) {
+      console.error('[VisualizerShell] Error processing input:', error);
+      this.status = 'Error';
+      this.isAiSpeaking = false;
+    }
   };
 
   private handleFileUploaded = (e: CustomEvent) => {
@@ -199,6 +239,7 @@ export class VisualizerShell extends LitElement {
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
     await this.initializeAudioContext();
+    await this.initializeServices();
     this.loadPersonIs();
     this.playIntroAnimation();
     this.subscribeToAppState();
@@ -207,6 +248,28 @@ export class VisualizerShell extends LitElement {
     this.ragInitialized = true; // RAG is always available
     
     console.log('[VisualizerShell] Initialized');
+  }
+
+  /**
+   * Initialize AI services
+   */
+  private async initializeServices(): Promise<void> {
+    try {
+      // Initialize speech output service audio context
+      await speechOutputService.initializeAudioContext();
+      
+      // Set status callback for conversation orchestrator
+      conversationOrchestrator.setStatusCallback((status) => {
+        this.status = status;
+      });
+      
+      // Initialize provider manager
+      await providerManager.initialize();
+      
+      console.log('[VisualizerShell] Services initialized');
+    } catch (error) {
+      console.error('[VisualizerShell] Failed to initialize services:', error);
+    }
   }
 
   disconnectedCallback(): void {
