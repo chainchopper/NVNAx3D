@@ -1,0 +1,49 @@
+SES Removing unpermitted intrinsics lockdown-install.js:1:203117
+  Removing intrinsics.%MapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%MapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsert lockdown-install.js:1:202962
+  Removing intrinsics.%WeakMapPrototype%.getOrInsertComputed lockdown-install.js:1:202962
+  Removing intrinsics.%DatePrototype%.toTemporalInstant lockdown-install.js:1:202962
+Loading failed for the <script> with source “https://vercel.live/_next-live/feedback/feedback.js”. emojithing.com:44:181
+Content-Security-Policy: The page’s settings blocked a script (script-src-elem) at https://vercel.live/_next-live/feedback/feedback.js from being executed because it violates the following directive: “script-src-elem 'self' https://esm.sh 'unsafe-inline'” emojithing.com
+[ActivePersonasManager] Model "gemini-2.5-flash" not found in any configured provider <anonymous code>:1:147461
+[Router] Initial route: main index-D6lXk1Aj.js:8392:3016
+[AppRoot] Mounted with route: main index-D6lXk1Aj.js:10384:1636
+[VisualizerShell] Audio context initialized (microphone will connect async) index-D6lXk1Aj.js:10253:16308
+[SpeechOutputService] Audio context initialized index-D6lXk1Aj.js:10253:2195
+[Visualizer3D] Dual-mesh audio sphere created index-D6lXk1Aj.js:8577:4079
+[Visualizer3D] Scene created with dual-mesh sphere index-D6lXk1Aj.js:8577:2218
+[Visualizer3D] Mouse tracking initialized index-D6lXk1Aj.js:8577:3716
+[Visualizer3D] Entrance animation started index-D6lXk1Aj.js:8577:2674
+Content-Security-Policy: The page’s settings blocked a JavaScript eval (script-src) from being executed because it violates the following directive: “script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'” (Missing 'unsafe-eval') 2 transformers-CEAbohaA.js:9:21436
+WebGL warning: drawElementsInstanced: Drawing to a destination rect smaller than the viewport rect. (This warning will only be given once)
+[CameraManager] Camera permission state: granted index-D6lXk1Aj.js:4243:3324
+[CameraManager] Camera permission already granted index-D6lXk1Aj.js:4243:3554
+[VisualizerShell] Microphone connected to audio analyser index-D6lXk1Aj.js:10253:16901
+[VisualizerShell] Analysers connected to visualizer-3d index-D6lXk1Aj.js:10253:17123
+[ProviderManager] Failed to fetch environment config from backend <anonymous code>:1:147461
+[VisualizerShell] Voice input service initialized index-D6lXk1Aj.js:10253:13408
+[VisualizerShell] Services initialized index-D6lXk1Aj.js:10253:12598
+[VisualizerShell] Adding 1 new PersonI from templates: BILLY index-D6lXk1Aj.js:10253:14189
+[VisualizerShell] Failed to load PersonI: DOMException: The quota has been exceeded.
+    loadPersonIs https://emojithing.com/assets/index-D6lXk1Aj.js:10253
+    connectedCallback https://emojithing.com/assets/index-D6lXk1Aj.js:10253
+<anonymous code>:1:147461
+[VisualizerShell] Initial AppState - settingsMenuVisible: false activeSidePanel: none index-D6lXk1Aj.js:10253:15872
+[VisualizerShell] Initialized index-D6lXk1Aj.js:10253:12397
+[VisualizerShell] Intro animation started index-D6lXk1Aj.js:10253:17687
+[CameraVisionService] COCO-SSD model loaded index-D6lXk1Aj.js:10242:1299
+[Visualizer3D] Consolidated camera animation started (orbital + parallax) index-D6lXk1Aj.js:8577:3264
+Source map error: Error: URL constructor:  is not a valid URL.
+Stack in the worker:resolveSourceMapURL@resource://devtools/client/shared/source-map-loader/utils/fetchSourceMap.js:56:22
+getOriginalURLs@resource://devtools/client/shared/source-map-loader/source-map.js:74:24
+workerHandler/</<@resource://devtools/client/shared/worker-utils.js:115:52
+workerHandler/<@resource://devtools/client/shared/worker-utils.js:113:13
+
+Resource URL: wasm:https://emojithing.com/assets/tensorflow-Du4bBFOU.js%20line%20106%20%3E%20WebAssembly.Module
+Source Map URL: null
+Source map error: Error: request failed with status 404
+Stack in the worker:networkRequest@resource://devtools/client/shared/source-map-loader/utils/network-request.js:43:9
+
+Resource URL: https://emojithing.com/%3Canonymous%20code%3E
+Source Map URL: installHook.js.map
