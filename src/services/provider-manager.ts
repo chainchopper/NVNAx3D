@@ -122,17 +122,36 @@ export class ProviderManager {
         ? '/api/config/env'
         : 'http://localhost:3001/api/config/env';
       
-      // Fetch environment configuration from backend with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      // Retry fetch with exponential backoff (backend might not be ready yet)
+      let response;
+      let lastError;
+      const maxRetries = 3;
       
-      const response = await fetch(backendUrl, {
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+          
+          response = await fetch(backendUrl, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            break; // Success!
+          }
+        } catch (fetchError) {
+          lastError = fetchError;
+          if (attempt < maxRetries - 1) {
+            // Wait before retrying (exponential backoff: 500ms, 1s, 2s)
+            await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt)));
+            continue;
+          }
+        }
+      }
       
-      if (!response.ok) {
-        console.warn('[ProviderManager] Failed to fetch environment config from backend');
+      if (!response || !response.ok) {
+        console.warn('[ProviderManager] Failed to fetch environment config from backend after', maxRetries, 'attempts');
         return;
       }
       
@@ -211,7 +230,11 @@ export class ProviderManager {
         console.warn('[ProviderManager] GEMINI_API_KEY not available on backend');
       }
     } catch (error) {
-      console.error('[ProviderManager] Error auto-configuring from environment:', error);
+      console.error('[ProviderManager] Error auto-configuring from environment:', {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        error
+      });
     }
   }
 
@@ -229,7 +252,15 @@ export class ProviderManager {
   saveToStorage() {
     try {
       const data = Object.fromEntries(this.providers.entries());
-      localStorage.setItem(PROVIDERS_KEY, JSON.stringify(data));
+      const providersJson = JSON.stringify(data);
+      const providersSize = new Blob([providersJson]).size;
+      
+      // Log size for quota monitoring
+      if (providersSize > 100000) { // Warn if > 100KB
+        console.warn(`[ProviderManager] Large provider data: ${(providersSize / 1024).toFixed(1)}KB`);
+      }
+      
+      localStorage.setItem(PROVIDERS_KEY, providersJson);
       
       if (this.sttConfig) {
         localStorage.setItem(STT_CONFIG_KEY, JSON.stringify(this.sttConfig));
@@ -239,7 +270,48 @@ export class ProviderManager {
         localStorage.setItem(TTS_CONFIG_KEY, JSON.stringify(this.ttsConfig));
       }
     } catch (error) {
-      console.error('Failed to save provider config:', error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.error('[ProviderManager] LocalStorage quota exceeded! Attempting cleanup...');
+        this.logStorageUsage();
+        // Try to save with minimal data
+        try {
+          const minimalData = Object.fromEntries(
+            Array.from(this.providers.entries()).filter(([_, p]) => p.enabled)
+          );
+          localStorage.setItem(PROVIDERS_KEY, JSON.stringify(minimalData));
+        } catch (retryError) {
+          console.error('[ProviderManager] Failed to save even minimal provider data');
+        }
+      } else {
+        console.error('[ProviderManager] Failed to save provider config:', error);
+      }
+    }
+  }
+  
+  private logStorageUsage() {
+    try {
+      let totalSize = 0;
+      const sizes: Record<string, number> = {};
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          const value = localStorage.getItem(key) || '';
+          const size = new Blob([value]).size;
+          sizes[key] = size;
+          totalSize += size;
+        }
+      }
+      
+      console.log('[Storage Usage] Total:', (totalSize / 1024).toFixed(1), 'KB');
+      
+      // Sort by size and log top 10
+      const sorted = Object.entries(sizes).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      sorted.forEach(([key, size]) => {
+        console.log(`  ${key}: ${(size / 1024).toFixed(1)}KB`);
+      });
+    } catch (error) {
+      console.error('[Storage Usage] Failed to calculate:', error);
     }
   }
 

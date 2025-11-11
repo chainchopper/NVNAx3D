@@ -25,6 +25,8 @@
  * - Tool execution: Sandboxed tool orchestration for PersonI autonomy
  * 
  * API ENDPOINTS:
+ * - GET  /api/config/env                   - Get API key availability status
+ * - POST /api/models/proxy                 - Discover models from custom endpoints (with SSRF protection)
  * - GET  /api/twilio/status                - Check Twilio configuration status
  * - POST /api/twilio/sms/send              - Send SMS message
  * - POST /api/twilio/voice/call            - Initiate voice call
@@ -436,6 +438,235 @@ async function verifyConnectorCredentials(connectorId) {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// ============================================================================
+// PROVIDER CONFIGURATION ENDPOINTS
+// ============================================================================
+
+// Environment Configuration - Returns API key availability (NOT actual keys)
+app.get('/api/config/env', (req, res) => {
+  try {
+    const config = {
+      geminiApiKey: !!process.env.GEMINI_API_KEY,
+      openaiApiKey: !!process.env.OPENAI_API_KEY,
+      anthropicApiKey: !!process.env.ANTHROPIC_API_KEY,
+      twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+      gmailConfigured: !!process.env.GOOGLE_ACCESS_TOKEN,
+    };
+    
+    res.json({
+      success: true,
+      config
+    });
+  } catch (error) {
+    console.error('[Config API Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Model Discovery Proxy - Discover models from custom endpoints with SSRF protection
+app.post('/api/models/proxy', async (req, res) => {
+  try {
+    const { baseUrl, apiKey } = req.body;
+    
+    if (!baseUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'baseUrl is required'
+      });
+    }
+    
+    // SSRF Protection: Validate URL
+    let url;
+    try {
+      url = new URL(baseUrl);
+    } catch (e) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid URL format'
+      });
+    }
+    
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only HTTP/HTTPS protocols are allowed'
+      });
+    }
+    
+    // Block private/reserved IP ranges - must resolve DNS first to prevent bypasses
+    const hostname = url.hostname.toLowerCase();
+    
+    // Helper function to check if IP is private/reserved
+    const isPrivateIP = (ip) => {
+      // IPv4 private ranges
+      if (ip.match(/^127\./)) return true;  // Loopback
+      if (ip.match(/^10\./)) return true;   // Private class A
+      if (ip.match(/^172\.(1[6-9]|2[0-9]|3[0-1])\./)) return true;  // Private class B
+      if (ip.match(/^192\.168\./)) return true;  // Private class C
+      if (ip.match(/^169\.254\./)) return true;  // Link-local
+      if (ip.match(/^0\./)) return true;  // Current network
+      if (ip.match(/^224\.|^225\.|^226\.|^227\.|^228\.|^229\.|^230\.|^231\.|^232\.|^233\.|^234\.|^235\.|^236\.|^237\.|^238\.|^239\./)) return true;  // Multicast
+      if (ip.match(/^255\.255\.255\.255$/)) return true;  // Broadcast
+      
+      // IPv6 private ranges
+      if (ip.match(/^::1$/)) return true;  // Loopback
+      if (ip.match(/^fe80:/i)) return true;  // Link-local
+      if (ip.match(/^fc00:/i)) return true;  // Unique local
+      if (ip.match(/^fd00:/i)) return true;  // Unique local
+      if (ip.match(/^ff00:/i)) return true;  // Multicast
+      
+      return false;
+    };
+    
+    // Check if hostname is a literal IP address
+    const isIPv4 = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const isIPv6 = hostname.includes(':');
+    
+    if (isIPv4 || isIPv6) {
+      // It's a literal IP - check if it's private
+      const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || isPrivateIP(hostname);
+      
+      if (isLocalhost && process.env.NODE_ENV === 'production') {
+        return res.status(400).json({
+          success: false,
+          error: 'Private/local IP addresses are not allowed in production'
+        });
+      }
+      
+      if (isLocalhost && process.env.NODE_ENV !== 'production') {
+        // Allow in development
+      } else if (isPrivateIP(hostname)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Private/reserved IP addresses are not allowed'
+        });
+      }
+    } else {
+      // It's a hostname - must resolve DNS and check all IPs
+      const dns = await import('dns');
+      const { promisify } = await import('util');
+      const resolve4 = promisify(dns.resolve4);
+      const resolve6 = promisify(dns.resolve6);
+      
+      try {
+        let allIPs = [];
+        
+        // Try to resolve both A and AAAA records
+        try {
+          const ipv4Addresses = await resolve4(hostname);
+          allIPs = allIPs.concat(ipv4Addresses);
+        } catch (e) {
+          // No IPv4 records, that's ok
+        }
+        
+        try {
+          const ipv6Addresses = await resolve6(hostname);
+          allIPs = allIPs.concat(ipv6Addresses);
+        } catch (e) {
+          // No IPv6 records, that's ok
+        }
+        
+        if (allIPs.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Unable to resolve hostname'
+          });
+        }
+        
+        // Check if ANY resolved IP is private
+        for (const ip of allIPs) {
+          if (isPrivateIP(ip)) {
+            if (process.env.NODE_ENV === 'production') {
+              return res.status(400).json({
+                success: false,
+                error: `Hostname resolves to private IP address: ${ip}`
+              });
+            }
+            // In development, allow localhost/private IPs
+            console.log(`[Model Proxy] Allowing private IP ${ip} in development mode`);
+          }
+        }
+      } catch (dnsError) {
+        return res.status(400).json({
+          success: false,
+          error: `DNS resolution failed: ${dnsError.message}`
+        });
+      }
+    }
+    
+    // Attempt to discover models from the endpoint
+    // Most providers have a /v1/models endpoint (OpenAI-compatible)
+    const modelsUrl = baseUrl.endsWith('/') ? `${baseUrl}v1/models` : `${baseUrl}/v1/models`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+      
+      const response = await fetch(modelsUrl, {
+        method: 'GET',
+        headers,
+        signal: controller.signal,
+        redirect: 'manual', // Don't follow redirects automatically
+        size: 1024 * 1024 // Max 1MB response
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({
+          success: false,
+          error: `Model discovery failed: ${response.statusText}`
+        });
+      }
+      
+      const data = await response.json();
+      
+      // Return the discovered models
+      res.json({
+        success: true,
+        data
+      });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      console.error('[Model Proxy Error]', fetchError);
+      
+      if (fetchError.name === 'AbortError') {
+        return res.status(408).json({
+          success: false,
+          error: 'Request timeout - endpoint took too long to respond'
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: `Failed to connect to endpoint: ${fetchError.message}`
+      });
+    }
+  } catch (error) {
+    console.error('[Model Proxy Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// CONNECTOR VERIFICATION
+// ============================================================================
 
 app.post('/api/connectors/verify', async (req, res) => {
   try {
