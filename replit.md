@@ -5,7 +5,18 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### Model Capability System & Dropdown Filtering (Latest)
+### Gmail & Twilio Connector Integration (Latest)
+- **Gmail Tools**: Added complete Gmail integration to tool orchestrator with 2 new tools:
+  - `search_gmail`: Search emails by query with configurable maxResults (no confirmation required)
+  - `send_gmail`: Send emails with to/cc/bcc/subject/body (requires user confirmation)
+- **Backend Gmail Endpoints**: Created `/api/connectors/gmail/send` endpoint with RFC 2822 email formatting, base64url encoding, OAuth token validation, and graceful error handling
+- **Twilio Tools Enhanced**: Updated existing SMS/voice tools with E.164 phone format documentation, character limits (1600 for SMS), and improved parameter descriptions
+- **Twilio Status Endpoint**: Added `GET /api/twilio/status` to check configuration state without triggering errors
+- **Setup Documentation**: Created comprehensive CONNECTOR_SETUP_GUIDE.md with step-by-step Gmail OAuth and Twilio API setup instructions
+- **Test Suite**: Built test-connectors.js for verifying connector integration and configuration status
+- **Architecture Alignment**: All connectors use .env file configuration (no Replit integration dependency), require user confirmation for destructive actions, return consistent {success, data?, error?, requiresSetup?, setupInstructions?} format
+
+### Model Capability System & Dropdown Filtering
 - **Capability Flags**: Added `conversation`, `embedding`, `imageGeneration` boolean flags to ModelCapabilities interface
 - **Capability-Based Filtering**: Each model dropdown in PersonI settings now filters by appropriate capability:
   - Conversation dropdown → models with `conversation: true`
