@@ -721,8 +721,11 @@ export class ModelsPanel extends LitElement {
           <input 
             type="url" 
             name="endpoint" 
-            placeholder="http://localhost:11434/v1"
+            placeholder="http://localhost:11434 or http://172.24.160.1:8189"
           />
+          <small style="color: #888; font-size: 12px; margin-top: 4px; display: block;">
+            For LMStudio, Ollama, or OpenAI-compatible APIs. Include or omit /v1 - both work.
+          </small>
         </div>
 
         <div class="input-group">

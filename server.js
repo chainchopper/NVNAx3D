@@ -3579,7 +3579,12 @@ app.post('/api/models/proxy', async (req, res) => {
     }
 
     // Build request to model discovery endpoint
-    const modelsUrl = `${baseUrl}/v1/models`;
+    // Normalize URL: if baseUrl already includes /v1, don't duplicate it
+    let normalizedBase = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    const modelsUrl = normalizedBase.includes('/v1') 
+      ? `${normalizedBase}/models`
+      : `${normalizedBase}/v1/models`;
+    
     const requestHeaders = {
       'Content-Type': 'application/json',
       ...headers
