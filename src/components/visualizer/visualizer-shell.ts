@@ -13,6 +13,7 @@ import { providerManager } from '../../services/provider-manager';
 import { getSharedMicrophone } from '../../utils';
 import { Analyser } from '../../analyser';
 import './visualizer-3d';
+import './visualizer-controls';
 import './twilio-settings-panel';
 import './sms-panel';
 import './voice-call-panel';
@@ -211,6 +212,9 @@ export class VisualizerShell extends LitElement {
       <div class="visualizer-container">
         <!-- 3D Audio Visualizer with Codrops shaders -->
         <visualizer-3d></visualizer-3d>
+
+        <!-- Floating Control Panel (auto-hide, draggable) -->
+        <visualizer-controls></visualizer-controls>
 
         <!-- Controls Ring (circular menu like persona carousel) -->
         <controls-ring
