@@ -11,6 +11,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import * as THREE from 'three';
+import { gsap } from 'gsap';
 import { 
   createWireframeMaterial, 
   createInnerGlowMaterial,
@@ -44,6 +45,18 @@ export class Visualizer3D extends LitElement {
   // Animation state
   private animationId: number | null = null;
   private isDestroyed = false;
+  private orbitalRotation = { angle: 0 }; // For GSAP ticker rotation
+  
+  // Mouse parallax
+  private mouseX = 0;
+  private mouseY = 0;
+  private quickToX: any;
+  private quickToY: any;
+  
+  // Cleanup references
+  private cameraTickerCallback: any;
+  private handleMouseMove: any;
+  private entranceTimeline: gsap.core.Timeline | null = null;
 
   // Audio data
   private frequencyData: Uint8Array = new Uint8Array(256);
@@ -74,6 +87,8 @@ export class Visualizer3D extends LitElement {
   override firstUpdated() {
     this.initThreeJS();
     this.createScene();
+    this.setupMouseParallax();
+    this.playEntranceAnimation();
     this.animateFrame();
   }
 
@@ -126,7 +141,126 @@ export class Visualizer3D extends LitElement {
     // Create particle field
     this.createParticleField();
 
+    // Set initial state for entrance animation
+    this.camera.position.z = 15; // Start far away
+    this.wireframeSphere.scale.setScalar(0); // Start invisible
+    this.glowSphere.scale.setScalar(0);
+    (this.particles.material as THREE.PointsMaterial).opacity = 0;
+
     console.log('[Visualizer3D] Scene created with dual-mesh sphere and particles');
+  }
+
+  private playEntranceAnimation(): void {
+    this.entranceTimeline = gsap.timeline({
+      defaults: { ease: 'power2.out' },
+      onComplete: () => {
+        // Start orbital rotation after entrance completes
+        this.startCameraOrbit();
+      }
+    });
+
+    const tl = this.entranceTimeline;
+
+    // Camera zoom in
+    tl.to(this.camera.position, {
+      z: 5,
+      duration: 2.5,
+      ease: 'power3.out'
+    }, 0);
+
+    // Wireframe sphere entrance (scale with bounce)
+    tl.to(this.wireframeSphere.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 1.8,
+      ease: 'back.out(1.7)'
+    }, 0.5);
+
+    // Glow sphere entrance (slightly delayed for depth effect)
+    tl.to(this.glowSphere.scale, {
+      x: 1,
+      y: 1,
+      z: 1,
+      duration: 1.8,
+      ease: 'back.out(1.7)'
+    }, 0.6);
+
+    // Particles fade in
+    tl.to(this.particles.material, {
+      opacity: 0.6,
+      duration: 2,
+      ease: 'power1.in'
+    }, 0.3);
+
+    console.log('[Visualizer3D] Entrance animation started');
+  }
+
+  private startCameraOrbit(): void {
+    // Guard: prevent ticker registration after cleanup
+    if (this.isDestroyed) {
+      console.warn('[Visualizer3D] Skipping camera orbit - component already destroyed');
+      return;
+    }
+
+    // Consolidated camera animation ticker (orbital + mouse parallax)
+    this.cameraTickerCallback = () => {
+      if (this.isDestroyed) return;
+
+      // Gentle orbital rotation (full circle every 60 seconds)
+      this.orbitalRotation.angle += 0.0003;
+      
+      // Calculate orbital base position
+      const radius = 5;
+      const height = Math.sin(this.orbitalRotation.angle * 0.5) * 0.3; // Subtle vertical wobble
+      
+      const orbitalX = Math.sin(this.orbitalRotation.angle) * radius * 0.2;
+      const orbitalY = height;
+      const orbitalZ = 5 + Math.cos(this.orbitalRotation.angle) * 0.5;
+      
+      // Apply mouse parallax on top of orbital position
+      const parallaxX = this.mouseX * 0.5; // Increased from 0.3 for more visible effect
+      const parallaxY = this.mouseY * 0.5;
+      
+      // Use quickTo for smooth parallax interpolation
+      this.quickToX(orbitalX + parallaxX);
+      this.quickToY(orbitalY + parallaxY);
+      
+      // Set Z directly (no parallax on depth)
+      this.camera.position.z = orbitalZ;
+      
+      // Always look at center
+      this.camera.lookAt(0, 0, 0);
+    };
+
+    gsap.ticker.add(this.cameraTickerCallback);
+
+    console.log('[Visualizer3D] Consolidated camera animation started (orbital + parallax)');
+  }
+
+  private setupMouseParallax(): void {
+    // Create ultra-smooth camera position updaters using GSAP quickTo
+    // quickTo creates optimized setters for fast, smooth animations
+    this.quickToX = gsap.quickTo(this.camera.position, 'x', {
+      duration: 0.8,
+      ease: 'power2.out'
+    });
+    
+    this.quickToY = gsap.quickTo(this.camera.position, 'y', {
+      duration: 0.8,
+      ease: 'power2.out'
+    });
+
+    // Track mouse movement (store reference for cleanup)
+    this.handleMouseMove = (e: MouseEvent) => {
+      // Normalize mouse position to -1 to 1 range
+      this.mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      this.mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+
+    window.addEventListener('mousemove', this.handleMouseMove);
+
+    console.log('[Visualizer3D] Mouse tracking initialized');
   }
 
   private createAudioSphere(): void {
@@ -310,6 +444,24 @@ export class Visualizer3D extends LitElement {
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
+    }
+
+    // Kill entrance timeline to prevent onComplete callback
+    if (this.entranceTimeline) {
+      this.entranceTimeline.kill();
+      this.entranceTimeline = null;
+    }
+
+    // Remove GSAP ticker callbacks
+    if (this.cameraTickerCallback) {
+      gsap.ticker.remove(this.cameraTickerCallback);
+      this.cameraTickerCallback = null;
+    }
+
+    // Remove mouse event listener
+    if (this.handleMouseMove) {
+      window.removeEventListener('mousemove', this.handleMouseMove);
+      this.handleMouseMove = null;
     }
 
     window.removeEventListener('resize', this.handleResize);
