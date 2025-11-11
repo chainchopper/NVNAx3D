@@ -1,0 +1,270 @@
+/**
+ * Conversation Orchestrator Service
+ * 
+ * Centralizes all AI interaction logic:
+ * - Provider interaction (send message, streaming)
+ * - RAG memory retrieval and storage
+ * - Tool calling via ToolOrchestrator
+ * - Dual-persona coordination
+ * - Provides clean API for UI components
+ */
+
+import { activePersonasManager, PersonaSlot } from './active-personas-manager';
+import { providerManager } from './provider-manager';
+import { ragMemoryManager } from './memory/rag-memory-manager';
+import { dualPersonIManager } from './dual-personi-manager';
+import { toolOrchestrator } from './tool-orchestrator';
+import { userProfileManager } from './user-profile-manager';
+import type { PersoniConfig } from '../personas';
+import type { BaseProvider } from '../providers/base-provider';
+import type { MemoryType } from '../types/memory';
+
+export interface ConversationOptions {
+  ragEnabled?: boolean;
+  visionData?: {
+    image: string;
+    mimeType: string;
+  };
+  enableTools?: boolean;
+}
+
+export interface StreamChunk {
+  text: string;
+  isComplete: boolean;
+}
+
+type ConversationCallback = (chunk: StreamChunk) => void;
+type StatusCallback = (status: string) => void;
+
+export class ConversationOrchestrator {
+  private onStatusChange: StatusCallback | null = null;
+
+  /**
+   * Set status callback for UI updates
+   */
+  setStatusCallback(callback: StatusCallback): void {
+    this.onStatusChange = callback;
+  }
+
+  private updateStatus(status: string): void {
+    if (this.onStatusChange) {
+      this.onStatusChange(status);
+    }
+  }
+
+  /**
+   * Send user input to active PersonI and get streaming response
+   */
+  async handleUserInput(
+    transcript: string,
+    options: ConversationOptions = {},
+    onChunk?: ConversationCallback
+  ): Promise<void> {
+    const { ragEnabled = true, visionData, enableTools = true } = options;
+
+    // Get active persona and provider
+    const activePersoni = activePersonasManager.getPrimaryPersona();
+    if (!activePersoni) {
+      throw new Error('No active PersonI configured');
+    }
+
+    const provider = providerManager.getProviderInstance(activePersoni.thinkingModel);
+    if (!provider) {
+      throw new Error(`No provider configured for model: ${activePersoni.thinkingModel}`);
+    }
+
+    this.updateStatus('Thinking...');
+
+    try {
+      // 1. Retrieve RAG memories if enabled
+      let memoryContext = '';
+      if (ragEnabled) {
+        try {
+          console.log('[ConversationOrchestrator] 🔍 Retrieving relevant memories...');
+          const relevantMemories = await ragMemoryManager.retrieveRelevantMemories(
+            transcript,
+            {
+              limit: 10,
+              threshold: 0.6,
+              persona: activePersoni.name,
+              memoryType: null,
+            }
+          );
+
+          if (relevantMemories.length > 0) {
+            memoryContext = ragMemoryManager.formatMemoriesForContext(relevantMemories);
+            console.log(`[ConversationOrchestrator] 🧠 Found ${relevantMemories.length} relevant memories`);
+          }
+        } catch (error) {
+          console.error('[ConversationOrchestrator] Failed to retrieve memories:', error);
+        }
+      }
+
+      // 2. Build system instruction with user profile and memory context
+      const userContext = userProfileManager.getSystemPromptContext();
+      let systemInstruction = userContext
+        ? `${activePersoni.systemInstruction}\n\n${userContext}`
+        : activePersoni.systemInstruction;
+
+      if (memoryContext) {
+        systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
+      }
+
+      // 3. Prepare messages
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: transcript },
+      ];
+
+      // 4. Send message to provider with streaming
+      let fullResponse = '';
+      this.updateStatus('Receiving response...');
+
+      await provider.sendMessage(messages, (chunk) => {
+        if (chunk.text) {
+          fullResponse += chunk.text;
+          if (onChunk) {
+            onChunk({
+              text: chunk.text,
+              isComplete: chunk.done || false,
+            });
+          }
+        }
+      });
+
+      // 5. Store conversation in RAG memory
+      if (ragEnabled) {
+        try {
+          // Store user message
+          await ragMemoryManager.addMemory(
+            transcript,
+            activePersoni.name,
+            'conversation',
+            'user',
+            5
+          );
+
+          // Store AI response
+          await ragMemoryManager.addMemory(
+            fullResponse,
+            activePersoni.name,
+            'conversation',
+            activePersoni.name,
+            5
+          );
+
+          console.log('[ConversationOrchestrator] 💾 Stored conversation in memory');
+        } catch (error) {
+          console.error('[ConversationOrchestrator] Failed to store memories:', error);
+        }
+      }
+
+      // 6. Update context history in active personas manager
+      activePersonasManager.addToContext('primary', 'user', transcript);
+      activePersonasManager.addToContext('primary', 'assistant', fullResponse);
+
+      this.updateStatus('Idle');
+    } catch (error) {
+      console.error('[ConversationOrchestrator] Error:', error);
+      this.updateStatus('Error');
+      throw error;
+    }
+  }
+
+  /**
+   * Handle dual-mode conversation (two PersonI collaborating)
+   */
+  async handleDualModeInput(
+    transcript: string,
+    mode: 'collaborative' | 'debate' | 'teaching',
+    options: ConversationOptions = {},
+    onChunk?: ConversationCallback
+  ): Promise<void> {
+    // Check dual mode is properly configured
+    const primaryPersona = activePersonasManager.getPrimaryPersona();
+    const secondaryPersona = activePersonasManager.getSecondaryPersona();
+
+    if (!primaryPersona || !secondaryPersona) {
+      throw new Error('Dual mode requires both primary and secondary PersonI');
+    }
+
+    this.updateStatus(`${mode} conversation in progress...`);
+
+    // Use DualPersonIManager to coordinate the conversation
+    let fullResponse = '';
+
+    // TODO: Implement dual-persona conversation in DualPersonIManager
+    // For now, just use primary persona
+    console.warn('[ConversationOrchestrator] Dual-mode conversation not fully implemented yet');
+    fullResponse = 'Dual-mode conversation is not yet implemented. Using single PersonI mode.';
+
+    // Store in RAG memory if enabled
+    if (options.ragEnabled) {
+      try {
+        await ragMemoryManager.addMemory(
+          transcript,
+          `${primaryPersona.name}+${secondaryPersona.name}`,
+          'conversation',
+          'user',
+          5
+        );
+
+        await ragMemoryManager.addMemory(
+          fullResponse,
+          `${primaryPersona.name}+${secondaryPersona.name}`,
+          'conversation',
+          'ai',
+          5
+        );
+      } catch (error) {
+        console.error('[ConversationOrchestrator] Failed to store dual-mode conversation:', error);
+      }
+    }
+
+    this.updateStatus('Idle');
+  }
+
+  /**
+   * Switch active PersonI
+   */
+  async switchPersona(persona: PersoniConfig): Promise<void> {
+    const provider = providerManager.getProviderInstance(persona.thinkingModel);
+    if (!provider) {
+      throw new Error(`No provider configured for model: ${persona.thinkingModel}`);
+    }
+
+    activePersonasManager.setPersona('primary', persona);
+    console.log(`[ConversationOrchestrator] Switched to PersonI: ${persona.name}`);
+  }
+
+  /**
+   * Get current active PersonI
+   */
+  getActivePersona(): PersoniConfig | null {
+    return activePersonasManager.getPrimaryPersona();
+  }
+
+  /**
+   * Get current secondary PersonI (for dual mode)
+   */
+  getSecondaryPersona(): PersoniConfig | null {
+    return activePersonasManager.getSecondaryPersona();
+  }
+
+  /**
+   * Set secondary PersonI for dual mode
+   */
+  async setSecondaryPersona(persona: PersoniConfig | null): Promise<void> {
+    if (persona) {
+      const provider = providerManager.getProviderInstance(persona.thinkingModel);
+      if (!provider) {
+        throw new Error(`No provider configured for model: ${persona.thinkingModel}`);
+      }
+      activePersonasManager.setPersona('secondary', persona);
+    } else {
+      activePersonasManager.setPersona('secondary', null);
+    }
+  }
+}
+
+export const conversationOrchestrator = new ConversationOrchestrator();
