@@ -9,13 +9,14 @@ import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
+import { appStateService } from '../../services/app-state-service';
 
 @customElement('settings-fab')
 export class SettingsFab extends LitElement {
-  @state() private menuOpen = false;
   @state() private position = { x: 0, y: 0 };
   
   private draggableInstance: Draggable[] | null = null;
+  private unsubscribeAppState: (() => void) | null = null;
 
   static override styles = css`
     :host {
@@ -73,9 +74,12 @@ export class SettingsFab extends LitElement {
   `;
 
   override render() {
+    // Get menu visibility from appStateService (stateless)
+    const menuOpen = appStateService.getState().settingsMenuVisible;
+    
     return html`
       <button
-        class="fab-button ${this.menuOpen ? 'menu-open' : ''}"
+        class="fab-button ${menuOpen ? 'menu-open' : ''}"
         @click=${this.toggleMenu}
         title="Settings"
         aria-label="Toggle settings menu">
@@ -85,6 +89,14 @@ export class SettingsFab extends LitElement {
         </svg>
       </button>
     `;
+  }
+
+  override connectedCallback() {
+    super.connectedCallback();
+    // Subscribe to app state changes to trigger re-render
+    this.unsubscribeAppState = appStateService.subscribe(() => {
+      this.requestUpdate();
+    });
   }
 
   override firstUpdated() {
@@ -99,6 +111,9 @@ export class SettingsFab extends LitElement {
     if (this.draggableInstance) {
       this.draggableInstance.forEach(d => d.kill());
       this.draggableInstance = null;
+    }
+    if (this.unsubscribeAppState) {
+      this.unsubscribeAppState();
     }
   }
 
@@ -140,23 +155,11 @@ export class SettingsFab extends LitElement {
   }
 
   private toggleMenu(): void {
-    this.menuOpen = !this.menuOpen;
-    
-    this.dispatchEvent(new CustomEvent('menu-toggle', {
-      detail: { open: this.menuOpen, position: this.position },
+    // Stateless: just emit toggle event, let visualizer-shell manage state via appStateService
+    this.dispatchEvent(new CustomEvent('toggle', {
+      detail: { position: this.position },
       bubbles: true,
       composed: true
     }));
-  }
-
-  public closeMenu(): void {
-    if (this.menuOpen) {
-      this.menuOpen = false;
-      this.dispatchEvent(new CustomEvent('menu-toggle', {
-        detail: { open: false, position: this.position },
-        bubbles: true,
-        composed: true
-      }));
-    }
   }
 }

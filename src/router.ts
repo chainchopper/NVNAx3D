@@ -1,9 +1,13 @@
 /**
  * Simple Router for Multi-Route Support
  * Handles navigation between main interface (/) and visualizer (/visualizer)
+ * 
+ * Feature Flag: useVisualizerShell
+ * - When enabled in localStorage, "/" shows visualizer-shell instead of main-interface
+ * - Legacy interface always available at /legacy for rollback safety
  */
 
-export type RouteName = 'main' | 'visualizer';
+export type RouteName = 'main' | 'visualizer' | 'legacy';
 
 export interface RouteConfig {
   path: string;
@@ -11,9 +15,32 @@ export interface RouteConfig {
   component: string;
 }
 
+/**
+ * Check feature flag in localStorage to determine if visualizer-shell should be used as main route
+ * 
+ * NOTE: This function is called once during module initialization (when routes array is created).
+ * To change the route behavior, set localStorage.setItem('useVisualizerShell', 'true') and refresh the page.
+ * 
+ * Usage for QA testing:
+ * - Enable new interface: localStorage.setItem('useVisualizerShell', 'true'); location.reload();
+ * - Revert to legacy: localStorage.setItem('useVisualizerShell', 'false'); location.reload();
+ * - Legacy interface always available at /legacy for rollback safety
+ */
+function getMainRouteComponent(): string {
+  try {
+    const useVisualizerShell = localStorage.getItem('useVisualizerShell') === 'true';
+    console.log('[Router] Feature flag useVisualizerShell:', useVisualizerShell);
+    return useVisualizerShell ? 'visualizer-shell' : 'main-interface';
+  } catch (error) {
+    console.warn('[Router] Failed to read feature flag, defaulting to main-interface:', error);
+    return 'main-interface';
+  }
+}
+
 export const routes: RouteConfig[] = [
-  { path: '/', name: 'main', component: 'main-interface' },
+  { path: '/', name: 'main', component: getMainRouteComponent() },
   { path: '/visualizer', name: 'visualizer', component: 'visualizer-interface' },
+  { path: '/legacy', name: 'legacy', component: 'main-interface' },
 ];
 
 export class Router extends EventTarget {

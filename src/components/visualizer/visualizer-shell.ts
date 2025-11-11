@@ -18,14 +18,17 @@ import './visualizer-3d';
 import './visualizer-controls';
 import './settings-fab';
 import './settings-menu';
-import '../panels/models-panel';
-import '../panels/user-profile-panel';
-import '../panels/notes-panel';
-import '../panels/tasks-panel';
-import '../panels/memory-panel';
-import '../panels/routines-panel';
-import '../panels/plugin-manager-panel';
-import '../panels/connector-config-panel';
+import './persona-carousel-hud';
+import './dual-mode-controls-hud';
+import './music-detection-hud';
+import '../models-panel';
+import '../user-profile-panel';
+import '../notes-panel';
+import '../tasks-panel';
+import '../memory-panel';
+import '../routines-panel';
+import '../plugin-manager-panel';
+import '../connector-config-panel';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -108,6 +111,7 @@ export class VisualizerShell extends LitElement {
     super.connectedCallback();
     await this.initializeAudioContext();
     this.playIntroAnimation();
+    this.subscribeToAppState();
     console.log('[VisualizerShell] Initialized');
   }
 
@@ -116,7 +120,20 @@ export class VisualizerShell extends LitElement {
     if (this.audioContext) {
       this.audioContext.close();
     }
+    if (this.unsubscribeAppState) {
+      this.unsubscribeAppState();
+    }
     console.log('[VisualizerShell] Destroyed');
+  }
+
+  private subscribeToAppState(): void {
+    // Subscribe to app state changes
+    this.unsubscribeAppState = appStateService.subscribe(() => {
+      const state = appStateService.getState();
+      this.activeSidePanel = state.activeSidePanel;
+      this.settingsMenuVisible = state.settingsMenuVisible;
+      this.requestUpdate();
+    });
   }
 
   private async initializeAudioContext(): Promise<void> {
@@ -212,6 +229,25 @@ export class VisualizerShell extends LitElement {
     });
   }
 
+  // Settings FAB and Menu handlers
+  private handleFabToggle(): void {
+    const state = appStateService.getState();
+    appStateService.setSettingsMenuVisible(!state.settingsMenuVisible);
+  }
+
+  private handleMenuItemClick(e: CustomEvent<{ item: MenuItem }>): void {
+    const { item } = e.detail;
+    
+    // MenuItem is already the ActiveSidePanel type, just set it directly
+    appStateService.setActiveSidePanel(item);
+    appStateService.setSettingsMenuVisible(false); // Close menu after selection
+  }
+
+  private handleClosePanel(): void {
+    appStateService.setActiveSidePanel('none');
+  }
+
+  // Twilio panel handlers (legacy - Phase 4)
   private handleShowTwilioSettings(): void {
     this.showTwilioSettings = !this.showTwilioSettings;
   }
@@ -224,6 +260,33 @@ export class VisualizerShell extends LitElement {
     this.showVoicePanel = !this.showVoicePanel;
   }
 
+  // Render panel based on activeSidePanel state
+  private renderActivePanel() {
+    switch (this.activeSidePanel) {
+      case 'userProfile':
+        return html`<user-profile-panel @close=${this.handleClosePanel}></user-profile-panel>`;
+      case 'models':
+        return html`<models-panel @close=${this.handleClosePanel}></models-panel>`;
+      case 'personis':
+        // PersonI management is handled in models-panel (AI configuration)
+        return html`<models-panel @close=${this.handleClosePanel}></models-panel>`;
+      case 'notes':
+        return html`<notes-panel @close=${this.handleClosePanel}></notes-panel>`;
+      case 'tasks':
+        return html`<tasks-panel @close=${this.handleClosePanel}></tasks-panel>`;
+      case 'memory':
+        return html`<memory-panel @close=${this.handleClosePanel}></memory-panel>`;
+      case 'routines':
+        return html`<routines-panel @close=${this.handleClosePanel}></routines-panel>`;
+      case 'plugins':
+        return html`<plugin-manager-panel @close=${this.handleClosePanel}></plugin-manager-panel>`;
+      case 'connectors':
+        return html`<connector-config-panel @close=${this.handleClosePanel}></connector-config-panel>`;
+      default:
+        return null;
+    }
+  }
+
   render() {
     return html`
       <div class="visualizer-container">
@@ -233,42 +296,25 @@ export class VisualizerShell extends LitElement {
         <!-- Floating Control Panel (auto-hide, draggable) -->
         <visualizer-controls></visualizer-controls>
 
-        <!-- Controls Ring (circular menu like persona carousel) -->
-        <controls-ring
-          @show-twilio-settings=${this.handleShowTwilioSettings}
-          @show-sms=${this.handleShowSMSPanel}
-          @show-voice=${this.handleShowVoicePanel}
-        ></controls-ring>
+        <!-- HUD Overlays -->
+        <persona-carousel-hud></persona-carousel-hud>
+        <dual-mode-controls-hud></dual-mode-controls-hud>
+        <music-detection-hud></music-detection-hud>
 
-        <!-- Twilio Settings Panel (GSAP Draggable) -->
-        ${this.showTwilioSettings
-          ? html`
-              <div class="panel">
-                <twilio-settings-panel
-                  @close=${() => (this.showTwilioSettings = false)}
-                ></twilio-settings-panel>
-              </div>
-            `
-          : ''}
+        <!-- Settings FAB (draggable gear button) -->
+        <settings-fab
+          @toggle=${this.handleFabToggle}
+        ></settings-fab>
 
-        <!-- SMS Panel (GSAP Draggable) -->
-        ${this.showSMSPanel
-          ? html`
-              <div class="panel">
-                <sms-panel @close=${() => (this.showSMSPanel = false)}></sms-panel>
-              </div>
-            `
-          : ''}
+        <!-- Radial Settings Menu -->
+        <settings-menu
+          .visible=${this.settingsMenuVisible}
+          @menu-item-click=${this.handleMenuItemClick}
+        ></settings-menu>
 
-        <!-- Voice Call Panel (GSAP Draggable) -->
-        ${this.showVoicePanel
-          ? html`
-              <div class="panel">
-                <voice-call-panel
-                  @close=${() => (this.showVoicePanel = false)}
-                ></voice-call-panel>
-              </div>
-            `
+        <!-- Active Side Panel (conditional render) -->
+        ${this.activeSidePanel !== 'none'
+          ? html`<div class="panel">${this.renderActivePanel()}</div>`
           : ''}
       </div>
 
