@@ -32,6 +32,7 @@ export class ProviderManager {
       if (saved) {
         const data = JSON.parse(saved);
         this.providers = new Map(Object.entries(data));
+        this.migrateProviderCapabilities();
       } else {
         this.initializeDefaults();
       }
@@ -62,6 +63,52 @@ export class ProviderManager {
     } catch (error) {
       console.error('Failed to load provider config:', error);
       this.initializeDefaults();
+    }
+  }
+
+  /**
+   * Migrate legacy provider models to include new capability flags
+   */
+  private migrateProviderCapabilities() {
+    let migrated = false;
+
+    this.providers.forEach((provider, providerId) => {
+      if (!provider.models || provider.models.length === 0) return;
+
+      provider.models = provider.models.map((model) => {
+        const caps = model.capabilities || {};
+        
+        // Check if migration is needed (missing new flags)
+        if (caps.conversation === undefined || caps.embedding === undefined || caps.imageGeneration === undefined) {
+          migrated = true;
+          
+          const modelId = model.id.toLowerCase();
+          
+          // Infer missing capabilities from model name or existing flags
+          const isEmbedding = modelId.includes('embed') || modelId.includes('embedding');
+          const isImageGen = modelId.includes('dall-e') || modelId.includes('imagen') || modelId.includes('stable-diffusion');
+          const hasVision = caps.vision || modelId.includes('vision');
+          const isConversation = !isEmbedding && !isImageGen;
+          
+          return {
+            ...model,
+            capabilities: {
+              ...caps,
+              conversation: caps.conversation ?? isConversation,
+              embedding: caps.embedding ?? isEmbedding,
+              imageGeneration: caps.imageGeneration ?? isImageGen,
+            },
+          };
+        }
+        
+        return model;
+      });
+    });
+
+    // Persist migrated data if changes were made
+    if (migrated) {
+      console.log('[ProviderManager] 🔄 Migrated legacy provider models with new capability flags');
+      this.saveToStorage();
     }
   }
 
