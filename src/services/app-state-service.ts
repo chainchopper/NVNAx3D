@@ -15,12 +15,12 @@ export type ActiveSidePanel =
   | 'userProfile'
   | 'models'
   | 'personis'
-  | 'tasks'
+  | 'connectorConfig'
   | 'notes'
+  | 'tasks'
   | 'memory'
   | 'routines'
-  | 'plugins'
-  | 'connectors';
+  | 'plugins';
 
 export type PersonaSlot = 'primary' | 'secondary';
 
