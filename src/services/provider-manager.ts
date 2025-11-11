@@ -160,75 +160,8 @@ export class ProviderManager {
       
       console.log('[ProviderManager] Environment config received:', envConfig);
       
-      // Auto-configure Google provider if GEMINI_API_KEY is available
-      if (envConfig.geminiApiKey) {
-        let googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
-        
-        if (googleProvider) {
-          // Update existing Google provider
-          const models: ModelInfo[] = [
-            {
-              id: 'gemini-2.5-flash',
-              name: 'Gemini 2.5 Flash',
-              providerId: googleProvider.id,
-              capabilities: {
-                audio: true,
-                vision: true,
-                streaming: true,
-                functionCalling: true,
-                conversation: true,
-                embedding: false,
-                imageGeneration: false,
-                maxTokens: 1000000,
-              },
-            },
-            {
-              id: 'gemini-2.5-pro',
-              name: 'Gemini 2.5 Pro',
-              providerId: googleProvider.id,
-              capabilities: {
-                audio: true,
-                vision: true,
-                streaming: true,
-                functionCalling: true,
-                conversation: true,
-                embedding: false,
-                imageGeneration: false,
-                maxTokens: 2000000,
-              },
-            },
-            {
-              id: 'gemini-2.0-flash-exp',
-              name: 'Gemini 2.0 Flash Experimental',
-              providerId: googleProvider.id,
-              capabilities: {
-                audio: true,
-                vision: true,
-                streaming: true,
-                functionCalling: true,
-                conversation: true,
-                embedding: false,
-                imageGeneration: false,
-                maxTokens: 1000000,
-              },
-            },
-          ];
-          
-          this.updateProvider(googleProvider.id, {
-            apiKey: 'configured', // Placeholder - actual key is on backend
-            enabled: true,
-            verified: true,
-            models,
-          });
-          
-          console.log('[ProviderManager] ✅ Auto-configured Google provider with GEMINI_API_KEY');
-          console.log('[ProviderManager] Models available:', models.map(m => m.id).join(', '));
-        } else {
-          console.warn('[ProviderManager] Google provider not found in provider list');
-        }
-      } else {
-        console.warn('[ProviderManager] GEMINI_API_KEY not available on backend');
-      }
+      // Note: Model configuration is handled through Settings UI
+      // Users can manually add any models they want via the Models panel
     } catch (error) {
       console.error('[ProviderManager] Error auto-configuring from environment:', {
         message: error instanceof Error ? error.message : String(error),

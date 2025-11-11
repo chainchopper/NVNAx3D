@@ -664,7 +664,10 @@ export class VisualizerShell extends LitElement {
     return html`
       <div class="visualizer-container">
         <!-- 3D Audio Visualizer with Codrops shaders (z-index: 1, pointer-events: none) -->
-        <visualizer-3d></visualizer-3d>
+        <visualizer-3d
+          .cameraVideoElement=${this.cameraManager?.videoElement || null}
+          .cameraRenderMode=${'texture'}
+        ></visualizer-3d>
 
         <!-- HUD Overlays -->
         <persona-carousel-hud></persona-carousel-hud>
@@ -701,7 +704,7 @@ export class VisualizerShell extends LitElement {
         <camera-manager
           .enabled=${this.cameraEnabled}
           .showPreview=${this.cameraShowPreview}
-          .renderMode=${'native'}
+          .renderMode=${'texture'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
         ></camera-manager>
