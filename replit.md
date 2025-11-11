@@ -5,7 +5,17 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### Voice Input Integration (Latest)
+### PersonI Settings Persistence & Connector Categorization (Latest)
+- **Storage Key Centralization**: Created `src/constants/storage.ts` with shared localStorage keys (PERSONIS_KEY, USER_PROFILE_KEY, etc.) to prevent desync
+- **PersonI Persistence Fix**: Added `appStateService.updatePersoni()` method that properly updates personis array and saves to localStorage
+- **Connector Type Discriminator**: Added `type: 'oauth' | 'api_tool'` field to all 31 connectors in AVAILABLE_CONNECTORS
+- **UI Separation**: PersonI Settings panel now shows two distinct sections:
+  - **OAuth Connectors** (Gmail, GitHub, Calendar, etc.) with connection status badges
+  - **API Tools & Commands** (Financial tools, web search, etc.) with configuration notes
+- **Data Storage**: Both OAuth and API tools currently stored in `enabledConnectors` array (UI-only separation)
+- **Backward Compatibility**: No breaking changes - existing PersonI configs continue working
+
+### Voice Input Integration
 - **Voice Input Service**: New `voice-input-service.ts` handles complete microphone → Whisper STT → text flow
   - MediaRecorder-based audio capture with automatic format conversion to Float32Array
   - Event-driven architecture (transcription, state-change, model-progress events)
