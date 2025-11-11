@@ -8,6 +8,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { AVAILABLE_CONNECTORS } from '../personas';
 import type { ConnectorConfig, ConnectorFieldDefinition } from '../types/connector-config';
 import { ConnectorConfigManager, CONNECTOR_FIELDS } from '../types/connector-config';
+import { oauthService } from '../services/oauth-service';
 
 type PanelMode = 'list' | 'configure';
 
@@ -20,6 +21,9 @@ export class ConnectorConfigPanel extends LitElement {
   @state() verifying = false;
   @state() verificationMessage = '';
   @state() oauthLoading = false;
+  @state() oauthConnected = false;
+  
+  private oauthUnsubscribe?: () => void;
 
   static styles = css`
     :host {
@@ -351,6 +355,63 @@ export class ConnectorConfigPanel extends LitElement {
   async connectedCallback() {
     super.connectedCallback();
     this.loadConfigs();
+    
+    // Subscribe to OAuth state changes
+    this.oauthUnsubscribe = oauthService.subscribe(() => {
+      this.checkOAuthStatus();
+      this.requestUpdate();
+    });
+    
+    // Initial OAuth status check
+    this.checkOAuthStatus();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.oauthUnsubscribe) {
+      this.oauthUnsubscribe();
+    }
+  }
+
+  private async checkOAuthStatus() {
+    if (!this.editingConnector) return;
+    
+    const authState = await oauthService.getConnectorAuthState(this.editingConnector);
+    this.oauthConnected = authState.isConnected;
+    
+    // Handle connection success
+    if (authState.isConnected && this.oauthLoading) {
+      const config: ConnectorConfig = {
+        id: this.editingConnector,
+        name: AVAILABLE_CONNECTORS.find(c => c.id === this.editingConnector)?.name || this.editingConnector,
+        configured: true,
+        verified: true,
+        lastVerified: new Date().toISOString(),
+      };
+
+      ConnectorConfigManager.updateConfig(config);
+      this.loadConfigs();
+      this.oauthLoading = false;
+      
+      const providerName = oauthService.getProviderName(authState.providerId);
+      this.verificationMessage = `✅ ${providerName} account connected successfully!`;
+      console.log(`[OAuth] Successfully connected ${providerName} account`);
+      
+      // Auto-close the form after successful connection
+      setTimeout(() => {
+        this.mode = 'list';
+        this.editingConnector = null;
+      }, 1500);
+    }
+    // Handle connection failure/cancellation
+    else if (!authState.isConnected && this.oauthLoading) {
+      this.oauthLoading = false;
+      const providerName = authState.providerId !== 'none' 
+        ? oauthService.getProviderName(authState.providerId)
+        : 'OAuth';
+      this.verificationMessage = `⚠️ ${providerName} authorization was cancelled or failed. Please try again.`;
+      console.log(`[OAuth] Authorization cancelled or failed for ${providerName}`);
+    }
   }
 
   private loadConfigs() {
@@ -386,8 +447,14 @@ export class ConnectorConfigPanel extends LitElement {
     this.editingConnector = connectorId;
     this.mode = 'configure';
     
+    // Reset state to avoid stale UI
     this.formCredentials = {};
     this.verificationMessage = '';
+    this.oauthLoading = false;
+    this.oauthConnected = false;
+    
+    // Check initial OAuth status
+    this.checkOAuthStatus();
   }
 
   private async handleVerify() {
@@ -498,104 +565,30 @@ export class ConnectorConfigPanel extends LitElement {
     this.verificationMessage = '';
   }
 
-  private isGoogleConnector(connectorId: string): boolean {
-    return ['gmail', 'google_calendar', 'google_docs', 'google_sheets'].includes(connectorId);
+  private isOAuthConnector(connectorId: string): boolean {
+    return oauthService.isOAuthConnector(connectorId);
   }
 
-  private async handleGoogleOAuth() {
+  private async handleOAuth() {
     if (!this.editingConnector) return;
 
+    const providerId = oauthService.getProviderForConnector(this.editingConnector);
+    if (!providerId) {
+      this.verificationMessage = '❌ No OAuth provider for this connector';
+      return;
+    }
+
     this.oauthLoading = true;
-    this.verificationMessage = '';
+    this.verificationMessage = `Opening ${oauthService.getProviderName(providerId)} authorization window...`;
     
     try {
-      // Initiate OAuth flow (relative URL for same-origin)
-      const response = await fetch('/api/oauth/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'google' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate OAuth flow');
-      }
-
-      const { authUrl } = await response.json();
+      // Use centralized oauth-service (opens popup and monitors)
+      await oauthService.connectProvider(providerId);
       
-      // Open OAuth URL in popup
-      const width = 600;
-      const height = 700;
-      const left = (screen.width - width) / 2;
-      const top = (screen.height - height) / 2;
-      const popup = window.open(
-        authUrl,
-        'Google OAuth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      if (!popup) {
-        throw new Error('Failed to open OAuth popup - please allow popups for this site');
-      }
-
-      // Poll for OAuth completion with proper cleanup
-      let attempts = 0;
-      const maxAttempts = 300; // 5 minutes max (300 seconds)
+      // OAuth service will handle popup and callback
+      // Status will be updated via subscription → checkOAuthStatus() → automatic config save
+      // No fixed timeout - we rely on the subscription callback to detect success
       
-      const checkInterval = setInterval(async () => {
-        attempts++;
-
-        // Check if popup was closed by user
-        if (popup.closed) {
-          clearInterval(checkInterval);
-          this.oauthLoading = false;
-          this.verificationMessage = '⚠️ OAuth cancelled - popup was closed';
-          console.log('[OAuth] Popup closed by user');
-          return;
-        }
-
-        // Timeout after max attempts
-        if (attempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          popup.close();
-          this.oauthLoading = false;
-          this.verificationMessage = '❌ OAuth timeout - please try again';
-          console.log('[OAuth] Timeout after 5 minutes');
-          return;
-        }
-
-        // Check OAuth status
-        try {
-          const statusResponse = await fetch('/api/oauth/status?provider=google');
-          const { connected } = await statusResponse.json();
-
-          if (connected) {
-            clearInterval(checkInterval);
-            popup.close();
-            
-            // Save connector config as verified
-            const config: ConnectorConfig = {
-              id: this.editingConnector!,
-              name: AVAILABLE_CONNECTORS.find(c => c.id === this.editingConnector)?.name || this.editingConnector!,
-              configured: true,
-              verified: true,
-              lastVerified: new Date().toISOString(),
-            };
-
-            ConnectorConfigManager.updateConfig(config);
-            this.loadConfigs();
-            this.mode = 'list';
-            this.editingConnector = null;
-            this.oauthLoading = false;
-            
-            this.verificationMessage = '✅ Google account connected successfully!';
-            console.log('[OAuth] Successfully connected Google account');
-          }
-        } catch (error) {
-          console.error('[OAuth] Status check error:', error);
-          // Don't break on status check errors, keep polling
-        }
-      }, 1000);
-
     } catch (error: any) {
       console.error('[OAuth] Error:', error);
       this.verificationMessage = `❌ OAuth error: ${error.message}`;
@@ -682,7 +675,9 @@ export class ConnectorConfigPanel extends LitElement {
       return html`<div>Connector not found</div>`;
     }
 
-    const isGoogle = this.isGoogleConnector(this.editingConnector!);
+    const isOAuth = this.isOAuthConnector(this.editingConnector!);
+    const providerId = isOAuth ? oauthService.getProviderForConnector(this.editingConnector!) : null;
+    const providerName = providerId ? oauthService.getProviderName(providerId) : '';
 
     return html`
       <div class="panel-content">
@@ -696,20 +691,28 @@ export class ConnectorConfigPanel extends LitElement {
           <p>${connector.description}</p>
         </div>
 
-        ${isGoogle ? html`
+        ${isOAuth ? html`
           <button 
             class="oauth-button" 
-            @click=${this.handleGoogleOAuth}
+            @click=${this.handleOAuth}
             ?disabled=${this.oauthLoading}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-              <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.71v2.26h2.92a8.78 8.78 0 002.68-6.61z"/>
-              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.02-3.71H.98v2.33A9 9 0 009 18z"/>
-              <path fill="#FBBC05" d="M3.98 10.71a5.41 5.41 0 010-3.42V4.96H.98A9 9 0 000 9c0 1.45.35 2.82.98 4.04l2.99-2.33z"/>
-              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 009 0 9 9 0 00.98 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
-            </svg>
-            ${this.oauthLoading ? 'Connecting...' : 'Connect with Google'}
+            ${providerId === 'google' ? html`
+              <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#4285F4" d="M17.64 9.2c0-.63-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 01-1.8 2.71v2.26h2.92a8.78 8.78 0 002.68-6.61z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.02-3.71H.98v2.33A9 9 0 009 18z"/>
+                <path fill="#FBBC05" d="M3.98 10.71a5.41 5.41 0 010-3.42V4.96H.98A9 9 0 000 9c0 1.45.35 2.82.98 4.04l2.99-2.33z"/>
+                <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 009 0 9 9 0 00.98 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+              </svg>
+            ` : '🔐'}
+            ${this.oauthLoading ? 'Connecting...' : `Connect with ${providerName}`}
           </button>
+
+          ${this.oauthConnected ? html`
+            <div style="text-align: center; margin: 16px 0; color: #4caf50;">
+              ✅ Connected to ${providerName}
+            </div>
+          ` : ''}
 
           <div class="oauth-divider">OR</div>
         ` : ''}
@@ -726,7 +729,7 @@ export class ConnectorConfigPanel extends LitElement {
 
         <div class="form-actions">
           <button class="secondary" @click=${this.handleCancel}>Cancel</button>
-          ${!isGoogle ? html`
+          ${!isOAuth ? html`
             <button class="primary" @click=${this.handleSave}>Save</button>
             <button 
               class="verify" 
