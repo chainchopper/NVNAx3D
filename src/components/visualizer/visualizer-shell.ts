@@ -13,6 +13,9 @@ import { providerManager } from '../../services/provider-manager';
 import { getSharedMicrophone } from '../../utils';
 import { Analyser } from '../../analyser';
 import { appStateService, type ActiveSidePanel } from '../../services/app-state-service';
+import { personaTemplates, DEFAULT_CAPABILITIES, type PersoniConfig } from '../../personas';
+import { activePersonasManager } from '../../services/active-personas-manager';
+import { dualPersonIManager } from '../../services/dual-personi-manager';
 import type { MenuItem } from './settings-menu';
 import './visualizer-3d';
 import './visualizer-controls';
@@ -33,6 +36,9 @@ import '../chatterbox-settings';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
+
+// localStorage keys (matching index.tsx)
+const PERSONIS_KEY = 'gdm-personis';
 
 @customElement('visualizer-shell')
 export class VisualizerShell extends LitElement {
@@ -111,6 +117,7 @@ export class VisualizerShell extends LitElement {
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
     await this.initializeAudioContext();
+    this.loadPersonIs();
     this.playIntroAnimation();
     this.subscribeToAppState();
     console.log('[VisualizerShell] Initialized');
@@ -125,6 +132,107 @@ export class VisualizerShell extends LitElement {
       this.unsubscribeAppState();
     }
     console.log('[VisualizerShell] Destroyed');
+  }
+
+  /**
+   * Load PersonI from localStorage and hydrate default templates
+   * Replicates index.tsx loadConfiguration() logic for PersonI
+   */
+  private loadPersonIs(): void {
+    try {
+      const storedPersonis = localStorage.getItem(PERSONIS_KEY);
+      let personis: PersoniConfig[];
+      
+      if (storedPersonis) {
+        personis = JSON.parse(storedPersonis);
+        
+        // Ensure all loaded PersonI have complete defaults from templates
+        personis = personis.map(p => {
+          const template = personaTemplates.find(t => t.templateName === p.templateName);
+          return {
+            ...p,
+            capabilities: p.capabilities || { ...DEFAULT_CAPABILITIES },
+            avatarUrl: p.avatarUrl || template?.avatarUrl,
+            visuals: p.visuals || template?.visuals,
+            voiceName: p.voiceName || template?.voiceName,
+            thinkingModel: p.thinkingModel || template?.thinkingModel,
+          };
+        });
+        
+        // SYNC NEW TEMPLATES: Check if any templates are missing and add them
+        const existingTemplateNames = personis.map(p => p.templateName);
+        const missingTemplates = personaTemplates.filter(
+          template => !existingTemplateNames.includes(template.templateName || template.name)
+        );
+        
+        if (missingTemplates.length > 0) {
+          console.log(`[VisualizerShell] Adding ${missingTemplates.length} new PersonI from templates:`, 
+            missingTemplates.map(t => t.name).join(', '));
+          
+          const newPersonis = missingTemplates.map((template) => {
+            return {
+              id: crypto.randomUUID(),
+              name: template.name,
+              tagline: template.tagline,
+              systemInstruction: template.systemInstruction,
+              templateName: template.templateName || template.name,
+              voiceName: template.voiceName,
+              thinkingModel: template.thinkingModel,
+              enabledConnectors: template.enabledConnectors,
+              capabilities: template.capabilities || { ...DEFAULT_CAPABILITIES },
+              avatarUrl: template.avatarUrl,
+              visuals: template.visuals,
+            };
+          });
+          
+          personis = [...personis, ...newPersonis];
+        }
+        
+        // Save with updated capabilities, avatarUrl, and new PersonI
+        localStorage.setItem(PERSONIS_KEY, JSON.stringify(personis));
+      } else {
+        // First time setup: create PersonI from templates
+        personis = personaTemplates.map((template) => {
+          return {
+            id: crypto.randomUUID(),
+            name: template.name,
+            tagline: template.tagline,
+            systemInstruction: template.systemInstruction,
+            templateName: template.templateName || template.name,
+            voiceName: template.voiceName,
+            thinkingModel: template.thinkingModel,
+            enabledConnectors: template.enabledConnectors,
+            capabilities: template.capabilities || { ...DEFAULT_CAPABILITIES },
+            avatarUrl: template.avatarUrl,
+            visuals: template.visuals,
+          };
+        });
+        localStorage.setItem(PERSONIS_KEY, JSON.stringify(personis));
+        console.log('[VisualizerShell] Created default PersonI from templates:', personis.map(p => p.name).join(', '));
+      }
+      
+      // Update app state with loaded PersonI
+      appStateService.setPersonis(personis);
+      
+      // Set active persona to first one if none selected
+      if (personis.length > 0) {
+        const activePersoni = appStateService.getActivePersoni() || personis[0];
+        appStateService.setActivePersoni(activePersoni);
+        
+        // Sync with activePersonasManager (primary slot)
+        activePersonasManager.setPersona('primary', activePersoni);
+        console.log('[VisualizerShell] Set active PersonI:', activePersoni.name);
+        
+        // Sync secondary persona if dual mode was enabled
+        const secondaryPersoni = appStateService.getSecondaryPersoni();
+        if (secondaryPersoni) {
+          activePersonasManager.setPersona('secondary', secondaryPersoni);
+          console.log('[VisualizerShell] Restored secondary PersonI:', secondaryPersoni.name);
+        }
+      }
+    } catch (error) {
+      console.error('[VisualizerShell] Failed to load PersonI:', error);
+    }
   }
 
   private subscribeToAppState(): void {
