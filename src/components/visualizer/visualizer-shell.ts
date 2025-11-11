@@ -21,6 +21,7 @@ import './visualizer-3d';
 import './visualizer-controls';
 import './settings-fab';
 import './settings-menu';
+import './settings-dock';
 import './persona-carousel-hud';
 import './dual-mode-controls-hud';
 import './music-detection-hud';
@@ -505,9 +506,15 @@ export class VisualizerShell extends LitElement {
   // Settings FAB and Menu handlers
   private handleFabToggle(): void {
     const state = appStateService.getState();
-    const newVisibility = !state.settingsMenuVisible;
-    console.log('[VisualizerShell] FAB toggle clicked, setting menu visible:', newVisibility);
-    appStateService.setSettingsMenuVisible(newVisibility);
+    
+    // Toggle dock: if closed, open main menu; if open, close it
+    if (state.activeSidePanel === 'none') {
+      console.log('[VisualizerShell] FAB clicked - opening settings dock');
+      appStateService.setActiveSidePanel('main-menu');
+    } else {
+      console.log('[VisualizerShell] FAB clicked - closing settings dock');
+      appStateService.setActiveSidePanel('none');
+    }
   }
 
   private handleMenuItemClick(e: CustomEvent<{ item: MenuItem }>): void {
@@ -537,21 +544,29 @@ export class VisualizerShell extends LitElement {
 
   // Render panel based on activeSidePanel state
   private renderActivePanel() {
+    // Panel IDs managed by the settings-dock (don't render legacy center panels for these)
+    const dockManagedPanels: ActiveSidePanel[] = [
+      'main-menu',
+      'models',
+      'personis',
+      'notes',
+      'tasks',
+      'memory',
+      'profile',
+      'calendar',
+    ];
+    
+    // If panel is managed by dock, don't render legacy center panel
+    if (dockManagedPanels.includes(this.activeSidePanel)) {
+      return null;
+    }
+    
+    // Legacy center panels (for backward compatibility)
     switch (this.activeSidePanel) {
       case 'userProfile':
         return html`<user-profile-panel @close=${this.handleClosePanel}></user-profile-panel>`;
-      case 'models':
-        return html`<models-panel @close=${this.handleClosePanel}></models-panel>`;
-      case 'personis':
-        return html`<chatterbox-settings @close=${this.handleClosePanel}></chatterbox-settings>`;
       case 'connectorConfig':
         return html`<connector-config-panel @close=${this.handleClosePanel}></connector-config-panel>`;
-      case 'notes':
-        return html`<notes-panel @close=${this.handleClosePanel}></notes-panel>`;
-      case 'tasks':
-        return html`<tasks-panel @close=${this.handleClosePanel}></tasks-panel>`;
-      case 'memory':
-        return html`<memory-panel @close=${this.handleClosePanel}></memory-panel>`;
       case 'routines':
         return html`<routines-panel @close=${this.handleClosePanel}></routines-panel>`;
       case 'plugins':
@@ -578,11 +593,14 @@ export class VisualizerShell extends LitElement {
           .providerStatus=${this.providerStatus}
         ></settings-fab>
 
-        <!-- Radial Settings Menu -->
+        <!-- Radial Settings Menu (deprecated - kept for backward compat) -->
         <settings-menu
           .visible=${this.settingsMenuVisible}
           @menu-item-click=${this.handleMenuItemClick}
         ></settings-menu>
+
+        <!-- Settings Dock (right-side docked panel with multi-layer nav) -->
+        <settings-dock></settings-dock>
 
         <!-- Camera Controls (z-index: 900) -->
         <camera-controls
