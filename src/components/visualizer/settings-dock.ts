@@ -180,8 +180,8 @@ export class SettingsDock extends LitElement {
       // Get full state from service (events only emit partial payloads)
       const state = appStateService.getState();
       
-      // Panel IDs managed by this dock
-      const dockManagedPanels = ['main-menu', 'models', 'personis', 'notes', 'tasks', 'memory', 'profile', 'calendar'];
+      // Panel IDs managed by this dock (all panels now opened via radial menu)
+      const dockManagedPanels = ['models', 'personis', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig'];
       const isDockManaged = dockManagedPanels.includes(state.activeSidePanel);
       
       if (isDockManaged) {
@@ -281,47 +281,52 @@ export class SettingsDock extends LitElement {
    * Get panel view configuration by ID
    */
   private getPanelView(panelId: string): PanelView | null {
-    // Map panel IDs to their configurations
+    // Map panel IDs to their configurations (using actual existing panel components)
     const panels: Record<string, PanelView> = {
-      'main-menu': {
-        id: 'main-menu',
-        title: 'Settings',
-        content: this.renderMainMenu(),
-      },
       'models': {
         id: 'models',
         title: 'AI Models',
-        content: html`<div>AI Models panel coming soon...</div>`,
+        content: html`<models-panel @close=${this.handlePanelCloseRequest}></models-panel>`,
       },
       'personis': {
         id: 'personis',
         title: 'PersonI',
-        content: html`<div>PersonI panel coming soon...</div>`,
+        content: html`<chatterbox-settings @close=${this.handlePanelCloseRequest}></chatterbox-settings>`,
       },
       'notes': {
         id: 'notes',
         title: 'Notes',
-        content: html`<div>Notes panel coming soon...</div>`,
+        content: html`<notes-panel @close=${this.handlePanelCloseRequest}></notes-panel>`,
       },
       'tasks': {
         id: 'tasks',
         title: 'Tasks',
-        content: html`<div>Tasks panel coming soon...</div>`,
+        content: html`<tasks-panel @close=${this.handlePanelCloseRequest}></tasks-panel>`,
       },
       'memory': {
         id: 'memory',
         title: 'Memory',
-        content: html`<div>Memory panel coming soon...</div>`,
+        content: html`<memory-panel @close=${this.handlePanelCloseRequest}></memory-panel>`,
       },
-      'profile': {
-        id: 'profile',
-        title: 'Profile',
-        content: html`<div>Profile panel coming soon...</div>`,
+      'userProfile': {
+        id: 'userProfile',
+        title: 'User Profile',
+        content: html`<user-profile-panel @close=${this.handlePanelCloseRequest}></user-profile-panel>`,
       },
-      'calendar': {
-        id: 'calendar',
-        title: 'Calendar',
-        content: html`<div>Calendar panel coming soon...</div>`,
+      'routines': {
+        id: 'routines',
+        title: 'Routines',
+        content: html`<routines-panel @close=${this.handlePanelCloseRequest}></routines-panel>`,
+      },
+      'plugins': {
+        id: 'plugins',
+        title: 'Plugins',
+        content: html`<plugin-manager-panel @close=${this.handlePanelCloseRequest}></plugin-manager-panel>`,
+      },
+      'connectorConfig': {
+        id: 'connectorConfig',
+        title: 'Connectors',
+        content: html`<connector-config-panel @close=${this.handlePanelCloseRequest}></connector-config-panel>`,
       },
     };
 
@@ -329,78 +334,12 @@ export class SettingsDock extends LitElement {
   }
 
   /**
-   * Render main menu navigation
+   * Handle close request from panel components
    */
-  private renderMainMenu() {
-    const menuItems = [
-      { id: 'models', label: 'AI Models', icon: '🤖' },
-      { id: 'personis', label: 'PersonI', icon: '👤' },
-      { id: 'notes', label: 'Notes', icon: '📝' },
-      { id: 'tasks', label: 'Tasks', icon: '✅' },
-      { id: 'memory', label: 'Memory', icon: '🧠' },
-      { id: 'profile', label: 'Profile', icon: '👨' },
-      { id: 'calendar', label: 'Calendar', icon: '📅' },
-    ];
+  private handlePanelCloseRequest = (): void => {
+    this.close();
+  };
 
-    return html`
-      <style>
-        .menu-items {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .menu-item {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          padding: 16px 20px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .menu-item:hover {
-          background: rgba(135, 206, 250, 0.15);
-          border-color: rgba(135, 206, 250, 0.3);
-          transform: translateX(4px);
-        }
-
-        .menu-item-icon {
-          font-size: 24px;
-        }
-
-        .menu-item-label {
-          font-size: 16px;
-          font-weight: 500;
-          color: white;
-        }
-
-        .menu-item-arrow {
-          margin-left: auto;
-          color: rgba(135, 206, 250, 0.6);
-          font-size: 18px;
-        }
-      </style>
-
-      <div class="menu-items">
-        ${menuItems.map(item => html`
-          <div class="menu-item" @click=${() => this.handleMenuItemClick(item.id)}>
-            <span class="menu-item-icon">${item.icon}</span>
-            <span class="menu-item-label">${item.label}</span>
-            <span class="menu-item-arrow">→</span>
-          </div>
-        `)}
-      </div>
-    `;
-  }
-
-  private handleMenuItemClick(itemId: string): void {
-    // Update AppState to show the selected panel
-    appStateService.setActiveSidePanel(itemId as any);
-  }
 
   /**
    * Show the dock with slide-in animation
