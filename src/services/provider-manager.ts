@@ -70,11 +70,16 @@ export class ProviderManager {
    */
   private async autoConfigureFromEnvironment() {
     try {
+      // Determine backend URL - use relative path in production, localhost in dev
+      const backendUrl = process.env.NODE_ENV === 'production' 
+        ? '/api/config/env'
+        : 'http://localhost:3001/api/config/env';
+      
       // Fetch environment configuration from backend with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const response = await fetch('http://localhost:3001/api/config/env', {
+      const response = await fetch(backendUrl, {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -204,6 +209,81 @@ export class ProviderManager {
     this.providers.set(id, { ...provider, id });
     this.saveToStorage();
     return id;
+  }
+
+  async addCustomProviderWithDiscovery(config: {
+    name: string;
+    baseUrl: string;
+    apiKey?: string;
+    capabilities?: {
+      streaming: boolean;
+      functionCalling: boolean;
+      vision: boolean;
+    };
+  }): Promise<{ success: boolean; providerId?: string; error?: string }> {
+    try {
+      // Determine backend URL
+      const backendUrl = process.env.NODE_ENV === 'production'
+        ? '/api/models/proxy'
+        : 'http://localhost:3001/api/models/proxy';
+      
+      // Use backend proxy to discover models with SSRF protection
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          baseUrl: config.baseUrl,
+          apiKey: config.apiKey,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { success: false, error: errorData.error || 'Model discovery failed' };
+      }
+
+      const { data } = await response.json();
+      
+      if (!data.data && !data.models) {
+        return { success: false, error: 'No models discovered from endpoint' };
+      }
+
+      // Create provider first to get the ID
+      const providerId = this.addCustomProvider({
+        name: config.name,
+        type: 'custom',
+        apiKey: config.apiKey,
+        endpoint: config.baseUrl,
+        enabled: true,
+        verified: true,
+        models: [], // Will be populated below
+      });
+
+      // Now create models with the correct providerId
+      const models: ModelInfo[] = (data.data || data.models || []).map((model: any) => ({
+        id: model.id,
+        name: model.id,
+        providerId: providerId,
+        capabilities: {
+          streaming: config.capabilities?.streaming ?? true,
+          functionCalling: config.capabilities?.functionCalling ?? false,
+          vision: config.capabilities?.vision ?? false,
+        },
+      }));
+
+      // Update provider with discovered models
+      const provider = this.providers.get(providerId);
+      if (provider) {
+        provider.models = models;
+        this.saveToStorage();
+      }
+
+      console.log(`[ProviderManager] Added custom provider "${config.name}" with ${models.length} models`);
+      return { success: true, providerId };
+    } catch (error: any) {
+      console.error('[ProviderManager] Custom provider discovery failed:', error);
+      return { success: false, error: error.message || 'Failed to add custom provider' };
+    }
   }
 
   deleteProvider(id: string) {
