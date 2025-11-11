@@ -131,6 +131,16 @@ export class PersoniSettingsPanel extends LitElement {
       background: rgba(255, 255, 255, 0.12);
     }
 
+    select option {
+      background: #1a1a2e;
+      color: white;
+      padding: 10px;
+    }
+
+    select option:hover {
+      background: #2a2a3e;
+    }
+
     textarea {
       min-height: 120px;
       resize: vertical;
