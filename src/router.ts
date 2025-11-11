@@ -38,9 +38,9 @@ function getMainRouteComponent(): string {
 }
 
 export const routes: RouteConfig[] = [
-  { path: '/', name: 'main', component: getMainRouteComponent() },
-  { path: '/visualizer', name: 'visualizer', component: 'visualizer-interface' },
-  { path: '/legacy', name: 'legacy', component: 'main-interface' },
+  { path: '/', name: 'main', component: 'visualizer-shell' },
+  { path: '/visualizer', name: 'visualizer', component: 'visualizer-shell' },
+  { path: '/legacy', name: 'legacy', component: 'gdm-live-audio' },
 ];
 
 export class Router extends EventTarget {

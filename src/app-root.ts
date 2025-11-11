@@ -8,8 +8,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { router, RouteName } from './router';
-import './index'; // Main interface (gdm-live-audio)
-import './routes/visualizer/index'; // Visualizer interface
+import './index'; // OLD main interface (gdm-live-audio) - for /legacy route
+import './components/visualizer/visualizer-shell'; // NEW visualizer-shell - for main routes
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
@@ -46,9 +46,9 @@ export class AppRoot extends LitElement {
 
   render() {
     return html`
-      ${this.currentRoute === 'main'
+      ${this.currentRoute === 'legacy'
         ? html`<gdm-live-audio></gdm-live-audio>`
-        : html`<visualizer-interface></visualizer-interface>`}
+        : html`<visualizer-shell></visualizer-shell>`}
     `;
   }
 }
