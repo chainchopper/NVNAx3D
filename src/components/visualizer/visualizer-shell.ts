@@ -29,6 +29,7 @@ import '../memory-panel';
 import '../routines-panel';
 import '../plugin-manager-panel';
 import '../connector-config-panel';
+import '../chatterbox-settings';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -268,8 +269,9 @@ export class VisualizerShell extends LitElement {
       case 'models':
         return html`<models-panel @close=${this.handleClosePanel}></models-panel>`;
       case 'personis':
-        // PersonI management is handled in models-panel (AI configuration)
-        return html`<models-panel @close=${this.handleClosePanel}></models-panel>`;
+        return html`<chatterbox-settings @close=${this.handleClosePanel}></chatterbox-settings>`;
+      case 'connectorConfig':
+        return html`<connector-config-panel @close=${this.handleClosePanel}></connector-config-panel>`;
       case 'notes':
         return html`<notes-panel @close=${this.handleClosePanel}></notes-panel>`;
       case 'tasks':
@@ -280,8 +282,6 @@ export class VisualizerShell extends LitElement {
         return html`<routines-panel @close=${this.handleClosePanel}></routines-panel>`;
       case 'plugins':
         return html`<plugin-manager-panel @close=${this.handleClosePanel}></plugin-manager-panel>`;
-      case 'connectors':
-        return html`<connector-config-panel @close=${this.handleClosePanel}></connector-config-panel>`;
       default:
         return null;
     }
