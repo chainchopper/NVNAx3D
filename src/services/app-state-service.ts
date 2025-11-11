@@ -17,7 +17,6 @@ const USER_PROFILE_KEY = 'userProfile';
 
 export type ActiveSidePanel = 
   | 'none'
-  | 'main-menu'
   | 'userProfile'
   | 'models'
   | 'personis'
@@ -26,9 +25,7 @@ export type ActiveSidePanel =
   | 'tasks'
   | 'memory'
   | 'routines'
-  | 'plugins'
-  | 'profile'
-  | 'calendar';
+  | 'plugins';
 
 export type PersonaSlot = 'primary' | 'secondary';
 

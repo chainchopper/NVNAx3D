@@ -506,15 +506,9 @@ export class VisualizerShell extends LitElement {
   // Settings FAB and Menu handlers
   private handleFabToggle(): void {
     const state = appStateService.getState();
-    
-    // Toggle dock: if closed, open main menu; if open, close it
-    if (state.activeSidePanel === 'none') {
-      console.log('[VisualizerShell] FAB clicked - opening settings dock');
-      appStateService.setActiveSidePanel('main-menu');
-    } else {
-      console.log('[VisualizerShell] FAB clicked - closing settings dock');
-      appStateService.setActiveSidePanel('none');
-    }
+    const newVisibility = !state.settingsMenuVisible;
+    console.log('[VisualizerShell] FAB toggle clicked, setting radial menu visible:', newVisibility);
+    appStateService.setSettingsMenuVisible(newVisibility);
   }
 
   private handleMenuItemClick(e: CustomEvent<{ item: MenuItem }>): void {
@@ -544,16 +538,18 @@ export class VisualizerShell extends LitElement {
 
   // Render panel based on activeSidePanel state
   private renderActivePanel() {
-    // Panel IDs managed by the settings-dock (don't render legacy center panels for these)
+    // All panels are now managed by the settings-dock (opened via radial menu icons)
+    // Don't render legacy center panels - everything goes in the dock
     const dockManagedPanels: ActiveSidePanel[] = [
-      'main-menu',
       'models',
       'personis',
       'notes',
       'tasks',
       'memory',
-      'profile',
-      'calendar',
+      'userProfile',
+      'routines',
+      'plugins',
+      'connectorConfig',
     ];
     
     // If panel is managed by dock, don't render legacy center panel
@@ -561,19 +557,8 @@ export class VisualizerShell extends LitElement {
       return null;
     }
     
-    // Legacy center panels (for backward compatibility)
-    switch (this.activeSidePanel) {
-      case 'userProfile':
-        return html`<user-profile-panel @close=${this.handleClosePanel}></user-profile-panel>`;
-      case 'connectorConfig':
-        return html`<connector-config-panel @close=${this.handleClosePanel}></connector-config-panel>`;
-      case 'routines':
-        return html`<routines-panel @close=${this.handleClosePanel}></routines-panel>`;
-      case 'plugins':
-        return html`<plugin-manager-panel @close=${this.handleClosePanel}></plugin-manager-panel>`;
-      default:
-        return null;
-    }
+    // No legacy center panels - all panels open in dock
+    return null;
   }
 
   render() {
