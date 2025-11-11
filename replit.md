@@ -3,6 +3,13 @@
 ## Overview
 Nirvana is an advanced AI companion system designed to provide highly customizable and engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, positioning itself as a versatile personal AI ecosystem with significant market potential.
 
+## Recent Changes (November 11, 2025)
+- **PersonI Settings Panel Restored**: Comprehensive `personi-settings-panel.ts` (865 lines) with full configuration UI including identity, model assignments (conversation, vision, embedding, function calling, image generation), voice selection, visual identity (shape, color, texture, animation), capabilities toggles (vision, MCP, tools, image gen, web search), and connector selection.
+- **Model Configuration Wiring**: Models configured in models-panel are now properly wired to conversation-orchestrator via `getProviderInstanceByModelId()` which searches all providers for the specified model ID.
+- **Backward Compatibility**: Legacy PersonI configs with provider IDs in `thinkingModel` field continue to work via automatic fallback detection in provider-manager.
+- **TTS Panel Separation**: Text-to-Speech configuration moved to dedicated panel, accessible via radial menu, distinct from PersonI settings.
+- **UI/UX Fixes**: Resolved overflow issues in settings-dock panels, all components now properly scroll within viewport constraints.
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
