@@ -1,12 +1,11 @@
 /**
  * EmbeddingGenerator Service - Backend Proxy Mode
- * Generates embeddings using Gemini via backend proxy at http://localhost:3001/api/gemini/embeddings
+ * Generates embeddings using Gemini via backend proxy at /api/gemini/embeddings (relative paths)
  * All API calls go through backend to keep API keys secure
  */
 
 import { providerManager } from '../provider-manager';
-
-const BACKEND_URL = 'http://localhost:3001';
+import { getBackendUrl } from '../../config/backend-url';
 
 export class EmbeddingGenerator {
   private cache: Map<string, number[]> = new Map();
@@ -68,7 +67,7 @@ export class EmbeddingGenerator {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/gemini/embeddings`, {
+      const response = await fetch(getBackendUrl('/api/gemini/embeddings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

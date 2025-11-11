@@ -8,6 +8,8 @@
  * - User controls: mute, listen, join as 3rd party
  */
 
+import { getBackendUrl } from '../config/backend-url';
+
 export interface TwilioConfig {
   accountSid: string;
   authToken: string;
@@ -46,21 +48,16 @@ export interface CallControls {
 }
 
 class TwilioService {
-  private backendUrl: string;
   private mediaWebSocket: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
   private activeCallSid: string | null = null;
-
-  constructor(backendUrl: string = 'http://localhost:3001') {
-    this.backendUrl = backendUrl;
-  }
 
   /**
    * Send SMS message
    */
   async sendSMS(to: string, message: string): Promise<{ success: boolean; messageSid?: string; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/sms/send`, {
+      const response = await fetch(getBackendUrl('/api/twilio/sms/send'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, message }),
@@ -79,7 +76,7 @@ class TwilioService {
    */
   async getSMSHistory(limit: number = 50): Promise<{ success: boolean; messages?: SMSMessage[]; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/sms/history?limit=${limit}`);
+      const response = await fetch(getBackendUrl(`/api/twilio/sms/history?limit=${limit}`));
       const data = await response.json();
       return data;
     } catch (error) {
@@ -93,7 +90,7 @@ class TwilioService {
    */
   async makeCall(to: string, personaVoice?: string): Promise<{ success: boolean; callSid?: string; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/voice/call`, {
+      const response = await fetch(getBackendUrl('/api/twilio/voice/call'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to, personaVoice }),
@@ -117,7 +114,7 @@ class TwilioService {
    */
   async getActiveCalls(): Promise<{ success: boolean; calls?: VoiceCall[]; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/voice/calls`);
+      const response = await fetch(getBackendUrl('/api/twilio/voice/calls'));
       const data = await response.json();
       return data;
     } catch (error) {
@@ -131,7 +128,7 @@ class TwilioService {
    */
   async updateCallControls(callSid: string, action: 'mute' | 'listen' | 'join', value: boolean): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/voice/controls`, {
+      const response = await fetch(getBackendUrl('/api/twilio/voice/controls'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callSid, action, value }),
@@ -150,7 +147,7 @@ class TwilioService {
    */
   async hangupCall(callSid: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/twilio/voice/hangup`, {
+      const response = await fetch(getBackendUrl('/api/twilio/voice/hangup'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callSid }),
@@ -176,7 +173,11 @@ class TwilioService {
    * Uses Twilio Media Streams protocol with JSON envelopes
    */
   async connectPersonIAudio(callSid: string, audioStream: MediaStream): Promise<void> {
-    const wsUrl = `${this.backendUrl.replace('http', 'ws')}/api/twilio/voice/media/${callSid}`;
+    // Convert HTTP(S) URL to WebSocket URL (relative paths become ws://<current-host>)
+    const httpUrl = getBackendUrl('/api/twilio/voice/media/' + callSid);
+    const wsUrl = httpUrl.startsWith('/') 
+      ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}${httpUrl}`
+      : httpUrl.replace(/^http/, 'ws');
     
     console.log('[Twilio Service] Connecting to media stream:', wsUrl);
 
@@ -302,7 +303,7 @@ class TwilioService {
    */
   async isConfigured(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.backendUrl}/api/config/env`);
+      const response = await fetch(getBackendUrl('/api/config/env'));
       const data = await response.json();
       return data.config?.twilioConfigured || false;
     } catch (error) {

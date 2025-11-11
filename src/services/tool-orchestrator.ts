@@ -10,6 +10,7 @@
  */
 
 import { twilioService } from './twilio-service';
+import { getBackendUrl } from '../config/backend-url';
 
 export interface Tool {
   id: string;
@@ -53,10 +54,8 @@ class ToolOrchestrator {
   private tools: Map<string, Tool> = new Map();
   private executionLogs: ToolExecutionLog[] = [];
   private pendingConfirmations: Map<string, any> = new Map();
-  private backendUrl: string;
 
-  constructor(backendUrl: string = 'http://localhost:3001') {
-    this.backendUrl = backendUrl;
+  constructor() {
     this.registerBuiltInTools();
   }
 
@@ -78,7 +77,7 @@ class ToolOrchestrator {
       handler: async (params) => {
         try {
           const { symbols, source = 'coingecko' } = params;
-          const response = await fetch(`${this.backendUrl}/api/financial/crypto`, {
+          const response = await fetch(getBackendUrl('/api/financial/crypto'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbols, source })
@@ -104,7 +103,7 @@ class ToolOrchestrator {
       handler: async (params) => {
         try {
           const { symbol } = params;
-          const response = await fetch(`${this.backendUrl}/api/financial/stocks`, {
+          const response = await fetch(getBackendUrl('/api/financial/stocks'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ symbol })
@@ -132,7 +131,7 @@ class ToolOrchestrator {
       handler: async (params) => {
         try {
           const { symbol, category = 'general', limit = 10 } = params;
-          const response = await fetch(`${this.backendUrl}/api/financial/news?symbol=${symbol || ''}&category=${category}&limit=${limit}`);
+          const response = await fetch(getBackendUrl(`/api/financial/news?symbol=${symbol || ''}&category=${category}&limit=${limit}`));
           
           const data = await response.json();
           return { success: true, data: data.news };
@@ -301,7 +300,7 @@ class ToolOrchestrator {
       ],
       handler: async (params) => {
         try {
-          const response = await fetch(`${this.backendUrl}/api/connectors/gmail/search`, {
+          const response = await fetch(getBackendUrl('/api/connectors/gmail/search'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -350,7 +349,7 @@ class ToolOrchestrator {
       ],
       handler: async (params) => {
         try {
-          const response = await fetch(`${this.backendUrl}/api/connectors/gmail/send`, {
+          const response = await fetch(getBackendUrl('/api/connectors/gmail/send'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
