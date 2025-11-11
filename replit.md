@@ -5,7 +5,16 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### PersonI Settings Persistence & Connector Categorization (Latest)
+### UI/UX Fixes & Custom Provider Discovery (Latest)
+- **Dropdown Styling Fix**: Model selection dropdowns now have dark backgrounds with white text for proper readability
+- **Custom Provider Model Discovery**: Fixed Ollama/local LLM integration - models now automatically discovered when adding custom providers
+  - Changed from `addCustomProvider()` to `addCustomProviderWithDiscovery()` flow
+  - Shows "Discovering models..." loading state during model detection
+  - Uses backend proxy with SSRF protection for secure endpoint discovery
+  - Models now properly appear in PersonI settings after verification
+- **Error Handling**: User feedback for failed custom provider additions
+
+### PersonI Settings Persistence & Connector Categorization
 - **Storage Key Centralization**: Created `src/constants/storage.ts` with shared localStorage keys (PERSONIS_KEY, USER_PROFILE_KEY, etc.) to prevent desync
 - **PersonI Persistence Fix**: Added `appStateService.updatePersoni()` method that properly updates personis array and saves to localStorage
 - **Connector Type Discriminator**: Added `type: 'oauth' | 'api_tool'` field to all 31 connectors in AVAILABLE_CONNECTORS
