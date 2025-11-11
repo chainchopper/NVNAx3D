@@ -44,6 +44,7 @@ import '../file-upload';
 import { ragMemoryManager } from '../../services/memory/rag-memory-manager';
 import { conversationOrchestrator } from '../../services/conversation-orchestrator';
 import { speechOutputService } from '../../services/speech-output-service';
+import { voiceInputService } from '../../services/voice-input-service';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -150,8 +151,14 @@ export class VisualizerShell extends LitElement {
   `;
 
   // Event handlers for UI controls
-  private toggleMute = () => {
-    this.isMuted = !this.isMuted;
+  private toggleMute = async () => {
+    // Toggle voice recording with Whisper STT
+    try {
+      await voiceInputService.toggleRecording();
+    } catch (error) {
+      console.error('[VisualizerShell] Voice recording error:', error);
+      this.status = 'Voice input error';
+    }
   };
 
   private handleInterrupt = () => {
@@ -268,10 +275,58 @@ export class VisualizerShell extends LitElement {
       // Initialize provider manager
       await providerManager.initialize();
       
+      // Initialize voice input service and listeners
+      this.initializeVoiceInput();
+      
       console.log('[VisualizerShell] Services initialized');
     } catch (error) {
       console.error('[VisualizerShell] Failed to initialize services:', error);
     }
+  }
+
+  /**
+   * Initialize voice input service (Whisper STT)
+   */
+  private initializeVoiceInput(): void {
+    // Listen for transcription results
+    voiceInputService.addEventListener('transcription', ((event: CustomEvent) => {
+      const text = event.detail.text;
+      console.log('[VisualizerShell] Voice transcription:', text);
+      
+      // Send transcribed text to conversation orchestrator
+      if (text && text.trim()) {
+        this.handleTextSubmit(new CustomEvent('text-submit', { detail: { text } }));
+      }
+    }) as EventListener);
+
+    // Listen for voice input state changes
+    voiceInputService.addEventListener('state-change', ((event: CustomEvent) => {
+      const state = event.detail.state;
+      
+      // Update UI state based on voice input state
+      this.isSpeaking = state === 'recording';
+      
+      switch (state) {
+        case 'loading-model':
+          this.status = 'Loading speech model...';
+          break;
+        case 'recording':
+          this.status = 'Listening...';
+          break;
+        case 'processing':
+          this.status = 'Transcribing...';
+          break;
+        case 'ready':
+          this.status = 'Ready';
+          break;
+        case 'error':
+          this.status = event.detail.error || 'Voice input error';
+          console.error('[VisualizerShell] Voice input error:', event.detail.error);
+          break;
+      }
+    }) as EventListener);
+
+    console.log('[VisualizerShell] Voice input service initialized');
   }
 
   disconnectedCallback(): void {
@@ -282,6 +337,10 @@ export class VisualizerShell extends LitElement {
     if (this.unsubscribeAppState) {
       this.unsubscribeAppState();
     }
+    
+    // Cleanup voice input service
+    voiceInputService.dispose();
+    
     console.log('[VisualizerShell] Destroyed');
   }
 
