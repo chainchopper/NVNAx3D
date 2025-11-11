@@ -12,12 +12,20 @@ import { Draggable } from 'gsap/Draggable';
 import { providerManager } from '../../services/provider-manager';
 import { getSharedMicrophone } from '../../utils';
 import { Analyser } from '../../analyser';
+import { appStateService, type ActiveSidePanel } from '../../services/app-state-service';
+import type { MenuItem } from './settings-menu';
 import './visualizer-3d';
 import './visualizer-controls';
-import './twilio-settings-panel';
-import './sms-panel';
-import './voice-call-panel';
-import './controls-ring';
+import './settings-fab';
+import './settings-menu';
+import '../panels/models-panel';
+import '../panels/user-profile-panel';
+import '../panels/notes-panel';
+import '../panels/tasks-panel';
+import '../panels/memory-panel';
+import '../panels/routines-panel';
+import '../panels/plugin-manager-panel';
+import '../panels/connector-config-panel';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -27,14 +35,23 @@ export class VisualizerShell extends LitElement {
   @state() private audioContext: AudioContext | null = null;
   @state() private outputNode: GainNode | null = null;
   @state() private inputNode: GainNode | null = null;
+  
+  // Panel management
+  @state() private activeSidePanel: ActiveSidePanel = 'none';
+  @state() private settingsMenuVisible = false;
+  @state() private fabPosition = { x: 0, y: 0 };
+  
+  // Twilio panels (Phase 4)
   @state() private showTwilioSettings = false;
   @state() private showSMSPanel = false;
   @state() private showVoicePanel = false;
 
   @query('visualizer-3d') private visualizer3d!: any;
+  @query('settings-fab') private settingsFab!: any;
   
   private outputAnalyser: Analyser | null = null;
   private inputAnalyser: Analyser | null = null;
+  private unsubscribeAppState: (() => void) | null = null;
 
   static styles = css`
     :host {
