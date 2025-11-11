@@ -16,24 +16,10 @@ export class UserProfilePanel extends LitElement {
   static styles = css`
     :host {
       display: block;
-      position: fixed;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 400px;
-      background: rgba(20, 20, 30, 0.98);
-      backdrop-filter: blur(20px);
-      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-      z-index: 1000;
+      height: 100%;
       overflow-y: auto;
       color: white;
       font-family: system-ui, -apple-system, sans-serif;
-      animation: slideIn 0.3s ease-out;
-    }
-
-    @keyframes slideIn {
-      from { transform: translateX(100%); }
-      to { transform: translateX(0); }
     }
 
     .header {

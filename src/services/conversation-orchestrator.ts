@@ -16,6 +16,7 @@ import { dualPersonIManager } from './dual-personi-manager';
 import { toolOrchestrator } from './tool-orchestrator';
 import { userProfileManager } from './user-profile-manager';
 import type { PersoniConfig } from '../personas';
+import { getPersoniModel } from '../personas';
 import type { BaseProvider } from '../providers/base-provider';
 import type { MemoryType } from '../types/memory';
 
@@ -68,12 +69,13 @@ export class ConversationOrchestrator {
       throw new Error('No active PersonI configured');
     }
 
-    const provider = providerManager.getProviderInstance(activePersoni.thinkingModel);
+    const modelId = getPersoniModel(activePersoni, 'conversation');
+    const provider = modelId ? providerManager.getProviderInstanceByModelId(modelId) : null;
     
     // GRACEFUL FALLBACK: If no provider configured, still allow conversation with browser-only mode
     if (!provider) {
       this.updateStatus('Provider not configured - using browser voice only');
-      console.warn(`[ConversationOrchestrator] No provider for model: ${activePersoni.thinkingModel}. Using browser-only mode.`);
+      console.warn(`[ConversationOrchestrator] No provider for model: ${modelId}. Using browser-only mode.`);
       // Return a friendly message since we can't generate AI responses
       const fallbackMessage = `I'm currently running in browser-only mode. Please configure an AI provider in Settings → Models to enable full conversation capabilities.`;
       if (onChunk) {
@@ -237,9 +239,10 @@ export class ConversationOrchestrator {
    * Switch active PersonI
    */
   async switchPersona(persona: PersoniConfig): Promise<void> {
-    const provider = providerManager.getProviderInstance(persona.thinkingModel);
+    const modelId = getPersoniModel(persona, 'conversation');
+    const provider = modelId ? providerManager.getProviderInstanceByModelId(modelId) : null;
     if (!provider) {
-      throw new Error(`No provider configured for model: ${persona.thinkingModel}`);
+      throw new Error(`No provider configured for model: ${modelId || 'none'}`);
     }
 
     activePersonasManager.setPersona('primary', persona);
@@ -265,9 +268,10 @@ export class ConversationOrchestrator {
    */
   async setSecondaryPersona(persona: PersoniConfig | null): Promise<void> {
     if (persona) {
-      const provider = providerManager.getProviderInstance(persona.thinkingModel);
+      const modelId = getPersoniModel(persona, 'conversation');
+      const provider = modelId ? providerManager.getProviderInstanceByModelId(modelId) : null;
       if (!provider) {
-        throw new Error(`No provider configured for model: ${persona.thinkingModel}`);
+        throw new Error(`No provider configured for model: ${modelId || 'none'}`);
       }
       activePersonasManager.setPersona('secondary', persona);
     } else {

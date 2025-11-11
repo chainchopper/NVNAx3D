@@ -253,6 +253,43 @@ export class ProviderManager {
     return allModels;
   }
 
+  /**
+   * Get provider instance by model ID (searches all providers for the model)
+   * This is the preferred method for PersonI model configuration
+   * 
+   * BACKWARD COMPATIBILITY: Also accepts legacy provider IDs for smooth migration
+   */
+  getProviderInstanceByModelId(modelIdOrProviderId: string): BaseProvider | null {
+    if (!modelIdOrProviderId) {
+      console.warn('[ProviderManager] No model/provider ID provided');
+      return null;
+    }
+
+    // BACKWARD COMPATIBILITY: Check if this is a provider ID (legacy thinkingModel)
+    // Provider IDs typically have format like "google-1234567-0" or "openai-1234567-0"
+    const legacyProvider = this.providers.get(modelIdOrProviderId);
+    if (legacyProvider) {
+      console.log(`[ProviderManager] Legacy provider ID detected: "${modelIdOrProviderId}", using fallback`);
+      return this.getProviderInstance(modelIdOrProviderId);
+    }
+
+    // NEW PATH: Search all providers for this model ID
+    for (const provider of Array.from(this.providers.values())) {
+      if (!provider.enabled || !provider.verified) {
+        continue;
+      }
+
+      const model = provider.models.find(m => m.id === modelIdOrProviderId);
+      if (model) {
+        console.log(`[ProviderManager] Found model "${modelIdOrProviderId}" in provider "${provider.name}"`);
+        return this.getProviderInstance(provider.id, modelIdOrProviderId);
+      }
+    }
+
+    console.warn(`[ProviderManager] No provider found for model/provider ID: ${modelIdOrProviderId}`);
+    return null;
+  }
+
   getProviderInstance(providerId: string, modelId?: string): BaseProvider | null {
     const provider = this.providers.get(providerId);
     

@@ -20,6 +20,7 @@ export type ActiveSidePanel =
   | 'userProfile'
   | 'models'
   | 'personis'
+  | 'tts'
   | 'connectorConfig'
   | 'notes'
   | 'tasks'
