@@ -8,6 +8,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Local-First**: Prefer on-device processing (Whisper for STT)
 - **Flexibility**: Manual configuration of all endpoints and services
 - **Not locked into Google's ecosystem**: Multi-provider support essential
+- **CRITICAL: No Replit Dependency**: ALL integrations/connectors (Twilio, Gmail, etc.) MUST be configured via app Settings UI or .env files - NOT Replit's integration system. System must be fully portable and independent.
 
 ## System Architecture
 
@@ -29,7 +30,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system. Supports a financial advisor PersonI, BILLY.
 - **Connector Backend Proxy**: Secure Express.js server for external service integrations (e.g., Gmail, Google Calendar, GitHub, financial APIs) with OAuth token handling.
 - **Codrops Audio Visualizer**: Separate `/visualizer` route with Fresnel/noise shaders, dual-mesh sphere, particle field, GSAP entrance animations, orbital camera rotation, mouse parallax, draggable controls with auto-hide (5s inactivity timer).
-- **Twilio Integration (Pending)**: Replit connector available for SMS/voice calls. User dismissed integration setup - can be configured later via connector:ccfg_twilio_01K69QJTED9YTJFE2SJ7E4SY08 or manual credentials.
+- **Twilio Integration (Manual Configuration)**: SMS/voice calls will be configured via app Settings UI with manual credential entry (Account SID, Auth Token, Phone Numbers). NO Replit connector dependency - fully portable implementation.
 - **Model Provider System**: Configures and integrates multiple AI providers (OpenAI, Google, custom) with flexible model selection for conversation, vision, embedding, function calling, and TTS.
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
