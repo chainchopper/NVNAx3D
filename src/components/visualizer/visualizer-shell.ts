@@ -390,8 +390,13 @@ export class VisualizerShell extends LitElement {
       const state = appStateService.getState();
       this.activeSidePanel = state.activeSidePanel;
       this.settingsMenuVisible = state.settingsMenuVisible;
+      console.log('[VisualizerShell] AppState updated - settingsMenuVisible:', this.settingsMenuVisible, 'activeSidePanel:', this.activeSidePanel);
       this.requestUpdate();
     });
+    
+    // Log initial state
+    const initialState = appStateService.getState();
+    console.log('[VisualizerShell] Initial AppState - settingsMenuVisible:', initialState.settingsMenuVisible, 'activeSidePanel:', initialState.activeSidePanel);
   }
 
   private async initializeAudioContext(): Promise<void> {
@@ -407,43 +412,53 @@ export class VisualizerShell extends LitElement {
       this.outputAnalyser = new Analyser(this.outputNode);
       this.inputAnalyser = new Analyser(this.inputNode);
 
-      // Request microphone access and connect to inputNode
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        });
+      console.log('[VisualizerShell] Audio context initialized (microphone will connect async)');
 
-        // Create source from microphone stream
-        const sourceNode = this.audioContext.createMediaStreamSource(mediaStream);
-        
-        // Connect microphone to inputNode (which feeds inputAnalyser)
-        sourceNode.connect(this.inputNode);
-        
-        // Also connect to a muted output to keep graph alive without feedback
-        const mutedGain = this.audioContext.createGain();
-        mutedGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-        this.inputNode.connect(mutedGain);
-        mutedGain.connect(this.audioContext.destination);
+      // Request microphone ASYNC (fire-and-forget) so we don't block initialization
+      this.initializeMicrophoneAsync();
 
-        console.log('[VisualizerShell] Microphone connected to audio analyser');
-      } catch (micError) {
-        console.warn('[VisualizerShell] Microphone access denied:', micError);
-        // Visualizer will use fallback animation without audio reactivity
-      }
-
-      // Wire analysers to visualizer component after it's rendered
-      this.updateComplete.then(() => {
-        if (this.visualizer3d) {
-          this.visualizer3d.outputAnalyser = this.outputAnalyser;
-          this.visualizer3d.inputAnalyser = this.inputAnalyser;
-          console.log('[VisualizerShell] Analysers connected to visualizer-3d');
-        }
-      });
-
-      console.log('[VisualizerShell] Audio context initialized with microphone stream');
     } catch (error) {
       console.error('[VisualizerShell] Audio context initialization failed:', error);
+    }
+  }
+
+  /**
+   * Initialize microphone asynchronously (non-blocking)
+   * This allows the shell to continue initializing even if mic permission is pending
+   */
+  private async initializeMicrophoneAsync(): Promise<void> {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+
+      if (!this.audioContext || !this.inputNode) return;
+
+      // Create source from microphone stream
+      const sourceNode = this.audioContext.createMediaStreamSource(mediaStream);
+      
+      // Connect microphone to inputNode (which feeds inputAnalyser)
+      sourceNode.connect(this.inputNode);
+      
+      // Also connect to a muted output to keep graph alive without feedback
+      const mutedGain = this.audioContext.createGain();
+      mutedGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+      this.inputNode.connect(mutedGain);
+      mutedGain.connect(this.audioContext.destination);
+
+      console.log('[VisualizerShell] Microphone connected to audio analyser');
+
+      // Wire analysers to visualizer component after it's rendered
+      await this.updateComplete;
+      if (this.visualizer3d) {
+        this.visualizer3d.outputAnalyser = this.outputAnalyser;
+        this.visualizer3d.inputAnalyser = this.inputAnalyser;
+        console.log('[VisualizerShell] Analysers connected to visualizer-3d');
+      }
+    } catch (micError) {
+      console.warn('[VisualizerShell] Microphone access denied:', micError);
+      // Visualizer will use fallback animation without audio reactivity
     }
   }
 
@@ -490,7 +505,9 @@ export class VisualizerShell extends LitElement {
   // Settings FAB and Menu handlers
   private handleFabToggle(): void {
     const state = appStateService.getState();
-    appStateService.setSettingsMenuVisible(!state.settingsMenuVisible);
+    const newVisibility = !state.settingsMenuVisible;
+    console.log('[VisualizerShell] FAB toggle clicked, setting menu visible:', newVisibility);
+    appStateService.setSettingsMenuVisible(newVisibility);
   }
 
   private handleMenuItemClick(e: CustomEvent<{ item: MenuItem }>): void {

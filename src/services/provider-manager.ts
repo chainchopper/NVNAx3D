@@ -70,8 +70,15 @@ export class ProviderManager {
    */
   private async autoConfigureFromEnvironment() {
     try {
-      // Fetch environment configuration from backend
-      const response = await fetch('http://localhost:3001/api/config/env');
+      // Fetch environment configuration from backend with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch('http://localhost:3001/api/config/env', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         console.warn('[ProviderManager] Failed to fetch environment config from backend');
         return;

@@ -13,7 +13,8 @@ import { appStateService } from '../../services/app-state-service';
 
 @customElement('settings-fab')
 export class SettingsFab extends LitElement {
-  @state() private position = { x: 0, y: 0 };
+  // Non-reactive position (mutated during GSAP drag, don't trigger Lit re-renders)
+  private position = { x: 0, y: 0 };
   
   private draggableInstance: Draggable[] | null = null;
   private unsubscribeAppState: (() => void) | null = null;
