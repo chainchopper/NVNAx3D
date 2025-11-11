@@ -11,7 +11,8 @@ import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { providerManager } from '../../services/provider-manager';
 import { getSharedMicrophone } from '../../utils';
-import '../../visual-3d';
+import { Analyser } from '../../analyser';
+import './visualizer-3d';
 import './twilio-settings-panel';
 import './sms-panel';
 import './voice-call-panel';
@@ -29,7 +30,10 @@ export class VisualizerShell extends LitElement {
   @state() private showSMSPanel = false;
   @state() private showVoicePanel = false;
 
-  @query('gdm-live-audio-visuals-3d') private visual3d!: any;
+  @query('visualizer-3d') private visualizer3d!: any;
+  
+  private outputAnalyser: Analyser | null = null;
+  private inputAnalyser: Analyser | null = null;
 
   static styles = css`
     :host {
@@ -99,28 +103,52 @@ export class VisualizerShell extends LitElement {
 
   private async initializeAudioContext(): Promise<void> {
     try {
-      // Reuse existing audio context from main app if available
-      // TODO: Refactor to use shared audio service for proper TTS/music stream connection
-      // For now, create isolated context - Phase 5 will wire to existing streams
       this.audioContext = new AudioContext();
       this.outputNode = this.audioContext.createGain();
       this.inputNode = this.audioContext.createGain();
 
-      // Connect to destination
+      // Connect outputNode to destination for playback
       this.outputNode.connect(this.audioContext.destination);
 
-      // Set up input from microphone
-      const micManager = getSharedMicrophone();
-      
-      // Request microphone access
-      const hasAccess = await micManager.requestMicrophoneAccess();
-      if (hasAccess) {
-        console.log('[VisualizerShell] Microphone access granted');
-        // TODO Phase 2: Wire shared microphone analyser data to visual-3d shader uniforms
-        // Currently audio-reactivity is pending - needs integration with existing audio graph
+      // Create analysers for audio visualizer
+      this.outputAnalyser = new Analyser(this.outputNode);
+      this.inputAnalyser = new Analyser(this.inputNode);
+
+      // Request microphone access and connect to inputNode
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+
+        // Create source from microphone stream
+        const sourceNode = this.audioContext.createMediaStreamSource(mediaStream);
+        
+        // Connect microphone to inputNode (which feeds inputAnalyser)
+        sourceNode.connect(this.inputNode);
+        
+        // Also connect to a muted output to keep graph alive without feedback
+        const mutedGain = this.audioContext.createGain();
+        mutedGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+        this.inputNode.connect(mutedGain);
+        mutedGain.connect(this.audioContext.destination);
+
+        console.log('[VisualizerShell] Microphone connected to audio analyser');
+      } catch (micError) {
+        console.warn('[VisualizerShell] Microphone access denied:', micError);
+        // Visualizer will use fallback animation without audio reactivity
       }
 
-      console.log('[VisualizerShell] Audio context initialized (isolated - needs Phase 2 integration)');
+      // Wire analysers to visualizer component after it's rendered
+      this.updateComplete.then(() => {
+        if (this.visualizer3d) {
+          this.visualizer3d.outputAnalyser = this.outputAnalyser;
+          this.visualizer3d.inputAnalyser = this.inputAnalyser;
+          console.log('[VisualizerShell] Analysers connected to visualizer-3d');
+        }
+      });
+
+      console.log('[VisualizerShell] Audio context initialized with microphone stream');
     } catch (error) {
       console.error('[VisualizerShell] Audio context initialization failed:', error);
     }
@@ -181,17 +209,8 @@ export class VisualizerShell extends LitElement {
   render() {
     return html`
       <div class="visualizer-container">
-        <!-- 3D Audio Visualizer (reuses existing visual-3d component) -->
-        <gdm-live-audio-visuals-3d
-          .outputNode=${this.outputNode}
-          .inputNode=${this.inputNode}
-          .visuals=${{
-            shape: 'Icosahedron',
-            accentColor: '#ff6b4a',
-            texture: 'none',
-            idleAnimation: 'particles',
-          }}
-        ></gdm-live-audio-visuals-3d>
+        <!-- 3D Audio Visualizer with Codrops shaders -->
+        <visualizer-3d></visualizer-3d>
 
         <!-- Controls Ring (circular menu like persona carousel) -->
         <controls-ring
