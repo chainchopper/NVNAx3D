@@ -10,6 +10,11 @@
 import type { PersoniConfig } from '../personas';
 import type { UserProfile } from '../types/user-profile';
 
+// localStorage keys (matching index.tsx)
+const PERSONIS_KEY = 'gdm-personis';
+const DUAL_MODE_KEY = 'dual-mode-settings';
+const USER_PROFILE_KEY = 'userProfile';
+
 export type ActiveSidePanel = 
   | 'none'
   | 'userProfile'
@@ -181,7 +186,7 @@ export class AppStateService extends EventTarget {
 
   private loadPersonis(): void {
     try {
-      const saved = localStorage.getItem('personis');
+      const saved = localStorage.getItem(PERSONIS_KEY);
       if (saved) {
         this.state.personis = JSON.parse(saved);
       }
@@ -192,7 +197,7 @@ export class AppStateService extends EventTarget {
 
   private savePersonis(): void {
     try {
-      localStorage.setItem('personis', JSON.stringify(this.state.personis));
+      localStorage.setItem(PERSONIS_KEY, JSON.stringify(this.state.personis));
     } catch (error) {
       console.error('[AppState] Failed to save personis:', error);
     }
@@ -200,7 +205,7 @@ export class AppStateService extends EventTarget {
 
   private loadDualModeSettings(): void {
     try {
-      const saved = localStorage.getItem('dualMode');
+      const saved = localStorage.getItem(DUAL_MODE_KEY);
       if (saved) {
         const settings = JSON.parse(saved);
         this.state.dualModeEnabled = settings.enabled || false;
@@ -222,7 +227,7 @@ export class AppStateService extends EventTarget {
         enabled: this.state.dualModeEnabled,
         secondaryPersoniId: this.state.secondaryPersoni?.id || null,
       };
-      localStorage.setItem('dualMode', JSON.stringify(settings));
+      localStorage.setItem(DUAL_MODE_KEY, JSON.stringify(settings));
     } catch (error) {
       console.error('[AppState] Failed to save dual mode settings:', error);
     }
@@ -230,7 +235,7 @@ export class AppStateService extends EventTarget {
 
   private loadUserProfile(): void {
     try {
-      const saved = localStorage.getItem('userProfile');
+      const saved = localStorage.getItem(USER_PROFILE_KEY);
       if (saved) {
         this.state.userProfile = JSON.parse(saved);
       }
@@ -241,7 +246,7 @@ export class AppStateService extends EventTarget {
 
   private saveUserProfile(): void {
     try {
-      localStorage.setItem('userProfile', JSON.stringify(this.state.userProfile));
+      localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(this.state.userProfile));
     } catch (error) {
       console.error('[AppState] Failed to save user profile:', error);
     }

@@ -8,6 +8,7 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appStateService } from '../../services/app-state-service';
+import { activePersonasManager } from '../../services/active-personas-manager';
 import type { PersoniConfig } from '../../personas';
 
 @customElement('persona-carousel-hud')
@@ -88,6 +89,11 @@ export class PersonaCarouselHUD extends LitElement {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       margin-right: 8px;
       vertical-align: middle;
+      object-fit: cover;
+    }
+    
+    .persona-avatar.has-image {
+      background: transparent;
     }
 
     .empty-state {
@@ -123,11 +129,14 @@ export class PersonaCarouselHUD extends LitElement {
 
   private handleSelectPersoni(personi: PersoniConfig): void {
     appStateService.setActivePersoni(personi);
+    
+    // Sync with activePersonasManager (primary slot)
+    activePersonasManager.setPersona('primary', personi);
   }
 
   private handleCreateNew(): void {
-    // Open models panel which has persona creation
-    appStateService.setActiveSidePanel('models');
+    // Open personis panel for persona creation/management
+    appStateService.setActiveSidePanel('personis');
   }
 
   override render() {
@@ -142,7 +151,10 @@ export class PersonaCarouselHUD extends LitElement {
                   @click=${() => this.handleSelectPersoni(personi)}
                   title="${personi.name} - ${personi.tagline || 'No tagline'}"
                 >
-                  <span class="persona-avatar"></span>
+                  ${personi.avatarUrl
+                    ? html`<img src="${personi.avatarUrl}" class="persona-avatar has-image" alt="${personi.name}" />`
+                    : html`<span class="persona-avatar" style="background: ${personi.visuals?.accentColor || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}"></span>`
+                  }
                   ${personi.name}
                 </div>
               `
