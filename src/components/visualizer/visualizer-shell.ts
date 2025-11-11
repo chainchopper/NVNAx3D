@@ -33,6 +33,13 @@ import '../routines-panel';
 import '../plugin-manager-panel';
 import '../connector-config-panel';
 import '../chatterbox-settings';
+import '../ui-controls';
+import '../camera-controls';
+import '../camera-manager';
+import '../rag-toggle';
+import '../object-detection-overlay';
+import '../file-upload';
+import { ragMemoryManager } from '../../services/memory/rag-memory-manager';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -52,12 +59,36 @@ export class VisualizerShell extends LitElement {
   @state() private fabPosition = { x: 0, y: 0 };
   
   // Twilio panels (Phase 4)
-  @state() private showTwilioSettings = false;
-  @state() private showSMSPanel = false;
-  @state() private showVoicePanel = false;
+  @state() showTwilioSettings = false;
+  @state() showSMSPanel = false;
+  @state() showVoicePanel = false;
+  
+  // UI control state (from index.tsx)
+  @state() isMuted = false;
+  @state() isSpeaking = false;
+  @state() isAiSpeaking = false;
+  @state() inputMode: 'voice' | 'text' = 'voice';
+  @state() textInput = '';
+  @state() status = 'Initializing...';
+  @state() providerStatus: 'configured' | 'missing' | 'unconfigured' = 'unconfigured';
+  
+  // Camera state
+  @state() private cameraEnabled = false;
+  @state() private cameraShowPreview = false;
+  @state() private cameraHasPermission = false;
+  @state() private cameraError: string | null = null;
+  
+  // RAG state
+  @state() private ragEnabled = true;
+  @state() private ragInitialized = false;
+  @state() private lastRetrievedMemories = 0;
+  
+  // Object detection state
+  @state() private objectDetectionEnabled = false;
 
   @query('visualizer-3d') private visualizer3d!: any;
   @query('settings-fab') private settingsFab!: any;
+  @query('camera-manager') private cameraManager!: any;
   
   private outputAnalyser: Analyser | null = null;
   private inputAnalyser: Analyser | null = null;
@@ -114,12 +145,67 @@ export class VisualizerShell extends LitElement {
     }
   `;
 
+  // Event handlers for UI controls
+  private toggleMute = () => {
+    this.isMuted = !this.isMuted;
+  };
+
+  private handleInterrupt = () => {
+    this.isAiSpeaking = false;
+  };
+
+  private handleTextSubmit = (e: CustomEvent) => {
+    const text = e.detail.text;
+    console.log('[VisualizerShell] Text submitted:', text);
+  };
+
+  private handleFileUploaded = (e: CustomEvent) => {
+    console.log('[VisualizerShell] File uploaded:', e.detail);
+  };
+
+  private handleToggleCameraControl = () => {
+    this.cameraEnabled = !this.cameraEnabled;
+  };
+
+  private handleToggleCameraPreview = () => {
+    this.cameraShowPreview = !this.cameraShowPreview;
+  };
+
+  private handleSwitchCamera = () => {
+    if (this.cameraManager) {
+      (this.cameraManager as any).switchCamera?.();
+    }
+  };
+
+  private handleCameraPermissions = () => {
+    this.cameraHasPermission = true;
+    this.cameraError = null;
+  };
+
+  private handleCameraPermissionsDenied = () => {
+    this.cameraHasPermission = false;
+    this.cameraError = 'Camera permissions denied';
+  };
+
+  private handleRAGToggle = () => {
+    this.ragEnabled = !this.ragEnabled;
+    console.log('[VisualizerShell] RAG toggled:', this.ragEnabled ? 'ENABLED' : 'DISABLED');
+  };
+
+  private handleToggleObjectDetection = () => {
+    this.objectDetectionEnabled = !this.objectDetectionEnabled;
+  };
+
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
     await this.initializeAudioContext();
     this.loadPersonIs();
     this.playIntroAnimation();
     this.subscribeToAppState();
+    
+    // Initialize RAG system
+    this.ragInitialized = true; // RAG is always available
+    
     console.log('[VisualizerShell] Initialized');
   }
 
@@ -398,7 +484,7 @@ export class VisualizerShell extends LitElement {
   render() {
     return html`
       <div class="visualizer-container">
-        <!-- 3D Audio Visualizer with Codrops shaders -->
+        <!-- 3D Audio Visualizer with Codrops shaders (z-index: 1, pointer-events: none) -->
         <visualizer-3d></visualizer-3d>
 
         <!-- Floating Control Panel (auto-hide, draggable) -->
@@ -409,9 +495,10 @@ export class VisualizerShell extends LitElement {
         <dual-mode-controls-hud></dual-mode-controls-hud>
         <music-detection-hud></music-detection-hud>
 
-        <!-- Settings FAB (draggable gear button) -->
+        <!-- Settings FAB (draggable gear button, z-index: 100) -->
         <settings-fab
           @toggle=${this.handleFabToggle}
+          .providerStatus=${this.providerStatus}
         ></settings-fab>
 
         <!-- Radial Settings Menu -->
@@ -419,6 +506,57 @@ export class VisualizerShell extends LitElement {
           .visible=${this.settingsMenuVisible}
           @menu-item-click=${this.handleMenuItemClick}
         ></settings-menu>
+
+        <!-- Camera Controls (z-index: 900) -->
+        <camera-controls
+          .hasPermission=${this.cameraHasPermission}
+          .isActive=${this.cameraEnabled}
+          .showPreview=${this.cameraShowPreview}
+          .error=${this.cameraError}
+          @toggle-camera=${this.handleToggleCameraControl}
+          @toggle-preview=${this.handleToggleCameraPreview}
+          @switch-camera=${this.handleSwitchCamera}
+        ></camera-controls>
+
+        <!-- Camera Manager -->
+        <camera-manager
+          .enabled=${this.cameraEnabled}
+          .showPreview=${this.cameraShowPreview}
+          .renderMode=${'native'}
+          @permissions-granted=${this.handleCameraPermissions}
+          @permissions-denied=${this.handleCameraPermissionsDenied}
+        ></camera-manager>
+
+        <!-- RAG Toggle (z-index: 1000) -->
+        <rag-toggle
+          .enabled=${this.ragEnabled}
+          .initialized=${this.ragInitialized}
+          .lastRetrievedCount=${this.lastRetrievedMemories}
+          @rag-toggle=${this.handleRAGToggle}
+        ></rag-toggle>
+
+        <!-- Object Detection Overlay -->
+        <object-detection-overlay
+          .enabled=${this.objectDetectionEnabled}
+          @toggle-detection=${this.handleToggleObjectDetection}
+        ></object-detection-overlay>
+
+        <!-- UI Controls (mic/keyboard/file-upload, z-index: 2000) -->
+        <ui-controls
+          .isMuted=${this.isMuted}
+          .isSpeaking=${this.isSpeaking}
+          .isAiSpeaking=${this.isAiSpeaking}
+          .inputMode=${this.inputMode}
+          .currentTextInput=${this.textInput}
+          .status=${this.status}
+          @mic-toggle=${this.toggleMute}
+          @interrupt=${this.handleInterrupt}
+          @mode-change=${(e: CustomEvent) => {
+            this.inputMode = e.detail.mode;
+          }}
+          @text-submit=${this.handleTextSubmit}
+          @file-uploaded=${this.handleFileUploaded}
+        ></ui-controls>
 
         <!-- Active Side Panel (conditional render) -->
         ${this.activeSidePanel !== 'none'
