@@ -22,6 +22,7 @@ export interface Connector {
   id: string;
   name: string;
   description: string;
+  type: 'oauth' | 'api_tool'; // OAuth connectors vs API endpoint tools
   functionDeclaration: FunctionDeclaration;
 }
 
@@ -66,7 +67,8 @@ export interface PersoniConfig {
   voiceName: string;
   thinkingModel?: string;       // DEPRECATED: Use models.conversation instead (backward compat)
   models?: PersoniModels;       // Flexible multi-model assignments
-  enabledConnectors: string[]; // List of connector IDs
+  enabledConnectors: string[];  // OAuth connector IDs (gmail, github, calendar)
+  enabledTools?: string[];      // API tool IDs (get_market_news, get_stock_quote) - for backward compat migration
   capabilities?: PersoniCapabilities;
   avatarUrl?: string;
   visuals: {
@@ -107,6 +109,7 @@ export function getPersoniModel(
 export const AVAILABLE_CONNECTORS: Connector[] = [
   {
     id: 'gmail',
+    type: 'oauth',
     name: 'Gmail',
     description: 'Search and read emails from your Gmail inbox.',
     functionDeclaration: {
@@ -132,6 +135,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'google_calendar',
+
+    type: 'oauth',
     name: 'Google Calendar',
     description: 'Access your Google Calendar events and schedules.',
     functionDeclaration: {
@@ -162,6 +167,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'google_docs',
+
+    type: 'oauth',
     name: 'Google Docs',
     description: 'Read and access Google Docs documents.',
     functionDeclaration: {
@@ -183,6 +190,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'google_sheets',
+
+    type: 'oauth',
     name: 'Google Sheets',
     description: 'Read and access Google Sheets spreadsheets.',
     functionDeclaration: {
@@ -209,6 +218,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'github',
+
+    type: 'oauth',
     name: 'GitHub',
     description: 'Access GitHub repositories, users, and organizations.',
     functionDeclaration: {
@@ -229,6 +240,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'notion',
+
+    type: 'api_tool',
     name: 'Notion',
     description:
       'Search and access your Notion pages, databases, and workspaces.',
@@ -249,6 +262,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'linear',
+
+    type: 'oauth',
     name: 'Linear',
     description: 'Access Linear issues, projects, and team workflows.',
     functionDeclaration: {
@@ -274,6 +289,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'jira',
+
+    type: 'oauth',
     name: 'Jira',
     description: 'Access Jira issues, projects, and sprint information.',
     functionDeclaration: {
@@ -298,6 +315,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'asana',
+
+    type: 'api_tool',
     name: 'Asana',
     description: 'Access Asana tasks, projects, and team workspaces.',
     functionDeclaration: {
@@ -321,6 +340,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'slack',
+
+    type: 'oauth',
     name: 'Slack',
     description: 'Send messages to Slack channels and users via Web API (requires Bot Token with chat:write scope).',
     functionDeclaration: {
@@ -348,6 +369,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'homeassistant',
+
+    type: 'api_tool',
     name: 'Home Assistant',
     description: 'Control and monitor smart home devices through Home Assistant (lights, switches, climate, sensors, etc.).',
     functionDeclaration: {
@@ -367,6 +390,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'homeassistant_state',
+
+    type: 'api_tool',
     name: 'Home Assistant State',
     description: 'Get the current state of a specific Home Assistant entity.',
     functionDeclaration: {
@@ -386,6 +411,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'homeassistant_control',
+
+    type: 'api_tool',
     name: 'Home Assistant Control',
     description: 'Control Home Assistant devices (turn on/off, set brightness, adjust temperature, etc.).',
     functionDeclaration: {
@@ -417,6 +444,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'frigate_events',
+
+    type: 'api_tool',
     name: 'Frigate Events',
     description: 'Get object detection events from Frigate NVR (e.g., person detected at front door, car in driveway).',
     functionDeclaration: {
@@ -444,6 +473,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'frigate_snapshot',
+
+    type: 'api_tool',
     name: 'Frigate Snapshot',
     description: 'Get a snapshot image from a Frigate camera for a specific event.',
     functionDeclaration: {
@@ -467,6 +498,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'frigate_camera_state',
+
+    type: 'api_tool',
     name: 'Frigate Camera State',
     description: 'Get the current state of a Frigate camera (online status, detection settings, etc.).',
     functionDeclaration: {
@@ -486,6 +519,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'codeprojectai_detect',
+
+    type: 'api_tool',
     name: 'CodeProject.AI Detection',
     description: 'Detect objects in images using CodeProject.AI server (supports person, car, dog, cat, and many other objects).',
     functionDeclaration: {
@@ -509,6 +544,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'yolo_detect',
+
+    type: 'api_tool',
     name: 'YOLO Object Detection',
     description: 'Detect objects in images using YOLO (You Only Look Once) real-time object detection.',
     functionDeclaration: {
@@ -532,6 +569,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'set_reminder',
+
+    type: 'api_tool',
     name: 'Set Reminder',
     description: 'Create a reminder with notification times. Built-in NIRVANA capability.',
     functionDeclaration: {
@@ -563,6 +602,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'list_reminders',
+
+    type: 'api_tool',
     name: 'List Reminders',
     description: 'List active or all reminders. Built-in NIRVANA capability.',
     functionDeclaration: {
@@ -582,6 +623,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'complete_reminder',
+
+    type: 'api_tool',
     name: 'Complete Reminder',
     description: 'Mark a reminder as completed. Built-in NIRVANA capability.',
     functionDeclaration: {
@@ -601,6 +644,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'delete_reminder',
+
+    type: 'api_tool',
     name: 'Delete Reminder',
     description: 'Delete a reminder. Built-in NIRVANA capability.',
     functionDeclaration: {
@@ -620,6 +665,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'get_stock_quote',
+
+    type: 'api_tool',
     name: 'Get Stock Quote',
     description: 'Get real-time stock market data and quotes for publicly traded companies.',
     functionDeclaration: {
@@ -639,6 +686,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'get_crypto_price',
+
+    type: 'api_tool',
     name: 'Get Cryptocurrency Price',
     description: 'Get real-time cryptocurrency prices and market data.',
     functionDeclaration: {
@@ -658,6 +707,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'analyze_portfolio',
+
+    type: 'api_tool',
     name: 'Analyze Investment Portfolio',
     description: 'Analyze investment portfolio performance, diversification, and risk metrics.',
     functionDeclaration: {
@@ -677,6 +728,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'get_market_news',
+
+    type: 'api_tool',
     name: 'Get Financial Market News',
     description: 'Get latest financial news, market analysis, and economic updates.',
     functionDeclaration: {
@@ -700,6 +753,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'analyze_spending',
+
+    type: 'api_tool',
     name: 'Analyze Spending Patterns',
     description: 'Analyze transaction history to identify spending patterns, trends, and insights.',
     functionDeclaration: {
@@ -727,6 +782,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'create_budget',
+
+    type: 'api_tool',
     name: 'Create Budget',
     description: 'Create or update budget limits for spending categories.',
     functionDeclaration: {
@@ -754,6 +811,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'get_account_balance',
+
+    type: 'api_tool',
     name: 'Get Account Balance',
     description: 'Get current balance and details for bank and investment accounts.',
     functionDeclaration: {
@@ -773,6 +832,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'get_transactions',
+
+    type: 'api_tool',
     name: 'Get Transactions',
     description: 'Retrieve transaction history from bank and investment accounts.',
     functionDeclaration: {
@@ -804,6 +865,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'outlook',
+
+    type: 'api_tool',
     name: 'Outlook',
     description: 'Search and read emails from your Outlook/Microsoft 365 inbox.',
     functionDeclaration: {
@@ -829,6 +892,8 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
   },
   {
     id: 'confluence',
+
+    type: 'api_tool',
     name: 'Confluence',
     description: 'Search and access Confluence pages and spaces.',
     functionDeclaration: {

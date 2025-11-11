@@ -49,8 +49,8 @@ import { voiceInputService } from '../../services/voice-input-service';
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
 
-// localStorage keys (matching index.tsx)
-const PERSONIS_KEY = 'gdm-personis';
+// Import shared localStorage keys
+import { PERSONIS_KEY } from '../../constants/storage.js';
 
 @customElement('visualizer-shell')
 export class VisualizerShell extends LitElement {
