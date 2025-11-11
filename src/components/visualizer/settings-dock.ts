@@ -36,7 +36,7 @@ export class SettingsDock extends LitElement {
       top: 0;
       right: 0;
       bottom: 0;
-      z-index: 1000;
+      z-index: 200; /* Above panels, primary settings layer */
       pointer-events: none;
     }
 

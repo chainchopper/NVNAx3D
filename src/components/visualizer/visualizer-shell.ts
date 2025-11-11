@@ -117,6 +117,12 @@ export class VisualizerShell extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 10; /* Match visualizer-3d z-index */
+      pointer-events: none; /* Allow clicks through to camera/controls */
+    }
+
+    .visualizer-container > * {
+      pointer-events: auto; /* Re-enable events for visualizer content */
     }
 
     .intro-overlay {
@@ -678,7 +684,7 @@ export class VisualizerShell extends LitElement {
   render() {
     return html`
       <div class="visualizer-container">
-        <!-- 3D Audio Visualizer with Codrops shaders (z-index: 1, pointer-events: none) -->
+        <!-- 3D Audio Visualizer with Codrops shaders (z-index: 10, pointer-events: none) -->
         <visualizer-3d
           .cameraVideoElement=${this.cameraManager?.videoElement || null}
           .cameraRenderMode=${'texture'}
@@ -689,7 +695,7 @@ export class VisualizerShell extends LitElement {
         <dual-mode-controls-hud></dual-mode-controls-hud>
         <music-detection-hud></music-detection-hud>
 
-        <!-- Settings FAB (draggable gear button, z-index: 100) -->
+        <!-- Settings FAB (draggable gear button, z-index: 100 - Panels tier) -->
         <settings-fab
           @toggle=${this.handleFabToggle}
           .providerStatus=${this.providerStatus}
@@ -704,7 +710,7 @@ export class VisualizerShell extends LitElement {
         <!-- Settings Dock (right-side docked panel with multi-layer nav) -->
         <settings-dock></settings-dock>
 
-        <!-- Camera Controls (z-index: 900) -->
+        <!-- Camera Controls (z-index: 45 - HUD tier) -->
         <camera-controls
           .hasPermission=${this.cameraHasPermission}
           .isActive=${this.cameraEnabled}
@@ -715,16 +721,16 @@ export class VisualizerShell extends LitElement {
           @switch-camera=${this.handleSwitchCamera}
         ></camera-controls>
 
-        <!-- Camera Manager -->
+        <!-- Camera Manager (z-index: 1 - Background layer below 3D canvas) -->
         <camera-manager
           .enabled=${this.cameraEnabled}
           .showPreview=${this.cameraShowPreview}
-          .renderMode=${'texture'}
+          .renderMode=${'native'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
         ></camera-manager>
 
-        <!-- RAG Toggle (z-index: 1000) -->
+        <!-- RAG Toggle (z-index: 45 - HUD tier) -->
         <rag-toggle
           .enabled=${this.ragEnabled}
           .initialized=${this.ragInitialized}
@@ -738,7 +744,7 @@ export class VisualizerShell extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
-        <!-- UI Controls (mic/keyboard/file-upload, z-index: 2000) -->
+        <!-- UI Controls (mic/keyboard/file-upload, z-index: 60) -->
         <ui-controls
           .isMuted=${this.isMuted}
           .isSpeaking=${this.isSpeaking}

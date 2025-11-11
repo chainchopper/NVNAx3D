@@ -51,7 +51,7 @@ export class CameraManager extends LitElement {
       position: fixed;
       top: 0;
       left: 0;
-      z-index: -1;
+      z-index: 1; /* Above body background, below 3D canvas */
       transform: scaleX(-1); /* Mirror for front-facing camera */
     }
 
@@ -64,6 +64,8 @@ export class CameraManager extends LitElement {
       /* Native rendering mode - full screen background with hardware acceleration */
       width: 100vw;
       height: 100vh;
+      opacity: 1;
+      transition: opacity 0.3s ease;
     }
 
     canvas {

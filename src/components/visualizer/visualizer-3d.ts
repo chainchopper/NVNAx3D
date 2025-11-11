@@ -66,7 +66,11 @@ export class Visualizer3D extends LitElement {
       display: block;
       width: 100%;
       height: 100%;
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10; /* Above camera background (z:1), below HUD (z:40-50) */
+      pointer-events: none; /* Allow mouse events to pass through to controls */
     }
 
     canvas {
