@@ -5,7 +5,13 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Recent Changes (November 11, 2025)
 
-### Backend API Fixes & SSRF Protection (Latest)
+### No Hardcoded Models & Camera Background (Latest)
+- **Removed Hardcoded Model Auto-Configuration**: Eliminated automatic Gemini model injection when GEMINI_API_KEY is detected. Users now configure ALL models manually via Settings UI - no models are hardcoded or auto-added. This ensures users can choose ANY custom model without restrictions.
+- **Fixed Custom Provider Discovery**: Removed duplicate `/api/models/proxy` endpoint that was causing JSON parse errors. The complete SSRF-protected implementation at line ~3863 in server.js is retained and working.
+- **Live Camera Feed as Canvas Background**: Wired camera-manager's video element to visualizer-3d component with `cameraRenderMode='texture'`. Camera feed now displays as 3D WebGL background plane when camera is enabled.
+- **Architecture Decision**: Model onboarding is now entirely manual via Settings UI - no automatic provider configuration based on environment variables.
+
+### Backend API Fixes & SSRF Protection
 - **Missing Endpoints Fixed**: Added `/api/config/env` (returns API key availability as booleans) and `/api/models/proxy` (custom provider model discovery with SSRF protection)
 - **Critical SSRF Security Fix**: Model proxy now resolves DNS and validates ALL resolved IPs against private/reserved ranges (prevents DNS rebinding attacks, blocks malicious domains that resolve to 127.0.0.1 or RFC1918 addresses)
 - **LocalStorage Quota Protection**: Added size monitoring, warns when provider data exceeds 100KB, implements automatic cleanup on QuotaExceededError, includes storage usage diagnostics tool
