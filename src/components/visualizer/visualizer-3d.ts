@@ -349,13 +349,14 @@ export class Visualizer3D extends LitElement {
     let activeAnalyser = this.inputAnalyser;
     
     // Fallback to outputAnalyser if inputAnalyser not available (for future TTS integration)
-    if (!activeAnalyser || !activeAnalyser.dataArray) {
+    if (!activeAnalyser || !activeAnalyser.data) {
       activeAnalyser = this.outputAnalyser;
     }
 
-    if (activeAnalyser && activeAnalyser.dataArray) {
-      this.frequencyData = activeAnalyser.dataArray;
-      activeAnalyser.getByteFrequencyData(this.frequencyData);
+    if (activeAnalyser && activeAnalyser.data) {
+      // Update analyser to get fresh frequency data
+      activeAnalyser.update();
+      this.frequencyData = activeAnalyser.data;
 
       // Calculate frequency bands (same as visual-3d.ts)
       const bass = this.frequencyData.slice(0, 10);
