@@ -2,6 +2,7 @@ import { VisionContext, VisionInferenceConfig, DetectedObject } from '../types/v
 import { CameraFrame } from '../components/camera-manager';
 import { providerManager } from './provider-manager';
 import { appStateService } from './app-state-service';
+import { getPersoniModel } from '../personas';
 
 type VisionListener = (context: VisionContext | null) => void;
 
@@ -114,15 +115,15 @@ class CameraVisionService {
   private async analyzeWithAPI(frame: CameraFrame, modelId?: string): Promise<VisionContext> {
     try {
       const activePersoni = appStateService.getActivePersoni();
-      const visionModelId = modelId || activePersoni?.models?.vision;
+      const visionModelIdOrSelection = modelId || (activePersoni ? getPersoniModel(activePersoni, 'vision') : null);
 
-      if (!visionModelId) {
+      if (!visionModelIdOrSelection) {
         throw new Error('No vision model configured');
       }
 
-      const provider = providerManager.getProviderInstanceByModelId(visionModelId);
+      const provider = providerManager.getProviderInstanceByModelId(visionModelIdOrSelection);
       if (!provider) {
-        throw new Error(`No provider found for vision model: ${visionModelId}`);
+        throw new Error(`No provider found for vision model: ${visionModelIdOrSelection}`);
       }
 
       const base64Image = frame.dataUrl.split(',')[1];

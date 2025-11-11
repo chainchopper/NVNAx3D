@@ -29,6 +29,7 @@ export class CameraManager extends LitElement {
   
   private mediaStream: MediaStream | null = null;
   private captureInterval: number | null = null;
+  private readonly CAPTURE_INTERVAL_MS = 5000; // Capture every 5 seconds
 
   static styles = css`
     :host {
@@ -166,7 +167,10 @@ export class CameraManager extends LitElement {
         await this.videoElement.play();
         this.isActive = true;
         
-        console.log('[CameraManager] Camera started');
+        // Start periodic frame capture for vision analysis
+        this.startPeriodicCapture();
+        
+        console.log('[CameraManager] Camera started with periodic capture');
         this.dispatchEvent(new CustomEvent('camera-started'));
         return true;
       }
@@ -175,6 +179,40 @@ export class CameraManager extends LitElement {
       console.error('[CameraManager] Failed to start camera:', err);
       this.error = 'Failed to start camera';
       return false;
+    }
+  }
+
+  /**
+   * Start periodic frame capture for vision analysis
+   */
+  private startPeriodicCapture(): void {
+    // Clear any existing interval
+    if (this.captureInterval) {
+      clearInterval(this.captureInterval);
+    }
+
+    // Capture immediately
+    setTimeout(() => {
+      this.captureAndAnalyze();
+    }, 1000); // Wait 1s for video to stabilize
+
+    // Then capture periodically
+    this.captureInterval = window.setInterval(() => {
+      this.captureAndAnalyze();
+    }, this.CAPTURE_INTERVAL_MS);
+
+    console.log(`[CameraManager] Periodic capture started (every ${this.CAPTURE_INTERVAL_MS / 1000}s)`);
+  }
+
+  /**
+   * Capture frame and dispatch for vision analysis
+   */
+  private captureAndAnalyze(): void {
+    const frame = this.captureFrame();
+    if (frame) {
+      console.log('[CameraManager] Frame captured for vision analysis');
+      // The frame-captured event is already dispatched by captureFrame()
+      // Listeners (like camera-vision-service) can handle it
     }
   }
 
