@@ -473,7 +473,7 @@ export class ModelsPanel extends LitElement {
     this.showAddCustom = true;
   }
 
-  handleSaveCustom() {
+  async handleSaveCustom() {
     const form = this.shadowRoot?.querySelector('.edit-form') as HTMLFormElement;
     const name = (form?.querySelector('[name="name"]') as HTMLInputElement)?.value;
     const endpoint = (form?.querySelector('[name="endpoint"]') as HTMLInputElement)?.value;
@@ -481,16 +481,35 @@ export class ModelsPanel extends LitElement {
 
     if (!name || !endpoint) return;
 
-    providerManager.addCustomProvider({
+    // Show loading state
+    const saveBtn = form?.querySelector('.save-btn');
+    if (saveBtn) {
+      saveBtn.textContent = 'Discovering models...';
+      (saveBtn as HTMLButtonElement).disabled = true;
+    }
+
+    // Use discovery method to automatically detect and verify models
+    const result = await providerManager.addCustomProviderWithDiscovery({
       name,
-      type: 'custom',
-      endpoint,
+      baseUrl: endpoint,
       apiKey,
-      enabled: true,
-      verified: false,
-      models: [],
+      capabilities: {
+        streaming: true,
+        functionCalling: false,
+        vision: false,
+      }
     });
 
+    if (!result.success) {
+      alert(`Failed to add provider: ${result.error}`);
+      if (saveBtn) {
+        saveBtn.textContent = 'Save';
+        (saveBtn as HTMLButtonElement).disabled = false;
+      }
+      return;
+    }
+
+    console.log(`[ModelsPanel] Custom provider added with ${result.providerId}`);
     this.showAddCustom = false;
     this.loadProviders();
   }
