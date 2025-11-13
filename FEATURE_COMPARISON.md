@@ -27,7 +27,11 @@
 - ✅ PersonI capabilities configuration (vision, image gen, web search, tools, MCP flag)
 - ✅ Unique liquid-themed avatars for each PersonI (50% reduced size)
 - ✅ PersonI switching with spoken handoffs
-- ✅ Dual PersonI Manager with 4 modes (collaborative, debate, teaching, single)
+- ✅ Dual PersonI Mode with turn-based collaboration (4 modes: collaborative, debate, teaching, single)
+  - Turn-based switching (every turn for collaborative/debate, every 3rd for teaching)
+  - TTS announcements when PersonI switches
+  - Visual HUD pulse events for active PersonI
+  - RAG memory integration for dual-mode conversations
 - ✅ Dynamic UI generation system for PersonI-created plugins
 - ✅ PersonI template system for custom creation
 
@@ -233,7 +237,6 @@
 ### Connectors Not Wired to PersonI
 - ⚠️ **Outlook** - Handler exists, NOT in AVAILABLE_CONNECTORS
 - ⚠️ **Confluence** - Handler exists, NOT in AVAILABLE_CONNECTORS
-- ⚠️ **Dual PersonI Mode** - Manager exists, needs verification in main UI
 - ⚠️ **MCP Capability** - Flag exists in PersoniCapabilities, NO actual implementation
 
 ---
