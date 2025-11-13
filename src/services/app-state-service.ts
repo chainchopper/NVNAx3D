@@ -13,6 +13,8 @@ import { PERSONIS_KEY, USER_PROFILE_KEY } from '../constants/storage.js';
 
 // localStorage keys (matching index.tsx)
 const DUAL_MODE_KEY = 'dual-mode-settings';
+const UI_PREFERENCES_KEY = 'ui-preferences';
+const ACTIVE_PERSONI_KEY = 'active-personi';
 
 export type ActiveSidePanel = 
   | 'none'
@@ -115,15 +117,27 @@ export class AppStateService extends EventTarget {
     return { ...this.state.userProfile };
   }
 
+  isMusicDetectionEnabled(): boolean {
+    return this.state.musicDetectionEnabled;
+  }
+
   // Setters with event emission
   setPersonis(personis: PersoniConfig[]): void {
     this.state.personis = personis;
     this.savePersonis();
+    
+    // Restore saved active PersonI after personis are loaded
+    this.restoreActivePersoniFromSaved();
+    
+    // Restore saved secondary PersonI if in dual mode
+    this.restoreDualModeFromSaved();
+    
     this.emit('personis-changed', { personis });
   }
 
   setActivePersoni(personi: PersoniConfig | null): void {
     this.state.activePersoni = personi;
+    this.saveActivePersoni();
     this.emit('active-personi-changed', { personi });
   }
 
@@ -175,12 +189,20 @@ export class AppStateService extends EventTarget {
 
   setShowCalendar(show: boolean): void {
     this.state.showCalendar = show;
+    this.saveUIPreferences();
     this.emit('calendar-changed', { show });
   }
 
   setShowFinancialDashboard(show: boolean): void {
     this.state.showFinancialDashboard = show;
+    this.saveUIPreferences();
     this.emit('financial-dashboard-changed', { show });
+  }
+  
+  setMusicDetectionEnabled(enabled: boolean): void {
+    this.state.musicDetectionEnabled = enabled;
+    this.saveUIPreferences();
+    this.emit('music-detection-enabled-changed', { enabled });
   }
 
   setMusicDetection(detected: boolean, bpm: number = 0, confidence: number = 0): void {
@@ -201,6 +223,8 @@ export class AppStateService extends EventTarget {
     this.loadPersonis();
     this.loadDualModeSettings();
     this.loadUserProfile();
+    this.loadActivePersoni();
+    this.loadUIPreferences();
   }
 
   private loadPersonis(): void {
@@ -271,6 +295,96 @@ export class AppStateService extends EventTarget {
     }
   }
 
+  private loadActivePersoni(): void {
+    try {
+      const saved = localStorage.getItem(ACTIVE_PERSONI_KEY);
+      if (saved && this.state.personis.length > 0) {
+        const activePersoniId = JSON.parse(saved);
+        this.state.activePersoni = this.state.personis.find(
+          p => p.id === activePersoniId
+        ) || null;
+      }
+    } catch (error) {
+      console.error('[AppState] Failed to load active personi:', error);
+    }
+  }
+
+  private saveActivePersoni(): void {
+    try {
+      const activePersoniId = this.state.activePersoni?.id || null;
+      localStorage.setItem(ACTIVE_PERSONI_KEY, JSON.stringify(activePersoniId));
+    } catch (error) {
+      console.error('[AppState] Failed to save active personi:', error);
+    }
+  }
+
+  private loadUIPreferences(): void {
+    try {
+      const saved = localStorage.getItem(UI_PREFERENCES_KEY);
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        this.state.showCalendar = prefs.showCalendar ?? false;
+        this.state.showFinancialDashboard = prefs.showFinancialDashboard ?? false;
+        this.state.musicDetectionEnabled = prefs.musicDetectionEnabled ?? true;
+      }
+    } catch (error) {
+      console.error('[AppState] Failed to load UI preferences:', error);
+    }
+  }
+
+  private saveUIPreferences(): void {
+    try {
+      const prefs = {
+        showCalendar: this.state.showCalendar,
+        showFinancialDashboard: this.state.showFinancialDashboard,
+        musicDetectionEnabled: this.state.musicDetectionEnabled,
+      };
+      localStorage.setItem(UI_PREFERENCES_KEY, JSON.stringify(prefs));
+    } catch (error) {
+      console.error('[AppState] Failed to save UI preferences:', error);
+    }
+  }
+
+  private restoreActivePersoniFromSaved(): void {
+    try {
+      const saved = localStorage.getItem(ACTIVE_PERSONI_KEY);
+      if (saved && this.state.personis.length > 0) {
+        const activePersoniId = JSON.parse(saved);
+        const personi = this.state.personis.find(p => p.id === activePersoniId);
+        if (personi) {
+          console.log(`[AppState] Restoring active PersonI: ${personi.name}`);
+          this.state.activePersoni = personi;
+          this.emit('active-personi-changed', { personi });
+        } else {
+          console.warn(`[AppState] Saved active PersonI ${activePersoniId} not found in personis list`);
+        }
+      }
+    } catch (error) {
+      console.error('[AppState] Failed to restore active personi:', error);
+    }
+  }
+
+  private restoreDualModeFromSaved(): void {
+    try {
+      if (this.state.dualModeEnabled && this.state.personis.length > 0) {
+        const saved = localStorage.getItem(DUAL_MODE_KEY);
+        if (saved) {
+          const settings = JSON.parse(saved);
+          if (settings.secondaryPersoniId) {
+            const personi = this.state.personis.find(p => p.id === settings.secondaryPersoniId);
+            if (personi) {
+              console.log(`[AppState] Restoring secondary PersonI: ${personi.name}`);
+              this.state.secondaryPersoni = personi;
+              this.emit('secondary-personi-changed', { personi });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[AppState] Failed to restore dual mode:', error);
+    }
+  }
+
   // Event emission helper
   private emit(type: string, detail: any): void {
     this.dispatchEvent(new CustomEvent(type, { detail }));
@@ -289,6 +403,7 @@ export class AppStateService extends EventTarget {
       'calendar-changed',
       'financial-dashboard-changed',
       'music-detection-changed',
+      'music-detection-enabled-changed',
       'user-profile-changed',
     ];
 

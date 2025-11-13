@@ -2338,12 +2338,19 @@ export class GdmLiveAudio extends LitElement {
     const template = personaTemplates.find(
       (t) => t.name === this.activePersoni?.templateName,
     );
+    console.log(`[PersonI Switch] Looking for template: ${this.activePersoni?.templateName}`);
+    console.log(`[PersonI Switch] Template found:`, template ? template.name : 'NOT FOUND');
+    console.log(`[PersonI Switch] Available templates:`, personaTemplates.map(t => t.name));
+    
     if (template && template.introductions.length > 0) {
       const intro =
         template.introductions[
           Math.floor(Math.random() * template.introductions.length)
         ];
+      console.log(`[PersonI Switch] Speaking greeting:`, intro);
       await this.speakText(intro);
+    } else {
+      console.warn(`[PersonI Switch] No template or introductions found for ${this.activePersoni?.name}`);
     }
 
     this.isSwitchingPersona = false;
