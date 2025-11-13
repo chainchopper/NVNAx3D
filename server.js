@@ -144,7 +144,7 @@ if (process.env.CSP_DIRECTIVES) {
 } else if (isDevelopment) {
   // Permissive CSP for development - allow testing of all endpoints
   cspDirectives = "default-src 'self'; " +
-    "script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'; " +
+    "script-src 'self' https://esm.sh 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; " +
     "script-src-elem 'self' https://esm.sh 'unsafe-inline'; " +
     "connect-src 'self' http://localhost:* https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com ws: wss: *; " +
     "worker-src 'self' blob:; " +
@@ -158,7 +158,7 @@ if (process.env.CSP_DIRECTIVES) {
 } else {
   // Strict CSP for production
   cspDirectives = "default-src 'self'; " +
-    "script-src 'self' https://esm.sh 'unsafe-inline' 'wasm-unsafe-eval'; " +
+    "script-src 'self' https://esm.sh 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; " +
     "script-src-elem 'self' https://esm.sh 'unsafe-inline'; " +
     "connect-src 'self' https://esm.sh https://raw.githubusercontent.com https://huggingface.co https://cdn-lfs.huggingface.co https://cdn.jsdelivr.net https://generativelanguage.googleapis.com https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.deepseek.com https://storage.googleapis.com https://cas-bridge.xethub.hf.co ws: wss:; " +
     "worker-src 'self' blob:; " +
