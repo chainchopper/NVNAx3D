@@ -150,19 +150,36 @@ export class ConversationOrchestrator {
 
       // 4. Send message to provider with streaming
       let fullResponse = '';
+      let responseComplete = false;
       this.updateStatus('Receiving response...');
 
       await provider.sendMessage(messages, (chunk) => {
+        // Accumulate text if present
         if (chunk.text) {
           fullResponse += chunk.text;
-          if (onChunk) {
-            onChunk({
-              text: chunk.text,
-              isComplete: chunk.done || false,
-            });
-          }
+        }
+        
+        // Track completion status
+        if (chunk.done) {
+          responseComplete = true;
+        }
+        
+        // Always forward chunk if there's text OR it's the completion signal
+        if (onChunk && (chunk.text || chunk.done)) {
+          onChunk({
+            text: chunk.text || '',
+            isComplete: chunk.done || false,
+          });
         }
       });
+
+      // Ensure final chunk completion is signaled if not already sent
+      if (onChunk && !responseComplete) {
+        onChunk({
+          text: '',
+          isComplete: true,
+        });
+      }
 
       // 5. Store conversation in RAG memory
       if (ragEnabled) {
@@ -252,11 +269,6 @@ export class ConversationOrchestrator {
       return;
     }
 
-    // Notify UI of PersonI switch
-    if (onPersonISwitch) {
-      onPersonISwitch(activePersonI);
-    }
-
     try {
       // 1. Retrieve RAG memories if enabled
       let memoryContext = '';
@@ -316,18 +328,22 @@ export class ConversationOrchestrator {
       this.updateStatus(`${activePersonI.name} is responding...`);
 
       await provider.sendMessage(messages, (chunk) => {
+        // Accumulate text if present
         if (chunk.text) {
           fullResponse += chunk.text;
-          if (onChunk) {
-            onChunk({
-              text: chunk.text,
-              isComplete: chunk.done || false,
-            });
-          }
         }
+        
         // Track completion status
         if (chunk.done) {
           responseComplete = true;
+        }
+        
+        // Always forward chunk if there's text OR it's the completion signal
+        if (onChunk && (chunk.text || chunk.done)) {
+          onChunk({
+            text: chunk.text || '',
+            isComplete: chunk.done || false,
+          });
         }
       });
 
