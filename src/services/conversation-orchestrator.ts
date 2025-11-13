@@ -210,8 +210,11 @@ export class ConversationOrchestrator {
     transcript: string,
     mode: 'collaborative' | 'debate' | 'teaching',
     options: ConversationOptions = {},
-    onChunk?: ConversationCallback
+    onChunk?: ConversationCallback,
+    onPersonISwitch?: (personi: PersoniConfig) => void
   ): Promise<void> {
+    const { ragEnabled = true, visionData, enableTools = true } = options;
+
     // Check dual mode is properly configured
     const primaryPersona = activePersonasManager.getPrimaryPersona();
     const secondaryPersona = activePersonasManager.getSecondaryPersona();
@@ -220,40 +223,169 @@ export class ConversationOrchestrator {
       throw new Error('Dual mode requires both primary and secondary PersonI');
     }
 
-    this.updateStatus(`${mode} conversation in progress...`);
-
-    // Use DualPersonIManager to coordinate the conversation
-    let fullResponse = '';
-
-    // TODO: Implement dual-persona conversation in DualPersonIManager
-    // For now, just use primary persona
-    console.warn('[ConversationOrchestrator] Dual-mode conversation not fully implemented yet');
-    fullResponse = 'Dual-mode conversation is not yet implemented. Using single PersonI mode.';
-
-    // Store in RAG memory if enabled
-    if (options.ragEnabled) {
-      try {
-        await ragMemoryManager.addMemory(
-          transcript,
-          `${primaryPersona.name}+${secondaryPersona.name}`,
-          'conversation',
-          'user',
-          5
-        );
-
-        await ragMemoryManager.addMemory(
-          fullResponse,
-          `${primaryPersona.name}+${secondaryPersona.name}`,
-          'conversation',
-          'ai',
-          5
-        );
-      } catch (error) {
-        console.error('[ConversationOrchestrator] Failed to store dual-mode conversation:', error);
-      }
+    // Initialize dual mode in manager if not already active
+    if (!dualPersonIManager.isInDualMode()) {
+      dualPersonIManager.activateDualMode(primaryPersona, secondaryPersona, mode);
     }
 
-    this.updateStatus('Idle');
+    this.updateStatus(`${mode} conversation in progress...`);
+    console.log('[ConversationOrchestrator] 🔀 Dual mode active:', mode);
+
+    // Determine which PersonI should respond
+    const activePersonI = dualPersonIManager.getActivePersonI();
+    if (!activePersonI) {
+      throw new Error('No active PersonI in dual mode');
+    }
+
+    const modelId = getPersoniModel(activePersonI, 'conversation');
+    const provider = modelId ? providerManager.getProviderInstanceByModelId(modelId) : null;
+    
+    if (!provider) {
+      this.updateStatus('Provider not configured');
+      console.warn(`[ConversationOrchestrator] No provider for model: ${modelId}`);
+      if (onChunk) {
+        onChunk({ 
+          text: `${activePersonI.name} needs an AI provider configured to respond.`,
+          isComplete: true 
+        });
+      }
+      return;
+    }
+
+    // Notify UI of PersonI switch
+    if (onPersonISwitch) {
+      onPersonISwitch(activePersonI);
+    }
+
+    try {
+      // 1. Retrieve RAG memories if enabled
+      let memoryContext = '';
+      if (ragEnabled) {
+        try {
+          const relevantMemories = await ragMemoryManager.retrieveRelevantMemories(
+            transcript,
+            {
+              limit: 8,
+              threshold: 0.6,
+              persona: `${primaryPersona.name}+${secondaryPersona.name}`,
+              memoryType: null,
+            }
+          );
+
+          if (relevantMemories.length > 0) {
+            memoryContext = ragMemoryManager.formatMemoriesForContext(relevantMemories);
+            console.log(`[ConversationOrchestrator] 🧠 Found ${relevantMemories.length} dual-mode memories`);
+          }
+        } catch (error) {
+          console.error('[ConversationOrchestrator] Failed to retrieve memories:', error);
+        }
+      }
+
+      // 2. Build dual-mode system instruction
+      const dualPrompt = dualPersonIManager.buildDualPrompt(transcript);
+      const userContext = userProfileManager.getSystemPromptContext();
+      
+      let systemInstruction = activePersonI.systemInstruction;
+      if (userContext) {
+        systemInstruction = `${systemInstruction}\n\n${userContext}`;
+      }
+      if (memoryContext) {
+        systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}`;
+      }
+
+      // Add dual-mode context
+      const otherPersonI = dualPersonIManager.getOtherPersonI();
+      const conversationContext = dualPersonIManager.getConversationContext(5);
+      
+      if (conversationContext.length > 0) {
+        const contextStr = conversationContext
+          .map(turn => `${turn.personi.name}: ${turn.text}`)
+          .join('\n');
+        systemInstruction = `${systemInstruction}\n\n## Recent Dual-Mode Conversation:\n${contextStr}`;
+      }
+
+      // 3. Prepare messages
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: dualPrompt },
+      ];
+
+      // 4. Send message to provider with streaming
+      let fullResponse = '';
+      let responseComplete = false;
+      this.updateStatus(`${activePersonI.name} is responding...`);
+
+      await provider.sendMessage(messages, (chunk) => {
+        if (chunk.text) {
+          fullResponse += chunk.text;
+          if (onChunk) {
+            onChunk({
+              text: chunk.text,
+              isComplete: chunk.done || false,
+            });
+          }
+        }
+        // Track completion status
+        if (chunk.done) {
+          responseComplete = true;
+        }
+      });
+
+      // Ensure final chunk completion is signaled if not already sent
+      if (onChunk && !responseComplete) {
+        onChunk({
+          text: '',
+          isComplete: true,
+        });
+      }
+
+      // 5. Record this turn in dual manager
+      const currentSlot = activePersonI === primaryPersona ? 'primary' : 'secondary';
+      dualPersonIManager.addTurn(currentSlot, fullResponse);
+
+      // 6. Store conversation in RAG memory
+      if (ragEnabled) {
+        try {
+          await ragMemoryManager.addMemory(
+            transcript,
+            `${primaryPersona.name}+${secondaryPersona.name}`,
+            'conversation',
+            'user',
+            5
+          );
+
+          await ragMemoryManager.addMemory(
+            fullResponse,
+            `${primaryPersona.name}+${secondaryPersona.name}`,
+            'conversation',
+            activePersonI.name,
+            5
+          );
+
+          console.log('[ConversationOrchestrator] 💾 Stored dual-mode conversation');
+        } catch (error) {
+          console.error('[ConversationOrchestrator] Failed to store dual-mode conversation:', error);
+        }
+      }
+
+      // 7. Determine if we should switch PersonI for next turn
+      if (dualPersonIManager.shouldSwitch()) {
+        const nextSlot = dualPersonIManager.switchActiveSlot();
+        const nextPersonI = dualPersonIManager.getActivePersonI();
+        console.log(`[ConversationOrchestrator] 🔄 Switching to ${nextPersonI?.name} for next turn`);
+        
+        // Notify UI of the switch to new active PersonI
+        if (onPersonISwitch && nextPersonI) {
+          onPersonISwitch(nextPersonI);
+        }
+      }
+
+      this.updateStatus('Idle');
+    } catch (error) {
+      console.error('[ConversationOrchestrator] Dual-mode error:', error);
+      this.updateStatus('Error');
+      throw error;
+    }
   }
 
   /**

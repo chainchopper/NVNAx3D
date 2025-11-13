@@ -81,6 +81,7 @@ import { audioRecordingManager } from './services/audio-recording-manager';
 import type { DetectionResult } from './services/object-recognition';
 import { voiceCommandSystem } from './services/voice-command-system';
 import { dualPersonIManager, DualMode } from './services/dual-personi-manager';
+import { conversationOrchestrator } from './services/conversation-orchestrator';
 import './components/object-detection-overlay';
 import './components/calendar-view';
 import { PERSONIS_KEY } from './constants/storage.js';
@@ -2566,6 +2567,13 @@ export class GdmLiveAudio extends LitElement {
       return;
     }
     
+    // Check if dual mode is active
+    if (this.dualModeActive && this.secondaryPersoni && dualPersonIManager.isInDualMode()) {
+      console.log('[DualMode] Routing to dual PersonI conversation handler');
+      await this.processDualModeTranscript(transcript);
+      return;
+    }
+    
     const provider = this.getProviderForPersoni(this.activePersoni);
     const isProviderMode = !!provider;
     const isBrowserOnlyMode = !isProviderMode;
@@ -2702,6 +2710,94 @@ export class GdmLiveAudio extends LitElement {
           }
         }
       }
+    }
+  }
+
+  private async processDualModeTranscript(transcript: string) {
+    if (!this.activePersoni || !this.secondaryPersoni) return;
+    
+    console.log('[DualMode] 🔀 Processing transcript in dual mode:', this.dualModeType);
+    
+    // Add user message to transcript history
+    this.transcriptHistory = [
+      ...this.transcriptHistory,
+      {
+        speaker: 'user',
+        text: transcript,
+        slot: undefined,
+      },
+    ];
+    this.currentTranscript = '';
+
+    try {
+      // Get active PersonI from dual manager
+      const activePersonI = dualPersonIManager.getActivePersonI();
+      if (!activePersonI) {
+        console.error('[DualMode] No active PersonI in dual manager');
+        return;
+      }
+
+      // Announce which PersonI is responding (with TTS)
+      const announcement = `${activePersonI.name} here...`;
+      console.log('[DualMode] 📢 Announcing:', announcement);
+      await this.speakText(announcement, 'system');
+
+      // Add visual pulse to HUD (dispatch custom event)
+      this.dispatchEvent(new CustomEvent('dual-personi-switch', {
+        detail: { personi: activePersonI },
+        bubbles: true,
+        composed: true
+      }));
+
+      // Use ConversationOrchestrator for dual mode handling
+      let fullResponse = '';
+      
+      // Ensure we're using a valid dual mode type (not 'single')
+      const validDualMode = this.dualModeType === 'single' ? 'collaborative' : this.dualModeType;
+      
+      await conversationOrchestrator.handleDualModeInput(
+        transcript,
+        validDualMode,
+        {
+          ragEnabled: this.ragEnabled,
+          enableTools: true
+        },
+        (chunk) => {
+          // Accumulate streaming response
+          fullResponse += chunk.text;
+        },
+        (switchedPersonI) => {
+          // PersonI switch callback
+          console.log('[DualMode] 🔄 PersonI switched to:', switchedPersonI.name);
+          this.dispatchEvent(new CustomEvent('dual-personi-switch', {
+            detail: { personi: switchedPersonI },
+            bubbles: true,
+            composed: true
+          }));
+        }
+      );
+
+      // Speak the response
+      if (fullResponse) {
+        this.transcriptHistory = [
+          ...this.transcriptHistory,
+          {
+            speaker: 'ai',
+            text: fullResponse,
+            slot: undefined,
+          },
+        ];
+        
+        await this.speakText(fullResponse, 'ai');
+      }
+
+      // Update UI status
+      this.updateStatus('Idle');
+      this.resetIdlePromptTimer();
+
+    } catch (error) {
+      console.error('[DualMode] Error processing transcript:', error);
+      this.updateError(`Dual mode error: ${error.message}`);
     }
   }
 
