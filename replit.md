@@ -3,12 +3,28 @@
 ## Overview
 Nirvana is an advanced AI companion system designed to provide highly customizable and engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, positioning itself as a versatile personal AI ecosystem with significant market potential. It focuses on offering a rich, interactive, and personalized AI experience.
 
+## Agentic Intelligence System (November 2025)
+
+**Implementation Status**: Complete layered agentic services built. **Integration Status**: Services ready but not yet wired into ConversationOrchestrator.
+
+### Core Services:
+1. **PerceptionOrchestrator** (`src/services/agentic/perception-orchestrator.ts`) - LLM-powered intent/entity/sentiment extraction with heuristic fallback
+2. **PlannerService** (`src/services/agentic/planner-service.ts`) - LLM planning with connector validation and template fallback
+3. **AgenticReasoningEngine** (`src/services/agentic-reasoning-engine.ts`) - Perception → Reasoning → Planning → Action pipeline with 8 real action types
+4. **CallIntelligence** (enhanced) - Real Gmail/Twilio summary delivery, session persistence
+5. **ContextSuggestionEngine** - Pattern-based proactive suggestions
+
+### Action Types: telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create
+
+### Next Integration Step: Wire `agenticReasoningEngine` into `ConversationOrchestrator.handleUserInput()` before provider message sending.
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
 - **Flexibility**: Manual configuration of all endpoints and services
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 - **CRITICAL: No Replit Dependency**: ALL integrations/connectors (Twilio, Gmail, etc.) MUST be configured via app Settings UI or .env files - NOT Replit's integration system. System must be fully portable and independent.
+- **Agentic Intelligence**: PersonI should be always-aware, autonomous agents that reason, plan, learn, and suggest - not passive responders. Continuous data gathering, pattern recognition, and proactive assistance.
 
 ## System Architecture
 
@@ -28,6 +44,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system. Supports a financial advisor PersonI, BILLY. PersonI configurations support both legacy string model IDs and new `{ providerId, modelId }` format.
+- **Agentic Intelligence Architecture**: PersonI use a Perception → Reasoning → Planning → Action pipeline for autonomous decision-making. Continuous learning from patterns, context-aware suggestions across all UI, and automatic routine generation from successful workflows.
 - **Connector Backend Proxy**: Secure Express.js server for external service integrations with OAuth token handling, including robust SSRF protection for model proxy and custom provider discovery.
 - **Codrops Audio Visualizer**: Separate `/visualizer` route with advanced shaders, 3D elements, GSAP animations, and interactive controls.
 - **Twilio Integration**: Manual configuration via app Settings UI for SMS/voice calls.
@@ -40,6 +57,9 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Voice Command System**: Hands-free control with natural language commands.
 - **Routine Automation System**: IF-THEN-THAT automation supporting various triggers including time, events, state monitoring, user actions, and vision detection.
 - **Dual PersonI Manager**: Multi-AI collaboration system with four modes: collaborative, debate, teaching, and single.
+- **Call Intelligence System**: Real-time call transcription, automatic note-taking, action item detection, sentiment analysis, and post-call summarization with email/SMS delivery.
+- **Context Suggestion Engine**: Pattern-based, memory-based, time-based, and activity-based suggestions across all interfaces for proactive assistance.
+- **Agentic Reasoning Engine**: Full perception (intent/entity/sentiment extraction), reasoning (goal identification, prerequisite checking, multi-step planning), and action execution with confidence scoring.
 - **Calendar System**: Visual component with natural language event creation and Google Calendar integration.
 - **Security**: CSP hardening, OAuth Vault V2 Backend with PKCE + CSRF protection. Backend API fixes include missing endpoints and robust SSRF protection.
 - **Plugin System**: Dynamic UI plugin architecture with registry, sandbox, and persistence.
