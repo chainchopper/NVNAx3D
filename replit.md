@@ -5,7 +5,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ## Agentic Intelligence System (November 2025)
 
-**Implementation Status**: Complete layered agentic services built. **Integration Status**: Services ready but not yet wired into ConversationOrchestrator.
+**Implementation Status**: ✅ **PRODUCTION READY** - Complete agentic architecture fully integrated and operational.
 
 ### Core Services:
 1. **PerceptionOrchestrator** (`src/services/agentic/perception-orchestrator.ts`) - LLM-powered intent/entity/sentiment extraction with heuristic fallback
@@ -13,10 +13,11 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 3. **AgenticReasoningEngine** (`src/services/agentic-reasoning-engine.ts`) - Perception → Reasoning → Planning → Action pipeline with 8 real action types
 4. **CallIntelligence** (enhanced) - Real Gmail/Twilio summary delivery, session persistence
 5. **ContextSuggestionEngine** - Pattern-based proactive suggestions
+6. **RoutineExecutor** - Auto-initializes on app startup, loads and executes IF-THEN-THAT automation routines
 
 ### Action Types: telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create
 
-### Integration Status: ✅ **COMPLETE** - Wired into ConversationOrchestrator with standardized error handling and failure reporting.
+### Integration Status: ✅ **COMPLETE** - Wired into ConversationOrchestrator with standardized ActionExecutionResult interface, comprehensive error handling, and user-visible success/failure reporting.
 
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
@@ -65,6 +66,29 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Plugin System**: Dynamic UI plugin architecture with registry, sandbox, and persistence.
 - **LocalStorage Management**: Includes quota protection, warnings, and automatic cleanup.
 - **Backend URL Management**: Centralized management using `getBackendUrl()` for CORS-safe requests and proper WebSocket URL conversion.
+- **OAuth Integration**: Full Google OAuth with write permissions (gmail.send, gmail.modify, calendar.events) configured via Settings UI with popup flow.
+
+## Infrastructure & Deployment
+
+### Docker Compose Stack (Optional - Local Development)
+Complete local-first infrastructure available via `docker-compose.yml`:
+- **PostgreSQL** (port 5432) - Relational database
+- **Milvus** (port 19530) - High-performance vector database
+- **Qdrant** (port 6333) - Alternative vector database
+- **Flowise** (port 3000) - LLM workflow orchestration UI
+- **n8n** (port 5678) - Workflow automation platform
+- **Jupyter** (port 8888) - Data science notebooks
+- **Apache Tika** (port 9998) - Content extraction
+- **MinIO** + **etcd** - Object storage and metadata
+
+### Environment Configuration
+All services configured via `.env` file (see `.env.example` template):
+- **Setup Script**: `./scripts/setup-env.sh` - Interactive setup helper
+- **Documentation**: `SETUP.md` - Complete configuration guide
+- **Quick Reference**: `DOCKER_REFERENCE.md` - Docker commands
+
+### Data Persistence
+All data stored in `./data/` subdirectories for full portability and backup.
 
 ## External Dependencies
 - **Google Gemini API**: Conversational AI and embeddings.
