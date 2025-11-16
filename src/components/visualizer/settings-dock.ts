@@ -336,6 +336,16 @@ export class SettingsDock extends LitElement {
         title: 'Connectors',
         content: html`<connector-config-panel @close=${this.handlePanelCloseRequest}></connector-config-panel>`,
       },
+      'telephony': {
+        id: 'telephony',
+        title: 'Telephony',
+        content: html`<telephony-settings-panel @close=${this.handlePanelCloseRequest}></telephony-settings-panel>`,
+      },
+      'help': {
+        id: 'help',
+        title: 'Help & Documentation',
+        content: html`<help-panel @close=${this.handlePanelCloseRequest}></help-panel>`,
+      },
     };
 
     return panels[panelId] || null;

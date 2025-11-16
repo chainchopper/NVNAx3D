@@ -42,6 +42,10 @@ import './components/financial-dashboard';
 import './components/transcription-log';
 import './components/ui-controls';
 import './components/plugin-manager-panel';
+import './components/visualizer/telephony-settings-panel';
+import './components/visualizer/sms-panel';
+import './components/visualizer/voice-call-panel';
+import './components/visualizer/help-panel';
 import { pluginRegistry } from './services/plugin-registry';
 import { dynamicComponentGenerator } from './services/dynamic-component-generator';
 import {
