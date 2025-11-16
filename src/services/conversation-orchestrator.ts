@@ -16,6 +16,7 @@ import { dualPersonIManager } from './dual-personi-manager';
 import { toolOrchestrator } from './tool-orchestrator';
 import { userProfileManager } from './user-profile-manager';
 import { cameraVisionService } from './camera-vision-service';
+import { agenticReasoningEngine } from './agentic-reasoning-engine';
 import type { PersoniConfig } from '../personas';
 import { getPersoniModel } from '../personas';
 import type { BaseProvider } from '../providers/base-provider';
@@ -104,6 +105,57 @@ export class ConversationOrchestrator {
     }
 
     try {
+      // AGENTIC REASONING PIPELINE - Execute autonomous actions before conversation
+      console.log('[ConversationOrchestrator] 🧠 Starting agentic reasoning pipeline...');
+      this.updateStatus('Analyzing intent...');
+      
+      const perception = await agenticReasoningEngine.perceive(transcript, activePersoni);
+      console.log(`[ConversationOrchestrator] 🎯 Intent detected: ${perception.intent}, Sentiment: ${perception.sentiment}`);
+      
+      this.updateStatus('Planning actions...');
+      const reasoning = await agenticReasoningEngine.reason(perception, activePersoni);
+      console.log(`[ConversationOrchestrator] 📋 Goal: ${reasoning.goal}, Confidence: ${reasoning.confidence}`);
+      
+      const actions = await agenticReasoningEngine.planActions(reasoning);
+      console.log(`[ConversationOrchestrator] ⚡ Planned ${actions.length} actions`);
+      
+      // Execute actions if any were planned
+      if (actions.length > 0) {
+        this.updateStatus('Executing autonomous actions...');
+        const results = await agenticReasoningEngine.executeActions(actions, activePersoni);
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.filter(r => !r.success).length;
+        console.log(`[ConversationOrchestrator] ✅ Executed ${successCount}/${results.length} actions successfully`);
+        
+        // Build action summary including both successes and failures
+        let actionMessage = '';
+        
+        if (successCount > 0) {
+          const successSummary = results
+            .filter(r => r.success)
+            .map(r => `✅ ${r.action.type} completed`)
+            .join('\n');
+          actionMessage += `Autonomous actions completed:\n${successSummary}\n\n`;
+        }
+        
+        if (failureCount > 0) {
+          const failureSummary = results
+            .filter(r => !r.success)
+            .map(r => `⚠️ ${r.action.type} failed: ${r.error || 'Unknown error'}`)
+            .join('\n');
+          actionMessage += `Action failures:\n${failureSummary}\n\nPlease configure the required connectors in Settings or try rephrasing your request.\n\n`;
+        }
+        
+        // Send action summary to user
+        if (actionMessage && onChunk) {
+          onChunk({
+            text: actionMessage,
+            isComplete: false
+          });
+        }
+      }
+      
+      this.updateStatus('Thinking...');
       // 1. Retrieve RAG memories if enabled
       let memoryContext = '';
       if (ragEnabled) {
