@@ -306,6 +306,15 @@ export class VisualizerShell extends LitElement {
       // Initialize voice input service and listeners
       this.initializeVoiceInput();
       
+      // Initialize routine executor
+      try {
+        const { routineExecutor } = await import('../../services/routine-executor');
+        await routineExecutor.initialize();
+        console.log('[VisualizerShell] ✅ Routine executor initialized');
+      } catch (routineError) {
+        console.error('[VisualizerShell] ⚠️  Routine executor initialization failed:', routineError);
+      }
+      
       console.log('[VisualizerShell] Services initialized');
     } catch (error) {
       console.error('[VisualizerShell] Failed to initialize services:', error);
