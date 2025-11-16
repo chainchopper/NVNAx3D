@@ -27,7 +27,9 @@ export type ActiveSidePanel =
   | 'tasks'
   | 'memory'
   | 'routines'
-  | 'plugins';
+  | 'plugins'
+  | 'telephony'
+  | 'help';
 
 export type PersonaSlot = 'primary' | 'secondary';
 

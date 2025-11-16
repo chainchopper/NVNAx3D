@@ -20,7 +20,9 @@ export type MenuItem =
   | 'tasks'
   | 'memory'
   | 'routines'
-  | 'plugins';
+  | 'plugins'
+  | 'telephony'
+  | 'help';
 
 @customElement('settings-menu')
 export class SettingsMenu extends LitElement {
@@ -287,6 +289,34 @@ export class SettingsMenu extends LitElement {
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="9" y1="9" x2="15" y2="15"></line>
           <line x1="15" y1="9" x2="9" y2="15"></line>
+        </svg>
+      </div>
+
+      <!-- Telephony -->
+      <div
+        class="menu-item group-system"
+        title="Telephony - Configure SMS and voice calls (Twilio/FreePBX)"
+        role="button"
+        tabindex="0"
+        @click=${() => this.handleClick('telephony')}
+        @keydown=${(e: KeyboardEvent) => this.handleKeydown(e, 'telephony')}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
+      </div>
+
+      <!-- Help -->
+      <div
+        class="menu-item group-system"
+        title="Help - Comprehensive documentation and guides"
+        role="button"
+        tabindex="0"
+        @click=${() => this.handleClick('help')}
+        @keydown=${(e: KeyboardEvent) => this.handleKeydown(e, 'help')}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
       </div>
     `;
