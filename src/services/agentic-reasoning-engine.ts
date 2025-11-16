@@ -34,6 +34,20 @@ export interface Action {
   expectedOutcome: string;
 }
 
+export interface ActionExecutionResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  metadata?: any;
+}
+
+export interface ActionResult {
+  action: Action;
+  success: boolean;
+  result?: any;
+  error?: string;
+}
+
 class AgenticReasoningEngine {
   private context: Map<string, any> = new Map();
   private patterns: Map<string, number> = new Map();
@@ -137,116 +151,226 @@ class AgenticReasoningEngine {
     return 'conversation';
   }
   
-  async executeActions(actions: Action[], personi: PersoniConfig): Promise<Record<string, any>> {
-    const results: Record<string, any> = {};
+  async executeActions(actions: Action[], personi: PersoniConfig): Promise<ActionResult[]> {
+    const results: ActionResult[] = [];
     
     for (const action of actions) {
       try {
         const result = await this.executeAction(action, personi);
-        results[action.type] = result;
+        results.push({
+          action,
+          success: result.success !== false,
+          result,
+          error: result.error
+        });
       } catch (error) {
         console.error(`[AgenticReasoning] Action execution failed for ${action.type}:`, error);
-        results[action.type] = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        results.push({
+          action,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
       }
     }
     
     return results;
   }
   
-  private async executeAction(action: Action, personi: PersoniConfig): Promise<any> {
-    switch (action.type) {
-      case 'telephony_call':
-        if (action.parameters.phoneNumber) {
-          const { telephonyManager } = await import('./telephony/telephony-manager');
-          const provider = telephonyManager.getProvider();
-          if (provider) {
-            return await provider.makeCall(action.parameters.phoneNumber);
+  private async executeAction(action: Action, personi: PersoniConfig): Promise<ActionExecutionResult> {
+    try {
+      switch (action.type) {
+        case 'telephony_call':
+          if (!action.parameters.phoneNumber) {
+            return { success: false, error: 'No phone number provided' };
           }
-        }
-        return { success: false, error: 'No phone number or telephony not configured' };
-        
-      case 'telephony_sms':
-        if (action.parameters.phoneNumber && action.parameters.message) {
-          const { telephonyManager } = await import('./telephony/telephony-manager');
-          const provider = telephonyManager.getProvider();
-          if (provider) {
-            return await provider.sendSMS(action.parameters.phoneNumber, action.parameters.message);
+          try {
+            const { telephonyManager } = await import('./telephony/telephony-manager');
+            const provider = telephonyManager.getProvider();
+            if (!provider) {
+              return { success: false, error: 'Telephony provider not configured' };
+            }
+            const callResult = await provider.makeCall(action.parameters.phoneNumber);
+            return { 
+              success: true, 
+              data: callResult,
+              metadata: { phoneNumber: action.parameters.phoneNumber }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Call failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
           }
-        }
-        return { success: false, error: 'Missing parameters or telephony not configured' };
-      
-      case 'email_send':
-        if (action.parameters.to && action.parameters.subject && action.parameters.body) {
-          const { connectorHandlers } = await import('./connector-handlers');
-          return await connectorHandlers.sendGmailEmail({
-            to: action.parameters.to,
-            subject: action.parameters.subject,
-            body: action.parameters.body
-          });
-        }
-        return { success: false, error: 'Missing email parameters' };
-        
-      case 'store_memory':
-        await ragMemoryManager.addMemory(
-          action.parameters.content,
-          'agent',
-          action.parameters.type || 'note',
-          undefined,
-          undefined,
-          action.parameters.metadata || {}
-        );
-        return { success: true };
-        
-      case 'create_task':
-        await ragMemoryManager.addMemory(
-          action.parameters.content,
-          'agent',
-          'task',
-          undefined,
-          undefined,
-          {
-            priority: action.parameters.priority || 'P3',
-            status: 'pending',
-            source: 'agent'
+          
+        case 'telephony_sms':
+          if (!action.parameters.phoneNumber || !action.parameters.message) {
+            return { success: false, error: 'Missing phone number or message' };
           }
-        );
-        return { success: true };
+          try {
+            const { telephonyManager } = await import('./telephony/telephony-manager');
+            const provider = telephonyManager.getProvider();
+            if (!provider) {
+              return { success: false, error: 'Telephony provider not configured' };
+            }
+            const smsResult = await provider.sendSMS(action.parameters.phoneNumber, action.parameters.message);
+            return { 
+              success: true, 
+              data: smsResult,
+              metadata: { phoneNumber: action.parameters.phoneNumber }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `SMS failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
       
-      case 'calendar_event':
-        if (action.parameters.summary && action.parameters.start) {
-          const { connectorHandlers } = await import('./connector-handlers');
-          return await connectorHandlers.createCalendarEvent({
-            summary: action.parameters.summary,
-            start: action.parameters.start,
-            end: action.parameters.end,
-            description: action.parameters.description
-          });
-        }
-        return { success: false, error: 'Missing calendar event parameters' };
-      
-      case 'web_search':
-        if (action.parameters.query) {
-          return { success: true, message: 'Web search queued', query: action.parameters.query };
-        }
-        return { success: false, error: 'Missing search query' };
-      
-      case 'routine_create':
-        if (action.parameters.name && action.parameters.trigger && action.parameters.actions) {
-          const { routineExecutor } = await import('./routine-executor');
-          const routineId = await routineExecutor.createRoutine({
-            name: action.parameters.name,
-            description: action.parameters.description || 'Auto-generated routine',
-            trigger: action.parameters.trigger,
-            conditions: action.parameters.conditions || [],
-            actions: action.parameters.actions,
-            tags: action.parameters.tags || ['auto-generated']
-          });
-          return { success: true, routineId };
-        }
-        return { success: false, error: 'Missing routine parameters (name, trigger, actions required)' };
+        case 'email_send':
+          if (!action.parameters.to || !action.parameters.subject || !action.parameters.body) {
+            return { success: false, error: 'Missing email parameters (to, subject, body required)' };
+          }
+          try {
+            const { connectorHandlers } = await import('./connector-handlers');
+            const emailResult = await connectorHandlers.sendGmailEmail({
+              to: action.parameters.to,
+              subject: action.parameters.subject,
+              body: action.parameters.body
+            });
+            return { 
+              success: true, 
+              data: emailResult,
+              metadata: { to: action.parameters.to, subject: action.parameters.subject }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Email failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
+          
+        case 'store_memory':
+          if (!action.parameters.content) {
+            return { success: false, error: 'Missing memory content' };
+          }
+          try {
+            const memoryId = await ragMemoryManager.addMemory(
+              action.parameters.content,
+              'agent',
+              action.parameters.type || 'note',
+              undefined,
+              undefined,
+              action.parameters.metadata || {}
+            );
+            return { 
+              success: true, 
+              data: { memoryId },
+              metadata: { type: action.parameters.type || 'note' }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Memory storage failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
+          
+        case 'create_task':
+          if (!action.parameters.content) {
+            return { success: false, error: 'Missing task content' };
+          }
+          try {
+            const taskId = await ragMemoryManager.addMemory(
+              action.parameters.content,
+              'agent',
+              'task',
+              undefined,
+              undefined,
+              {
+                priority: action.parameters.priority || 'P3',
+                status: 'pending',
+                source: 'agent'
+              }
+            );
+            return { 
+              success: true, 
+              data: { taskId },
+              metadata: { priority: action.parameters.priority || 'P3' }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Task creation failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
         
-      default:
-        return { success: false, error: `Unknown action type: ${action.type}` };
+        case 'calendar_event':
+          if (!action.parameters.summary || !action.parameters.start) {
+            return { success: false, error: 'Missing calendar event parameters (summary, start required)' };
+          }
+          try {
+            const { connectorHandlers } = await import('./connector-handlers');
+            const eventResult = await connectorHandlers.createCalendarEvent({
+              summary: action.parameters.summary,
+              start: action.parameters.start,
+              end: action.parameters.end,
+              description: action.parameters.description
+            });
+            return { 
+              success: true, 
+              data: eventResult,
+              metadata: { summary: action.parameters.summary, start: action.parameters.start }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Calendar event failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
+        
+        case 'web_search':
+          if (!action.parameters.query) {
+            return { success: false, error: 'Missing search query' };
+          }
+          return { 
+            success: true, 
+            data: { status: 'queued', query: action.parameters.query },
+            metadata: { query: action.parameters.query }
+          };
+        
+        case 'routine_create':
+          if (!action.parameters.name || !action.parameters.trigger || !action.parameters.actions) {
+            return { success: false, error: 'Missing routine parameters (name, trigger, actions required)' };
+          }
+          try {
+            const { routineExecutor } = await import('./routine-executor');
+            const routineId = await routineExecutor.createRoutine({
+              name: action.parameters.name,
+              description: action.parameters.description || 'Auto-generated routine',
+              trigger: action.parameters.trigger,
+              conditions: action.parameters.conditions || [],
+              actions: action.parameters.actions,
+              tags: action.parameters.tags || ['auto-generated']
+            });
+            return { 
+              success: true, 
+              data: { routineId },
+              metadata: { name: action.parameters.name }
+            };
+          } catch (error) {
+            return { 
+              success: false, 
+              error: `Routine creation failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+            };
+          }
+          
+        default:
+          return { success: false, error: `Unknown action type: ${action.type}` };
+      }
+    } catch (error) {
+      console.error(`[AgenticReasoning] Unexpected error in executeAction:`, error);
+      return { 
+        success: false, 
+        error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      };
     }
   }
   
