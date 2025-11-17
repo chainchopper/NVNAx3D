@@ -28,7 +28,7 @@ export class ObjectDetectionOverlay extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      z-index: 46;
       transition: opacity 0.5s ease-out;
     }
 
@@ -40,6 +40,7 @@ export class ObjectDetectionOverlay extends LitElement {
       position: relative;
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
 
     .detection-box {
@@ -79,7 +80,7 @@ export class ObjectDetectionOverlay extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 4px;
-      pointer-events: all;
+      pointer-events: auto;
     }
 
     .stats-row {
@@ -115,8 +116,7 @@ export class ObjectDetectionOverlay extends LitElement {
       color: white;
       font-size: 18px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      pointer-events: all;
-      z-index: 46; /* HUD tier - positioned above camera controls for clear spacing */
+      pointer-events: auto;
     }
 
     .toggle-button:hover {
