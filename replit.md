@@ -19,6 +19,32 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ### Integration Status: ✅ **COMPLETE** - Wired into ConversationOrchestrator with standardized ActionExecutionResult interface, comprehensive error handling, and user-visible success/failure reporting.
 
+## Recent Changes (November 17, 2025)
+
+### Critical Fixes Deployed
+1. **Camera System Restored** ✅
+   - Re-wired VisualizerShell ↔ CameraManager bindings
+   - All camera controls now functional: start/stop, preview toggle, switch camera
+   - Video element properly connected to ObjectRecognitionService
+
+2. **YOLO Object Detection Working** ✅
+   - Lazy-loads TensorFlow.js COCO-SSD model on demand
+   - Real-time object detection with bounding boxes and confidence scores
+   - FPS counter and object statistics display
+   - Detection results stored in RAG memory automatically
+
+3. **Web Search Implementation** ✅
+   - Created backend `/api/web-search` endpoint
+   - Supports DuckDuckGo (free, no API key) and Brave Search API
+   - Agentic reasoning engine now executes real web searches
+   - Returns structured results with error handling
+
+4. **UI Icon Layout Fixed** ✅
+   - Object detection button repositioned from bottom: 160px → 270px
+   - Eliminated overlap with camera controls stack
+   - All 8 icon groups properly spaced (documented in /tmp/ui-icon-layout.md)
+   - Spacing rules: Object detection (270px) → 18px gap → Camera controls (100-252px)
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
