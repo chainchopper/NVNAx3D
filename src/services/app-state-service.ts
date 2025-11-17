@@ -22,6 +22,8 @@ export type ActiveSidePanel =
   | 'models'
   | 'personis'
   | 'tts'
+  | 'help'
+  | 'telephony'
   | 'connectorConfig'
   | 'notes'
   | 'tasks'

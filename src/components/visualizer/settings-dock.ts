@@ -184,7 +184,7 @@ export class SettingsDock extends LitElement {
       const state = appStateService.getState();
       
       // Panel IDs managed by this dock (all panels now opened via radial menu)
-      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig'];
+      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig', 'help', 'telephony'];
       const isDockManaged = dockManagedPanels.includes(state.activeSidePanel);
       
       if (isDockManaged) {
