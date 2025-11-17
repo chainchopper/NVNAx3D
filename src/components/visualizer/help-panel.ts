@@ -5,14 +5,20 @@ import { appStateService } from '../../services/app-state-service';
 type HelpSection = 
   | 'overview' 
   | 'personi' 
+  | 'agentic'
   | 'connectors' 
   | 'memory'
   | 'routines'
   | 'plugins'
+  | 'call-intelligence'
+  | 'context-suggestions'
+  | 'calendar'
+  | 'environmental-awareness'
   | 'privacy'
   | 'telephony'
   | 'voice-commands'
-  | 'settings';
+  | 'settings'
+  | 'setup';
 
 @customElement('help-panel')
 export class HelpPanel extends LitElement {
@@ -373,6 +379,106 @@ export class HelpPanel extends LitElement {
     `;
   }
 
+  private renderAgentic() {
+    return html`
+      <h3>🧠⚡ Agentic Intelligence System</h3>
+      <p>PersonI are not passive responders - they are <strong>autonomous agents</strong> that perceive, reason, plan, learn, and act proactively. This is the core of Nirvana's agentic architecture.</p>
+
+      <div class="diagram">
+        <div class="diagram-title">Agentic Pipeline: Perception → Reasoning → Planning → Action</div>
+        <div class="flow-diagram">
+          <div class="flow-box">Perception</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Reasoning</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Planning</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Action Execution</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Memory Update</div>
+        </div>
+      </div>
+
+      <h4>1. Perception Orchestrator</h4>
+      <p>LLM-powered understanding of user intent with heuristic fallback:</p>
+      <ul>
+        <li><strong>Intent Extraction</strong>: What does the user want? (query_info, execute_action, create_content, etc.)</li>
+        <li><strong>Entity Recognition</strong>: Extract key entities (dates, names, amounts, locations)</li>
+        <li><strong>Sentiment Analysis</strong>: Emotional tone (positive, negative, neutral, urgent)</li>
+        <li><strong>Confidence Scoring</strong>: How certain is the perception? (0.0-1.0)</li>
+      </ul>
+
+      <h4>2. Reasoning Engine</h4>
+      <p>Multi-step reasoning with prerequisite checking:</p>
+      <ul>
+        <li><strong>Goal Identification</strong>: What needs to be accomplished?</li>
+        <li><strong>Prerequisite Checking</strong>: Are required connectors configured? Is data available?</li>
+        <li><strong>Multi-Step Planning</strong>: Break complex tasks into sequential steps</li>
+        <li><strong>Context Awareness</strong>: Use RAG memory and user profile for personalized responses</li>
+      </ul>
+
+      <h4>3. Planner Service</h4>
+      <p>LLM-based planning with connector validation:</p>
+      <ul>
+        <li><strong>Plan Generation</strong>: Creates step-by-step action plans</li>
+        <li><strong>Connector Validation</strong>: Ensures required services are available</li>
+        <li><strong>Template Fallback</strong>: Uses predefined templates for common tasks</li>
+        <li><strong>Parameter Extraction</strong>: Intelligently extracts parameters from user requests</li>
+      </ul>
+
+      <h4>4. Action Execution (8 Action Types)</h4>
+      <p>PersonI can execute real-world actions autonomously:</p>
+      <div class="connector-list">
+        <div class="connector-item">📞 telephony_call - Make voice calls</div>
+        <div class="connector-item">💬 telephony_sms - Send SMS messages</div>
+        <div class="connector-item">📧 email_send - Send emails via Gmail</div>
+        <div class="connector-item">🧠 store_memory - Add facts to RAG</div>
+        <div class="connector-item">✅ create_task - Create tasks with priorities</div>
+        <div class="connector-item">📅 calendar_event - Schedule events</div>
+        <div class="connector-item">🔍 web_search - Real-time information</div>
+        <div class="connector-item">⚡ routine_create - Generate IF-THEN-THAT automations</div>
+      </div>
+
+      <h4>Continuous Learning</h4>
+      <ul>
+        <li><strong>Pattern Recognition</strong>: Identifies repeated workflows and suggests automations</li>
+        <li><strong>Routine Generation</strong>: Automatically creates routines from successful action sequences</li>
+        <li><strong>Memory Updates</strong>: All actions logged to RAG for future reference</li>
+        <li><strong>Feedback Loop</strong>: Success/failure results improve future planning</li>
+      </ul>
+
+      <div class="code-block">
+Example Agentic Workflow:
+User: "Remind me to call mom tomorrow at 2pm"
+
+PERCEPTION:
+  Intent: execute_action (create_reminder)
+  Entities: { person: "mom", time: "tomorrow 2pm", action: "call" }
+  Sentiment: neutral
+  Confidence: 0.92
+
+REASONING:
+  Goal: Create calendar reminder + store memory
+  Prerequisites: Calendar access ✓, Memory system ✓
+  Multi-step: [create_event, store_memory]
+
+PLANNING:
+  Step 1: calendar_event(title="Call mom", time="tomorrow 2pm")
+  Step 2: store_memory(fact="User wants to call mom regularly")
+
+ACTION EXECUTION:
+  ✓ Calendar event created
+  ✓ Memory stored
+  → PersonI confirms: "I've scheduled a reminder to call 
+     mom tomorrow at 2pm and I'll remember this for future suggestions."
+      </div>
+
+      <div class="info-box">
+        💡 <strong>Always-On Autonomy</strong>: The agentic system runs continuously, monitoring patterns, generating proactive suggestions, and executing scheduled routines even when you're not actively chatting. PersonI are truly autonomous assistants!
+      </div>
+    `;
+  }
+
   private renderPersonI() {
     return html`
       <h3>🤖 PersonI System</h3>
@@ -661,6 +767,367 @@ Actions:
 
       <div class="info-box">
         💡 <strong>PersonI as Automation Assistants</strong>: Routines are stored in RAG memory, so PersonI can recall, modify, disable, or delete them on your request. Simply ask: "Show me all my routines" or "Disable the morning reminder routine."
+      </div>
+    `;
+  }
+
+  private renderCallIntelligence() {
+    return html`
+      <h3>📞🧠 Call Intelligence System</h3>
+      <p>Real-time call transcription, automatic note-taking, action item detection, sentiment analysis, and post-call summarization with email/SMS delivery.</p>
+
+      <div class="diagram">
+        <div class="diagram-title">Call Intelligence Flow</div>
+        <div class="flow-diagram">
+          <div class="flow-box">Call Initiated</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Real-Time Transcription</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">AI Analysis (Topics/Actions/Sentiment)</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Live Note Generation</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Post-Call Summary</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">Email/SMS Delivery</div>
+        </div>
+      </div>
+
+      <h4>Real-Time Capabilities</h4>
+      <ul>
+        <li><strong>Live Transcription</strong>: Speech-to-text during active calls using Whisper or provider STT</li>
+        <li><strong>Speaker Diarization</strong>: Distinguishes between caller and PersonI speech</li>
+        <li><strong>Topic Extraction</strong>: Identifies key discussion points automatically</li>
+        <li><strong>Action Item Detection</strong>: Recognizes commitments and to-dos in real-time</li>
+        <li><strong>Sentiment Analysis</strong>: Tracks emotional tone throughout the conversation</li>
+        <li><strong>Session Persistence</strong>: All call data stored for later review</li>
+      </ul>
+
+      <h4>Post-Call Processing</h4>
+      <p>When a call ends, PersonI automatically:</p>
+      <ol>
+        <li><strong>Generates Summary</strong>: AI-powered call summary with key points</li>
+        <li><strong>Extracts Actions</strong>: Converts action items into tasks with due dates</li>
+        <li><strong>Sentiment Report</strong>: Overall call sentiment and mood tracking</li>
+        <li><strong>Delivery Options</strong>:
+          <ul>
+            <li>Email summary via Gmail (if configured)</li>
+            <li>SMS summary via Twilio (if configured)</li>
+            <li>Store in RAG memory for future reference</li>
+            <li>Add to Notes panel</li>
+          </ul>
+        </li>
+      </ol>
+
+      <h4>How to Use Call Intelligence</h4>
+      <ol>
+        <li>Enable telephony in <strong>Settings → Telephony</strong></li>
+        <li>Configure Gmail and/or Twilio for summary delivery</li>
+        <li>Initiate a call via the Voice Call panel</li>
+        <li>Speak naturally - PersonI transcribes and analyzes in real-time</li>
+        <li>After call ends, choose delivery method for summary</li>
+      </ol>
+
+      <div class="code-block">
+Example Call Summary (sent via email/SMS):
+
+📞 Call Summary - Nov 17, 2025, 2:15 PM
+Duration: 8 minutes 34 seconds
+Sentiment: Positive
+
+Key Topics:
+• Q1 budget planning
+• Marketing campaign timeline
+• Team hiring needs
+
+Action Items:
+✅ Send Q1 budget proposal by Friday
+✅ Schedule follow-up meeting next Tuesday
+✅ Review candidate resumes this week
+
+Transcript highlights saved to Notes.
+      </div>
+
+      <div class="info-box">
+        💡 <strong>Conference Call Support</strong>: Call Intelligence works with multi-party calls! PersonI can transcribe and analyze group conversations, identifying different speakers and tracking multi-threaded discussions.
+      </div>
+    `;
+  }
+
+  private renderContextSuggestions() {
+    return html`
+      <h3>💡 Context Suggestion Engine</h3>
+      <p>Proactive, context-aware suggestions that appear across all interfaces based on patterns, time, activity, and memory.</p>
+
+      <h4>Suggestion Types</h4>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <strong>Pattern-Based</strong>
+          Learn from repeated workflows and suggest automations
+        </div>
+        <div class="feature-card">
+          <strong>Memory-Based</strong>
+          Surface relevant information from RAG memory
+        </div>
+        <div class="feature-card">
+          <strong>Time-Based</strong>
+          Contextual suggestions based on time of day/week
+        </div>
+        <div class="feature-card">
+          <strong>Activity-Based</strong>
+          Suggestions based on current user activity
+        </div>
+      </div>
+
+      <h4>Where Suggestions Appear</h4>
+      <ul>
+        <li><strong>Main Chat Interface</strong>: Suggestions appear as clickable chips above the input</li>
+        <li><strong>Notes Panel</strong>: Relevant notes suggested when creating new ones</li>
+        <li><strong>Tasks Panel</strong>: Related tasks and recommended priorities</li>
+        <li><strong>Calendar View</strong>: Optimal meeting times and event suggestions</li>
+        <li><strong>Routine Builder</strong>: Automation patterns detected from user behavior</li>
+      </ul>
+
+      <h4>Example Suggestions</h4>
+      <div class="code-block">
+Morning (9am):
+💡 "Review your tasks for today"
+💡 "Check calendar for upcoming meetings"
+💡 "Start your daily standup routine"
+
+Detected Pattern:
+💡 "You check email every morning at 10am - 
+   would you like me to create a routine for that?"
+
+Based on Current Activity (editing notes):
+💡 "Related note from last week about this project"
+💡 "Create a task from this note?"
+
+Context-Aware (calendar event in 30 minutes):
+💡 "Your meeting with Sarah starts in 30 minutes"
+💡 "Would you like me to prepare discussion points?"
+      </div>
+
+      <h4>Customization</h4>
+      <p>PersonI learn your preferences over time:</p>
+      <ul>
+        <li><strong>Ignore Suggestions</strong>: Dismissed suggestions won't reappear</li>
+        <li><strong>Accept Suggestions</strong>: Reinforces pattern for future suggestions</li>
+        <li><strong>Modify Suggestions</strong>: PersonI adapt based on your edits</li>
+        <li><strong>Disable Categories</strong>: Turn off specific suggestion types</li>
+      </ul>
+
+      <div class="info-box">
+        💡 <strong>Privacy-Preserving Intelligence</strong>: All suggestion patterns are generated locally using your RAG memory. No external analysis or tracking - just your PersonI understanding your workflow!
+      </div>
+    `;
+  }
+
+  private renderCalendar() {
+    return html`
+      <h3>📅 Calendar System</h3>
+      <p>Visual calendar component with natural language event creation and full Google Calendar integration.</p>
+
+      <h4>Features</h4>
+      <ul>
+        <li><strong>Monthly View</strong>: Clean, visual calendar interface</li>
+        <li><strong>Event Display</strong>: Color-coded events with time indicators</li>
+        <li><strong>Natural Language Creation</strong>: "Schedule lunch with Alex next Tuesday at noon"</li>
+        <li><strong>Google Calendar Sync</strong>: Two-way sync with Google Calendar (OAuth required)</li>
+        <li><strong>Quick Add</strong>: Click any date to create events instantly</li>
+        <li><strong>Event Details</strong>: View full event information on click</li>
+      </ul>
+
+      <h4>Natural Language Examples</h4>
+      <div class="code-block">
+"Schedule a team meeting tomorrow at 2pm"
+→ Creates event: Team Meeting, [Tomorrow] 2:00 PM
+
+"Remind me to call the dentist next Monday"
+→ Creates event: Call dentist, [Next Monday] 9:00 AM
+
+"Set up weekly standup every Monday at 9am"
+→ Creates recurring event: Weekly Standup, Every Monday 9:00 AM
+
+"Block off next Friday afternoon for deep work"
+→ Creates event: Deep Work, [Next Friday] 1:00 PM - 5:00 PM
+      </div>
+
+      <h4>Google Calendar Integration</h4>
+      <ol>
+        <li>Go to <strong>Settings → Connectors → Google OAuth</strong></li>
+        <li>Click "Connect with Google" and authorize calendar access</li>
+        <li>PersonI will now sync events with your Google Calendar</li>
+        <li>Events created in Nirvana appear in Google Calendar (and vice versa)</li>
+      </ol>
+
+      <h4>Calendar Actions via PersonI</h4>
+      <p>Ask your PersonI to manage your calendar:</p>
+      <ul>
+        <li>"What's on my calendar today?"</li>
+        <li>"Cancel my 3pm meeting"</li>
+        <li>"Move tomorrow's standup to 10am"</li>
+        <li>"Find a free slot for a 1-hour meeting this week"</li>
+        <li>"What meetings do I have with Sarah this month?"</li>
+      </ul>
+
+      <div class="info-box">
+        💡 <strong>Agentic Calendar Management</strong>: PersonI can proactively suggest optimal meeting times based on your schedule, create events from email action items, and even reschedule conflicts automatically!
+      </div>
+    `;
+  }
+
+  private renderEnvironmentalAwareness() {
+    return html`
+      <h3>👁️ Environmental Awareness Suite</h3>
+      <p>Real-time camera-based contextual observation, vision-enhanced idle speech, and environmental observer service.</p>
+
+      <h4>Camera-as-3D-Background</h4>
+      <ul>
+        <li><strong>WebGL Integration</strong>: Live camera feed rendered as 3D background texture</li>
+        <li><strong>Performance Optimized</strong>: Efficient frame capture without blocking UI</li>
+        <li><strong>Privacy Controls</strong>: Toggle camera on/off with persistent permissions</li>
+        <li><strong>Visual Feedback</strong>: Camera indicator shows active status</li>
+      </ul>
+
+      <h4>Vision-Enhanced Idle Speech</h4>
+      <p>When PersonI are idle, they can observe their surroundings and make contextual comments:</p>
+      <div class="code-block">
+Examples of Vision-Enhanced Idle Speech:
+
+"I notice you're in your home office - looking productive today!"
+
+"Is that a new plant on your desk? Nice addition to the workspace."
+
+"You seem focused - I'll stay quiet unless you need me."
+
+"Based on what I see, it looks like late afternoon. 
+Time for a break maybe?"
+      </div>
+
+      <h4>Environmental Observer Service</h4>
+      <p>Continuous monitoring and analysis of camera feed:</p>
+      <ul>
+        <li><strong>Object Detection</strong>: TensorFlow.js COCO-SSD model detects 80 object classes</li>
+        <li><strong>Motion Detection</strong>: Tracks movement and user presence</li>
+        <li><strong>Scene Understanding</strong>: Identifies room type, lighting conditions</li>
+        <li><strong>Context Storage</strong>: Observations stored in RAG memory</li>
+      </ul>
+
+      <h4>Object Detection Overlay</h4>
+      <ul>
+        <li><strong>Real-Time Bounding Boxes</strong>: Visual overlays on detected objects</li>
+        <li><strong>Confidence Scores</strong>: Shows AI confidence percentage</li>
+        <li><strong>Class Labels</strong>: Object names displayed on overlay</li>
+        <li><strong>Adjustable Threshold</strong>: Filter detections by confidence level</li>
+      </ul>
+
+      <h4>Multi-Format File Upload with RAG</h4>
+      <p>PersonI can analyze uploaded files and store insights in memory:</p>
+      <ul>
+        <li><strong>Images</strong>: Vision analysis with object detection and scene description</li>
+        <li><strong>PDFs</strong>: Text extraction and semantic understanding</li>
+        <li><strong>Documents</strong>: Content analysis and key point extraction</li>
+        <li><strong>Code Files</strong>: Syntax highlighting and code review</li>
+      </ul>
+
+      <h4>Privacy & Control</h4>
+      <ul>
+        <li><strong>Explicit Permission</strong>: Camera requires user approval</li>
+        <li><strong>Visual Indicators</strong>: Always shows when camera is active</li>
+        <li><strong>On-Device Processing</strong>: Object detection runs locally (TensorFlow.js)</li>
+        <li><strong>Opt-Out</strong>: Disable all vision features in Settings</li>
+      </ul>
+
+      <div class="warning-box">
+        ⚠️ <strong>Privacy Guarantee</strong>: Your camera feed is NEVER uploaded to external servers unless you explicitly request vision analysis (e.g., "What do you see?"). All object detection runs locally in your browser using TensorFlow.js.
+      </div>
+    `;
+  }
+
+  private renderSetup() {
+    return html`
+      <h3>🚀 Setup & Installation</h3>
+      <p>Nirvana is designed to be 100% standalone with NO cloud platform dependencies. Run it locally with full control.</p>
+
+      <h4>Quick Start (Standalone Mode)</h4>
+      <div class="code-block">
+# 1. Copy environment template
+cp .env.example .env
+
+# 2. Add your AI provider API key to .env
+# At minimum: GEMINI_API_KEY or OPENAI_API_KEY
+
+# 3. Start the application
+npm run dev          # Frontend (port 5000)
+node server.js       # Backend (port 3001)
+      </div>
+
+      <h4>Full Stack with Docker Compose</h4>
+      <p>Optional infrastructure for advanced features:</p>
+      <div class="connector-list">
+        <div class="connector-item">🐘 PostgreSQL - Relational database</div>
+        <div class="connector-item">🔍 Milvus - High-performance vector DB</div>
+        <div class="connector-item">📊 Qdrant - Alternative vector DB</div>
+        <div class="connector-item">🌊 Flowise - LLM workflow orchestration</div>
+        <div class="connector-item">🔧 n8n - Workflow automation platform</div>
+        <div class="connector-item">📓 Jupyter - Data science notebooks</div>
+        <div class="connector-item">📄 Apache Tika - Content extraction</div>
+        <div class="connector-item">💾 MinIO + etcd - Object storage</div>
+      </div>
+
+      <div class="code-block">
+# Launch all Docker services
+docker-compose up -d
+
+# Access UIs:
+# Flowise:  http://localhost:3000 (admin/admin)
+# n8n:      http://localhost:5678 (admin/admin)
+# Jupyter:  http://localhost:8888 (token: nirvana)
+# MinIO:    http://localhost:9001 (minioadmin/minioadmin)
+      </div>
+
+      <h4>Environment Configuration</h4>
+      <p>All integrations configured via <code>.env</code> file (see <code>.env.example</code>):</p>
+      <ul>
+        <li><strong>Interactive Setup</strong>: Run <code>./scripts/setup-env.sh</code> for guided configuration</li>
+        <li><strong>Documentation</strong>: See <code>SETUP.md</code> for complete instructions</li>
+        <li><strong>Docker Reference</strong>: See <code>DOCKER_REFERENCE.md</code> for quick commands</li>
+      </ul>
+
+      <h4>Required Environment Variables</h4>
+      <div class="code-block">
+# At least ONE AI provider required
+GEMINI_API_KEY=          # Google Gemini (recommended)
+OPENAI_API_KEY=          # OpenAI GPT models
+
+# OAuth for Gmail/Calendar (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=http://localhost:5000/oauth/callback
+
+# Telephony (optional)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+
+# 20+ additional optional APIs (see .env.example)
+      </div>
+
+      <h4>Data Persistence</h4>
+      <p>All data stored in <code>./data/</code> subdirectories:</p>
+      <ul>
+        <li><strong>Backup</strong>: Simply copy <code>./data/</code> directory</li>
+        <li><strong>Portable</strong>: Move to any machine - no cloud dependencies</li>
+        <li><strong>Version Control</strong>: Use git for code, backup <code>./data/</code> separately</li>
+      </ul>
+
+      <div class="info-box">
+        💡 <strong>Zero Lock-In</strong>: Nirvana works on any machine (Linux, macOS, Windows). No Replit account required. No cloud subscriptions. You own your data and infrastructure completely.
+      </div>
+
+      <div class="warning-box">
+        ⚠️ <strong>Security Best Practice</strong>: NEVER commit <code>.env</code> to version control. Use <code>.env.example</code> as a template and fill in your actual credentials locally.
       </div>
     `;
   }
@@ -1009,6 +1476,9 @@ Examples:
           <div class="nav-item ${this.activeSection === 'personi' ? 'active' : ''}" @click=${() => this.handleSectionClick('personi')}>
             🤖 PersonI System
           </div>
+          <div class="nav-item ${this.activeSection === 'agentic' ? 'active' : ''}" @click=${() => this.handleSectionClick('agentic')}>
+            🧠⚡ Agentic Intelligence
+          </div>
           <div class="nav-item ${this.activeSection === 'connectors' ? 'active' : ''}" @click=${() => this.handleSectionClick('connectors')}>
             🔌 Connectors (32)
           </div>
@@ -1017,6 +1487,18 @@ Examples:
           </div>
           <div class="nav-item ${this.activeSection === 'routines' ? 'active' : ''}" @click=${() => this.handleSectionClick('routines')}>
             ⚡ Routines
+          </div>
+          <div class="nav-item ${this.activeSection === 'call-intelligence' ? 'active' : ''}" @click=${() => this.handleSectionClick('call-intelligence')}>
+            📞🧠 Call Intelligence
+          </div>
+          <div class="nav-item ${this.activeSection === 'context-suggestions' ? 'active' : ''}" @click=${() => this.handleSectionClick('context-suggestions')}>
+            💡 Context Suggestions
+          </div>
+          <div class="nav-item ${this.activeSection === 'calendar' ? 'active' : ''}" @click=${() => this.handleSectionClick('calendar')}>
+            📅 Calendar
+          </div>
+          <div class="nav-item ${this.activeSection === 'environmental-awareness' ? 'active' : ''}" @click=${() => this.handleSectionClick('environmental-awareness')}>
+            👁️ Environmental Awareness
           </div>
           <div class="nav-item ${this.activeSection === 'plugins' ? 'active' : ''}" @click=${() => this.handleSectionClick('plugins')}>
             🧩 Plugins
@@ -1033,19 +1515,28 @@ Examples:
           <div class="nav-item ${this.activeSection === 'settings' ? 'active' : ''}" @click=${() => this.handleSectionClick('settings')}>
             ⚙️ Settings
           </div>
+          <div class="nav-item ${this.activeSection === 'setup' ? 'active' : ''}" @click=${() => this.handleSectionClick('setup')}>
+            🚀 Setup & Installation
+          </div>
         </div>
 
         <div class="content">
           ${this.activeSection === 'overview' ? this.renderOverview() : ''}
           ${this.activeSection === 'personi' ? this.renderPersonI() : ''}
+          ${this.activeSection === 'agentic' ? this.renderAgentic() : ''}
           ${this.activeSection === 'connectors' ? this.renderConnectors() : ''}
           ${this.activeSection === 'memory' ? this.renderMemory() : ''}
           ${this.activeSection === 'routines' ? this.renderRoutines() : ''}
+          ${this.activeSection === 'call-intelligence' ? this.renderCallIntelligence() : ''}
+          ${this.activeSection === 'context-suggestions' ? this.renderContextSuggestions() : ''}
+          ${this.activeSection === 'calendar' ? this.renderCalendar() : ''}
+          ${this.activeSection === 'environmental-awareness' ? this.renderEnvironmentalAwareness() : ''}
           ${this.activeSection === 'plugins' ? this.renderPlugins() : ''}
           ${this.activeSection === 'telephony' ? this.renderTelephony() : ''}
           ${this.activeSection === 'voice-commands' ? this.renderVoiceCommands() : ''}
           ${this.activeSection === 'privacy' ? this.renderPrivacy() : ''}
           ${this.activeSection === 'settings' ? this.renderSettings() : ''}
+          ${this.activeSection === 'setup' ? this.renderSetup() : ''}
         </div>
       </div>
 
