@@ -95,6 +95,7 @@ export class VisualizerShell extends LitElement {
   @query('visualizer-3d') private visualizer3d!: any;
   @query('settings-fab') private settingsFab!: any;
   @query('camera-manager') private cameraManager!: any;
+  @query('object-detection-overlay') private objectDetectionOverlay!: any;
   
   private outputAnalyser: Analyser | null = null;
   private inputAnalyser: Analyser | null = null;
@@ -254,9 +255,83 @@ export class VisualizerShell extends LitElement {
     console.log('[VisualizerShell] RAG toggled:', this.ragEnabled ? 'ENABLED' : 'DISABLED');
   };
 
-  private handleToggleObjectDetection = () => {
+  private handleToggleObjectDetection = async () => {
     this.objectDetectionEnabled = !this.objectDetectionEnabled;
+    console.log('[ObjectDetection] Toggled:', this.objectDetectionEnabled ? 'ENABLED' : 'DISABLED');
+    
+    if (this.objectDetectionEnabled) {
+      await this.startObjectDetection();
+    } else {
+      this.stopObjectDetection();
+    }
   };
+
+  private async startObjectDetection() {
+    if (!this.cameraManager?.videoElement) {
+      console.warn('[ObjectDetection] No video element available');
+      return;
+    }
+
+    try {
+      const { objectRecognitionService } = await import('../../services/object-recognition');
+      await objectRecognitionService.initialize();
+      
+      objectRecognitionService.startContinuousDetection(
+        this.cameraManager.videoElement,
+        async (result) => {
+          if (this.objectDetectionOverlay) {
+            const videoEl = this.cameraManager.videoElement;
+            this.objectDetectionOverlay.videoWidth = videoEl.videoWidth;
+            this.objectDetectionOverlay.videoHeight = videoEl.videoHeight;
+            this.objectDetectionOverlay.updateDetections(result);
+          }
+          
+          if (this.ragEnabled && this.ragInitialized && result.objects.length > 0) {
+            const objectsList = result.objects
+              .map(obj => `${obj.class} (${Math.round(obj.score * 100)}%)`)
+              .join(', ');
+            
+            try {
+              const activePersoni = appStateService.getActivePersoni();
+              if (activePersoni) {
+                await ragMemoryManager.addMemory(
+                  `Detected objects in camera view: ${objectsList}`,
+                  activePersoni.name,
+                  'camera_observation',
+                  activePersoni.name,
+                  3,
+                  { 
+                    detectionTimestamp: result.timestamp,
+                    fps: result.fps,
+                    objectCount: result.objects.length
+                  }
+                );
+              }
+            } catch (error) {
+              console.error('[ObjectDetection] Failed to store detection in RAG:', error);
+            }
+          }
+        },
+        500
+      );
+      
+      console.log('[ObjectDetection] Started continuous detection');
+    } catch (error) {
+      console.error('[ObjectDetection] Failed to start:', error);
+      this.objectDetectionEnabled = false;
+    }
+  }
+
+  private async stopObjectDetection() {
+    const { objectRecognitionService } = await import('../../services/object-recognition');
+    objectRecognitionService.stopContinuousDetection();
+    
+    if (this.objectDetectionOverlay) {
+      this.objectDetectionOverlay.clearDetections();
+    }
+    
+    console.log('[ObjectDetection] Stopped continuous detection');
+  }
 
   async connectedCallback(): Promise<void> {
     super.connectedCallback();

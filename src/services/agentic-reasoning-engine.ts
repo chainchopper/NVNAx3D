@@ -330,11 +330,41 @@ class AgenticReasoningEngine {
           if (!action.parameters.query) {
             return { success: false, error: 'Missing search query' };
           }
-          return { 
-            success: true, 
-            data: { status: 'queued', query: action.parameters.query },
-            metadata: { query: action.parameters.query }
-          };
+          try {
+            const { getBackendUrl } = await import('../config/backend-url');
+            const response = await fetch(getBackendUrl('/api/web-search'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                query: action.parameters.query,
+                limit: action.parameters.limit || 5,
+                engine: action.parameters.engine || 'duckduckgo'
+              })
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+              return {
+                success: false,
+                error: data.error || 'Web search failed'
+              };
+            }
+            
+            return {
+              success: true,
+              data: data.data,
+              metadata: { 
+                query: action.parameters.query,
+                resultCount: data.data.results?.length || 0
+              }
+            };
+          } catch (error) {
+            return {
+              success: false,
+              error: `Web search failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+          }
         
         case 'routine_create':
           if (!action.parameters.name || !action.parameters.trigger || !action.parameters.actions) {
