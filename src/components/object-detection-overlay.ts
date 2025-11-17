@@ -100,7 +100,7 @@ export class ObjectDetectionOverlay extends LitElement {
 
     .toggle-button {
       position: absolute;
-      bottom: 270px;
+      bottom: 330px;
       right: 20px;
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(10px);

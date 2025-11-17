@@ -68,3 +68,62 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Twilio API**: SMS and voice calls.
 - **Gmail API**: Email search and sending.
 - **Google Calendar API**: Calendar integration.
+## Recent Changes (November 17, 2025)
+
+### Voice Command System Implemented ✅
+1. **CommandRouter Service** (`src/services/command-router.ts`)
+   - 13 app control functions exposed via LLM function calling manifest
+   - Functions: toggle_camera, toggle_camera_preview, toggle_object_detection, switch_personi, enable_dual_mode, open_panel, close_panel, toggle_rag, create_note, create_task, toggle_settings_menu, mute_microphone
+   - Event-driven architecture using CustomEvents for decoupled execution
+   - Full error handling with CommandResult interface
+
+2. **Agentic Integration**
+   - Added 'app_control' action type to AgenticReasoningEngine
+   - Commands routed through agentic pipeline: Perception → Reasoning → Planning → Action
+   - Voice/text commands now trigger app control actions automatically
+
+3. **Event-Driven Execution**
+   - VisualizerShell registers command event handlers in registerCommandHandlers()
+   - Listens for 7 command types: camera controls, PersonI switching, dual mode, RAG toggle
+   - State updates flow through CustomEvents maintaining clean separation of concerns
+
+### Help Panel Enhanced with Visual Analytics ✅
+1. **Mermaid.js Integration**
+   - Service architecture diagrams showing full agentic pipeline
+   - Interactive flowcharts with dark theme customization
+   - Auto-rendering on section change with proper cleanup
+
+2. **Chart.js Integration**
+   - Action Types Distribution (doughnut chart) - 7 action types visualization
+   - Pipeline Performance Metrics (line chart) - timing breakdown
+   - Responsive charts with proper memory management and cleanup
+
+3. **New Architecture Section**
+   - Comprehensive technical overview with 2 Mermaid diagrams + 2 Chart.js charts
+   - Documents all key services and their relationships
+   - Navigation item added: 🏗️ Architecture
+
+### Critical UI/UX Fixes ✅
+1. **Camera Controls & Object Detection Buttons Now Clickable**
+   - Fixed pointer-events blocking issue in object-detection-overlay component
+   - Removed pointer-events: none from :host to allow hit testing into shadow DOM
+   - Set pointer-events: none on .overlay-container to allow clicks through empty space
+   - Interactive elements (toggle button, stats panel) have pointer-events: auto
+
+2. **Camera Background Full-Screen Display Fixed**
+   - Changed camera-manager :host from position: relative to position: fixed
+   - Camera now displays as full viewport background (100vw × 100vh) when enabled
+   - Set z-index: 1 on camera background (below all other UI elements)
+   - Added pointer-events: none to camera elements to allow clicks through to controls
+
+3. **Z-Index Unified for All Interactive HUD Elements**
+   - Raised all clickable icons/menus to z-index: 150 to prevent obstruction
+   - Updated: camera-controls, object-detection-overlay, rag-toggle, ui-controls, persona-carousel-hud, music-detection-hud, dual-mode-controls-hud
+   - All interactive elements guaranteed above 3D canvas (z:10) and below panels (z:200+)
+
+4. **Icon Spacing Increased to 30px Minimum**
+   - Camera controls: increased gap from 10px to 30px between buttons
+   - Object detection toggle: moved from bottom 270px → 330px (38px clearance above camera controls)
+   - Music detection HUD: moved from top 20px → 80px (60px clearance from top edge)
+   - Dual mode controls: moved from top 90px → 110px (increased spacing below persona carousel)
+   - All icons now have minimum 30px spacing preventing overlap and ensuring clickability
