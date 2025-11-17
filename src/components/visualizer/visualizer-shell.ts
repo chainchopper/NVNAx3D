@@ -333,6 +333,86 @@ export class VisualizerShell extends LitElement {
     console.log('[ObjectDetection] Stopped continuous detection');
   }
 
+  /**
+   * Register command event handlers for voice/text commands
+   */
+  private registerCommandHandlers(): void {
+    // Camera control commands
+    window.addEventListener('command-toggle-camera', ((event: CustomEvent) => {
+      const { enabled } = event.detail;
+      if (enabled !== undefined) {
+        this.cameraEnabled = enabled;
+      } else {
+        this.cameraEnabled = !this.cameraEnabled;
+      }
+      console.log('[Command] Camera toggled:', this.cameraEnabled);
+    }) as EventListener);
+
+    window.addEventListener('command-toggle-camera-preview', ((event: CustomEvent) => {
+      const { visible } = event.detail;
+      if (visible !== undefined) {
+        this.cameraShowPreview = visible;
+      } else {
+        this.cameraShowPreview = !this.cameraShowPreview;
+      }
+      console.log('[Command] Camera preview toggled:', this.cameraShowPreview);
+    }) as EventListener);
+
+    window.addEventListener('command-toggle-object-detection', ((event: CustomEvent) => {
+      const { enabled } = event.detail;
+      if (enabled !== undefined) {
+        if (enabled && !this.objectDetectionEnabled) {
+          this.handleToggleObjectDetection();
+        } else if (!enabled && this.objectDetectionEnabled) {
+          this.handleToggleObjectDetection();
+        }
+      } else {
+        this.handleToggleObjectDetection();
+      }
+      console.log('[Command] Object detection toggled:', enabled);
+    }) as EventListener);
+
+    // PersonI management commands
+    window.addEventListener('command-switch-personi', ((event: CustomEvent) => {
+      const { personaName } = event.detail;
+      const personi = this.personis.find(p => p.name.toUpperCase() === personaName.toUpperCase());
+      if (personi) {
+        appStateService.setActivePersoni(personi);
+        console.log('[Command] Switched to persona:', personaName);
+      } else {
+        console.warn('[Command] Persona not found:', personaName);
+      }
+    }) as EventListener);
+
+    window.addEventListener('command-enable-dual-mode', ((event: CustomEvent) => {
+      const { primary, secondary, mode } = event.detail;
+      const primaryPersona = this.personis.find(p => p.name.toUpperCase() === primary);
+      const secondaryPersona = this.personis.find(p => p.name.toUpperCase() === secondary);
+      
+      if (primaryPersona && secondaryPersona) {
+        appStateService.setActivePersoni(primaryPersona);
+        appStateService.setSecondaryPersoni(secondaryPersona);
+        appStateService.setDualModeEnabled(true);
+        console.log('[Command] Dual mode enabled:', primary, '+', secondary, mode);
+      } else {
+        console.warn('[Command] Personas not found for dual mode:', primary, secondary);
+      }
+    }) as EventListener);
+
+    // RAG toggle command
+    window.addEventListener('command-toggle-rag', ((event: CustomEvent) => {
+      const { enabled } = event.detail;
+      if (enabled !== undefined) {
+        this.ragEnabled = enabled;
+      } else {
+        this.ragEnabled = !this.ragEnabled;
+      }
+      console.log('[Command] RAG toggled:', this.ragEnabled);
+    }) as EventListener);
+
+    console.log('[VisualizerShell] Command handlers registered');
+  }
+
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
     await this.initializeAudioContext();
@@ -340,6 +420,7 @@ export class VisualizerShell extends LitElement {
     this.loadPersonIs();
     this.playIntroAnimation();
     this.subscribeToAppState();
+    this.registerCommandHandlers();
     
     console.log('[VisualizerShell] Initialized');
   }

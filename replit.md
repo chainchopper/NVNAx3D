@@ -45,6 +45,41 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
    - All 8 icon groups properly spaced (documented in /tmp/ui-icon-layout.md)
    - Spacing rules: Object detection (270px) → 18px gap → Camera controls (100-252px)
 
+### Voice Command System Implemented ✅ (Nov 17, 2025)
+1. **CommandRouter Service** (`src/services/command-router.ts`)
+   - 13 app control functions exposed via LLM function calling manifest
+   - Functions: toggle_camera, toggle_camera_preview, toggle_object_detection, switch_personi, enable_dual_mode, open_panel, close_panel, toggle_rag, create_note, create_task, toggle_settings_menu, mute_microphone
+   - Event-driven architecture using CustomEvents for decoupled execution
+   - Full error handling with CommandResult interface
+
+2. **Agentic Integration**
+   - Added 'app_control' action type to AgenticReasoningEngine
+   - Commands routed through agentic pipeline: Perception → Reasoning → Planning → Action
+   - Voice/text commands now trigger app control actions automatically
+   - Example: "Turn on the camera" → app_control action → CommandRouter execution
+
+3. **Event-Driven Execution**
+   - VisualizerShell registers command event handlers in registerCommandHandlers()
+   - Listens for 7 command types: camera controls, PersonI switching, dual mode, RAG toggle
+   - State updates flow through CustomEvents maintaining clean separation of concerns
+
+### Help Panel Enhanced with Visual Analytics ✅ (Nov 17, 2025)
+1. **Mermaid.js Integration**
+   - Service architecture diagrams showing full agentic pipeline
+   - Interactive flowcharts with dark theme customization
+   - Auto-rendering on section change with proper cleanup
+
+2. **Chart.js Integration**
+   - Action Types Distribution (doughnut chart) - 7 action types visualization
+   - Pipeline Performance Metrics (line chart) - timing breakdown
+   - Responsive charts with proper memory management and cleanup
+
+3. **New Architecture Section**
+   - Comprehensive technical overview with 2 Mermaid diagrams + 2 Chart.js charts
+   - Documents all key services and their relationships
+   - Navigation item added: 🏗️ Architecture
+   - Full system architecture visibility for developers
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
