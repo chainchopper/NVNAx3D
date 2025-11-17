@@ -80,6 +80,21 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
    - Navigation item added: 🏗️ Architecture
    - Full system architecture visibility for developers
 
+### Critical UI/UX Fixes ✅ (Nov 17, 2025)
+1. **Camera Controls & Object Detection Buttons Now Clickable**
+   - Fixed pointer-events blocking issue in object-detection-overlay component
+   - Removed pointer-events: none from :host to allow hit testing into shadow DOM
+   - Set pointer-events: none on .overlay-container to allow clicks through empty space
+   - Interactive elements (toggle button, stats panel) have pointer-events: auto
+   - All 4 right-side buttons now fully functional
+
+2. **Camera Background Full-Screen Display Fixed**
+   - Changed camera-manager :host from position: relative to position: fixed
+   - Camera now displays as full viewport background (100vw × 100vh) when enabled
+   - Set z-index: 1 on camera background (below all other UI elements)
+   - Added pointer-events: none to camera elements to allow clicks through to controls
+   - Camera feed visible across ENTIRE application as intended
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
