@@ -33,7 +33,7 @@ export class DualModeControlsHUD extends LitElement {
       top: 90px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 49;
+      z-index: 150;
       pointer-events: none;
       transition: opacity 0.5s ease-out;
     }

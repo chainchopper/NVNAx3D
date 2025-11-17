@@ -28,7 +28,7 @@ export class ObjectDetectionOverlay extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 46;
+      z-index: 150;
       transition: opacity 0.5s ease-out;
     }
 
