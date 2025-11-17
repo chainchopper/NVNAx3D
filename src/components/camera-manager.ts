@@ -34,13 +34,20 @@ export class CameraManager extends LitElement {
   static styles = css`
     :host {
       display: block;
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
     }
 
     .camera-container {
       position: relative;
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
 
     video {
@@ -51,8 +58,9 @@ export class CameraManager extends LitElement {
       position: fixed;
       top: 0;
       left: 0;
-      z-index: 1; /* Above body background, below 3D canvas */
+      z-index: 1;
       transform: scaleX(-1); /* Mirror for front-facing camera */
+      pointer-events: none;
     }
 
     video.preview,
