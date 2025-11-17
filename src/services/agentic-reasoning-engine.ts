@@ -179,6 +179,30 @@ class AgenticReasoningEngine {
   private async executeAction(action: Action, personi: PersoniConfig): Promise<ActionExecutionResult> {
     try {
       switch (action.type) {
+        case 'app_control':
+          // App control commands (camera, UI, settings, etc.)
+          if (!action.parameters.command) {
+            return { success: false, error: 'No command specified' };
+          }
+          try {
+            const { commandRouter } = await import('./command-router');
+            const result = await commandRouter.executeCommand(
+              action.parameters.command,
+              action.parameters.params || {}
+            );
+            return {
+              success: result.success,
+              data: result.data,
+              error: result.message && !result.success ? result.message : undefined,
+              metadata: { command: action.parameters.command }
+            };
+          } catch (error) {
+            return {
+              success: false,
+              error: `App control failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            };
+          }
+        
         case 'telephony_call':
           if (!action.parameters.phoneNumber) {
             return { success: false, error: 'No phone number provided' };
