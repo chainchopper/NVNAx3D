@@ -30,7 +30,7 @@ export class DualModeControlsHUD extends LitElement {
     :host {
       display: block;
       position: fixed;
-      top: 90px;
+      top: 110px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 150;

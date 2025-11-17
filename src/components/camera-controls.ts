@@ -34,7 +34,7 @@ export class CameraControls extends LitElement {
       z-index: 150;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 30px;
     }
 
     .icon-button {
