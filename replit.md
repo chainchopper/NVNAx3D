@@ -26,6 +26,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Not locked into Google's ecosystem**: Multi-provider support essential
 - **CRITICAL: No Replit Dependency**: ALL integrations/connectors (Twilio, Gmail, etc.) MUST be configured via app Settings UI or .env files - NOT Replit's integration system. System must be fully portable and independent.
 - **Agentic Intelligence**: PersonI should be always-aware, autonomous agents that reason, plan, learn, and suggest - not passive responders. Continuous data gathering, pattern recognition, and proactive assistance.
+- **UI/UX Clarity**: Larger, more visible icons and controls; centered, draggable FAB button; clear visual hierarchy.
 
 ## System Architecture
 
@@ -42,6 +43,7 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays. The camera feed can be displayed as a 3D WebGL background.
 - **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
 - **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, and distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
+- **Settings UI (Nov 2024)**: Centered 80px draggable FAB button (gear icon) opens radial menu with 60px icon buttons (32px SVG icons). All 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help) managed via settings-dock with multi-layer navigation. Help documentation fully accessible via dedicated menu icon.
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system. Supports a financial advisor PersonI, BILLY. PersonI configurations support both legacy string model IDs and new `{ providerId, modelId }` format.
