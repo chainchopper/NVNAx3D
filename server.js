@@ -1025,6 +1025,102 @@ app.post('/api/connectors/github/repo', async (req, res) => {
   }
 });
 
+// Web Search API - supports multiple search engines
+app.post('/api/web-search', async (req, res) => {
+  try {
+    const { query, limit = 5, engine = 'duckduckgo' } = req.body;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    let results = [];
+
+    // Option 1: Brave Search API (if API key configured)
+    if (engine === 'brave' && process.env.BRAVE_SEARCH_API_KEY) {
+      const response = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${limit}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'X-Subscription-Token': process.env.BRAVE_SEARCH_API_KEY
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        results = data.web?.results?.slice(0, limit).map(r => ({
+          title: r.title,
+          url: r.url,
+          description: r.description,
+          engine: 'brave'
+        })) || [];
+      }
+    }
+    // Option 2: DuckDuckGo Instant Answer API (free, no key)
+    else if (engine === 'duckduckgo') {
+      const response = await fetch(
+        `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Extract results from DuckDuckGo response
+        const abstractResult = data.Abstract ? [{
+          title: data.Heading || query,
+          url: data.AbstractURL,
+          description: data.Abstract,
+          engine: 'duckduckgo'
+        }] : [];
+        
+        const relatedTopics = (data.RelatedTopics || [])
+          .filter(t => t.FirstURL && t.Text)
+          .slice(0, limit - abstractResult.length)
+          .map(t => ({
+            title: t.Text.split(' - ')[0] || t.Text.substring(0, 60),
+            url: t.FirstURL,
+            description: t.Text,
+            engine: 'duckduckgo'
+          }));
+        
+        results = [...abstractResult, ...relatedTopics].slice(0, limit);
+      }
+    }
+
+    // If no results, provide fallback
+    if (results.length === 0) {
+      results = [{
+        title: `Search results for: ${query}`,
+        url: `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
+        description: `No structured results available. Try searching manually at DuckDuckGo.`,
+        engine: 'fallback'
+      }];
+    }
+
+    res.json({
+      success: true,
+      data: {
+        query,
+        results,
+        engine,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('[Web Search Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Web search failed',
+      setupInstructions: 'Web search uses DuckDuckGo by default. For better results, add BRAVE_SEARCH_API_KEY to your environment.'
+    });
+  }
+});
+
 app.post('/api/connectors/googledocs/read', async (req, res) => {
   try {
     const { documentId } = req.body;
