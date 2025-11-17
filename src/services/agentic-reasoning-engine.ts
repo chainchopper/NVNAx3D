@@ -331,7 +331,7 @@ class AgenticReasoningEngine {
             return { success: false, error: 'Missing search query' };
           }
           try {
-            const { getBackendUrl } = await import('../config/backend-url');
+            const { getBackendUrl } = await import('../config/backend-url.js');
             const response = await fetch(getBackendUrl('/api/web-search'), {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },

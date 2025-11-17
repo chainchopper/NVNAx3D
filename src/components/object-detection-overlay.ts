@@ -99,7 +99,7 @@ export class ObjectDetectionOverlay extends LitElement {
 
     .toggle-button {
       position: absolute;
-      bottom: 160px;
+      bottom: 270px;
       right: 20px;
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(10px);
@@ -116,7 +116,7 @@ export class ObjectDetectionOverlay extends LitElement {
       font-size: 18px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
       pointer-events: all;
-      z-index: 46; /* HUD tier */
+      z-index: 46; /* HUD tier - positioned above camera controls for clear spacing */
     }
 
     .toggle-button:hover {
