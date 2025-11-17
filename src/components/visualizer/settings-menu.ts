@@ -47,8 +47,8 @@ export class SettingsMenu extends LitElement {
       position: absolute;
       bottom: 0;
       right: 0;
-      width: 48px;
-      height: 48px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: rgba(25, 22, 30, 0.85);
       backdrop-filter: blur(10px);
@@ -152,8 +152,8 @@ export class SettingsMenu extends LitElement {
     }
 
     svg {
-      width: 24px;
-      height: 24px;
+      width: 32px;
+      height: 32px;
     }
   `;
 

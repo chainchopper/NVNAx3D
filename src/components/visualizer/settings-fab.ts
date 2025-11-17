@@ -26,7 +26,8 @@ export class SettingsFab extends LitElement {
       display: block;
       position: fixed;
       bottom: 20px;
-      right: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 100;
       transition: opacity 0.5s ease-out;
     }
@@ -37,8 +38,8 @@ export class SettingsFab extends LitElement {
     }
 
     .fab-button {
-      width: 64px;
-      height: 64px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
       background: rgba(25, 22, 30, 0.85);
       backdrop-filter: blur(10px);
@@ -72,8 +73,8 @@ export class SettingsFab extends LitElement {
     }
 
     svg {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       transition: transform 0.3s ease;
     }
 
