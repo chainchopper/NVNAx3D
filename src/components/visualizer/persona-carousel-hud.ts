@@ -25,7 +25,7 @@ export class PersonaCarouselHUD extends LitElement {
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 50;
+      z-index: 150;
       pointer-events: none;
     }
 

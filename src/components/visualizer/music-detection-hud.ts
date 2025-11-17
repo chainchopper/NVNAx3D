@@ -26,7 +26,7 @@ export class MusicDetectionHUD extends LitElement {
       position: fixed;
       top: 20px;
       right: 20px;
-      z-index: 48;
+      z-index: 150;
       pointer-events: none;
     }
 

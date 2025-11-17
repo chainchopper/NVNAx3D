@@ -31,7 +31,7 @@ export class CameraControls extends LitElement {
       position: fixed;
       bottom: 100px;
       right: 20px;
-      z-index: 45; /* HUD tier - above 3D canvas (10), below panels (100) */
+      z-index: 150;
       display: flex;
       flex-direction: column;
       gap: 10px;

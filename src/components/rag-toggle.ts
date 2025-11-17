@@ -21,7 +21,7 @@ export class RAGToggle extends LitElement {
       position: fixed;
       top: 20px;
       left: 20px;
-      z-index: 45; /* HUD tier - above 3D canvas (10), below UI controls (60) */
+      z-index: 150;
       transition: opacity 0.5s ease-out;
     }
 
