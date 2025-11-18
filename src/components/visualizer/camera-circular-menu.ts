@@ -86,7 +86,7 @@ export class CameraCircularMenu extends LitElement {
       position: fixed;
       bottom: 100px;
       right: 20px;
-      z-index: 150;
+      z-index: 250;
       user-select: none;
     }
 
