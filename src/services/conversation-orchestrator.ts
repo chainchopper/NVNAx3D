@@ -17,6 +17,7 @@ import { toolOrchestrator } from './tool-orchestrator';
 import { userProfileManager } from './user-profile-manager';
 import { cameraVisionService } from './camera-vision-service';
 import { agenticReasoningEngine } from './agentic-reasoning-engine';
+import { systemContextService } from './system-context-service';
 import type { PersoniConfig } from '../personas';
 import { getPersoniModel } from '../personas';
 import type { BaseProvider } from '../providers/base-provider';
@@ -156,7 +157,14 @@ export class ConversationOrchestrator {
       }
       
       this.updateStatus('Thinking...');
-      // 1. Retrieve RAG memories if enabled
+      
+      // 1. Get complete system context for AI awareness
+      console.log('[ConversationOrchestrator] 📊 Building complete system context...');
+      const systemContext = await systemContextService.getSystemContext(activePersoni);
+      const systemContextText = systemContextService.formatContextForPrompt(systemContext);
+      console.log('[ConversationOrchestrator] ✅ System context ready');
+      
+      // 2. Retrieve RAG memories if enabled
       let memoryContext = '';
       if (ragEnabled) {
         try {
@@ -180,11 +188,11 @@ export class ConversationOrchestrator {
         }
       }
 
-      // 2. Build system instruction with user profile and memory context
-      const userContext = userProfileManager.getSystemPromptContext();
-      let systemInstruction = userContext
-        ? `${activePersoni.systemInstruction}\n\n${userContext}`
-        : activePersoni.systemInstruction;
+      // 3. Build system instruction with full context
+      let systemInstruction = activePersoni.systemInstruction;
+      
+      // Add system context (user profile, data snapshots, connector status, etc.)
+      systemInstruction = `${systemInstruction}\n\n${systemContextText}`;
 
       if (memoryContext) {
         systemInstruction = `${systemInstruction}\n\n## Relevant Past Context:\n${memoryContext}\n\nUse this context to provide more personalized and contextually aware responses.`;
@@ -194,13 +202,13 @@ export class ConversationOrchestrator {
         systemInstruction = `${systemInstruction}\n\n${visionContext}`;
       }
 
-      // 3. Prepare messages
+      // 4. Prepare messages
       const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: transcript },
       ];
 
-      // 4. Send message to provider with streaming
+      // 5. Send message to provider with streaming
       let fullResponse = '';
       let responseComplete = false;
       this.updateStatus('Receiving response...');
@@ -233,7 +241,7 @@ export class ConversationOrchestrator {
         });
       }
 
-      // 5. Store conversation in RAG memory
+      // 6. Store conversation in RAG memory
       if (ragEnabled) {
         try {
           // Store user message
@@ -260,7 +268,7 @@ export class ConversationOrchestrator {
         }
       }
 
-      // 6. Update context history in active personas manager
+      // 7. Update context history in active personas manager
       activePersonasManager.addToContext('primary', 'user', transcript);
       activePersonasManager.addToContext('primary', 'assistant', fullResponse);
 
