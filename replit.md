@@ -1,7 +1,7 @@
 # Nirvana - PersonI AI System
 
 ## Overview
-Nirvana is an advanced AI companion system designed to provide highly customizable and engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, positioning itself as a versatile personal AI ecosystem with significant market potential. It focuses on offering a rich, interactive, and personalized AI experience, with autonomous, always-aware PersonI agents that reason, plan, learn, and suggest.
+Nirvana is an advanced AI companion system providing customizable, engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, offering a rich, interactive, and personalized AI experience with autonomous, always-aware PersonI agents that reason, plan, learn, and suggest.
 
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
@@ -24,29 +24,31 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 
 ### UI/UX Decisions
 - **Design Philosophy**: Minimalist, glass-morphism, clean, and uncluttered interfaces.
-- **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays. The camera feed can be displayed as a 3D WebGL background.
+- **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays. Camera feeds are displayed as native video elements via a Background Manager.
 - **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
-- **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, and distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
-- **Settings UI**: Centered draggable FAB button opens radial menu with various icon buttons. All 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help) managed via settings-dock with multi-layer navigation.
+- **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
+- **Settings UI**: Centered draggable FAB button opens a radial menu. An always-visible circular menu wheel provides direct access to 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help).
 
 ### System Design Choices
-- **PersonI System**: Manages AI personas with unique attributes and capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
-- **Agentic Intelligence Architecture**: PersonI use a Perception → Reasoning → Planning → Action pipeline for autonomous decision-making. Core services include PerceptionOrchestrator, PlannerService, and AgenticReasoningEngine. Includes 8 action types: telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create.
-- **Connector Backend Proxy**: Secure Express.js server for external service integrations with OAuth token handling and robust SSRF protection.
+- **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
+- **Agentic Intelligence Architecture**: PersonI utilize a Perception → Reasoning → Planning → Action pipeline. Core services include PerceptionOrchestrator, PlannerService, and AgenticReasoningEngine, supporting 8 action types (telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create) and an 'app_control' action for voice commands.
+- **Connector Backend Proxy**: Secure Express.js server for external service integrations with OAuth token handling.
 - **Model Provider System**: Configures and integrates multiple AI providers with flexible model selection.
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
-- **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and full OpenAI TTS integration.
+- **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and OpenAI TTS integration.
 - **Environmental Awareness Suite**: Real-time camera-based contextual observation, Vision-Enhanced Idle Speech, Environmental Observer Service, and multi-format file upload with RAG.
 - **Object Recognition System**: Real-time object detection using TensorFlow.js and COCO-SSD model.
-- **Voice Command System**: Hands-free control with natural language commands, routed through the agentic pipeline via an 'app_control' action type.
+- **Voice Command System**: Hands-free control with natural language commands routed through the agentic pipeline.
 - **Routine Automation System**: IF-THEN-THAT automation supporting various triggers.
 - **Dual PersonI Manager**: Multi-AI collaboration system with four modes: collaborative, debate, teaching, and single.
-- **Call Intelligence System**: Real-time call transcription, automatic note-taking, action item detection, sentiment analysis, and post-call summarization with email/SMS delivery.
-- **Context Suggestion Engine**: Pattern-based, memory-based, time-based, and activity-based suggestions for proactive assistance.
+- **Call Intelligence System**: Real-time call transcription, automatic note-taking, action item detection, sentiment analysis, and post-call summarization.
+- **Context Suggestion Engine**: Pattern-based, memory-based, time-based, and activity-based suggestions.
 - **Calendar System**: Visual component with natural language event creation and Google Calendar integration.
 - **Security**: CSP hardening, OAuth Vault V2 Backend with PKCE + CSRF protection.
 - **Plugin System**: Dynamic UI plugin architecture with registry, sandbox, and persistence.
+- **CommandRouter Service**: Handles 13 app control functions exposed via LLM function calling.
+- **Background Manager**: Centralized full-viewport background content management for device camera feeds and external video sources.
 
 ## External Dependencies
 - **Google Gemini API**: Conversational AI and embeddings.
@@ -68,102 +70,3 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
 - **Twilio API**: SMS and voice calls.
 - **Gmail API**: Email search and sending.
 - **Google Calendar API**: Calendar integration.
-## Recent Changes (November 17, 2025)
-
-### Voice Command System Implemented ✅
-1. **CommandRouter Service** (`src/services/command-router.ts`)
-   - 13 app control functions exposed via LLM function calling manifest
-   - Functions: toggle_camera, toggle_camera_preview, toggle_object_detection, switch_personi, enable_dual_mode, open_panel, close_panel, toggle_rag, create_note, create_task, toggle_settings_menu, mute_microphone
-   - Event-driven architecture using CustomEvents for decoupled execution
-   - Full error handling with CommandResult interface
-
-2. **Agentic Integration**
-   - Added 'app_control' action type to AgenticReasoningEngine
-   - Commands routed through agentic pipeline: Perception → Reasoning → Planning → Action
-   - Voice/text commands now trigger app control actions automatically
-
-3. **Event-Driven Execution**
-   - VisualizerShell registers command event handlers in registerCommandHandlers()
-   - Listens for 7 command types: camera controls, PersonI switching, dual mode, RAG toggle
-   - State updates flow through CustomEvents maintaining clean separation of concerns
-
-### Help Panel Enhanced with Visual Analytics ✅
-1. **Mermaid.js Integration**
-   - Service architecture diagrams showing full agentic pipeline
-   - Interactive flowcharts with dark theme customization
-   - Auto-rendering on section change with proper cleanup
-
-2. **Chart.js Integration**
-   - Action Types Distribution (doughnut chart) - 7 action types visualization
-   - Pipeline Performance Metrics (line chart) - timing breakdown
-   - Responsive charts with proper memory management and cleanup
-
-3. **New Architecture Section**
-   - Comprehensive technical overview with 2 Mermaid diagrams + 2 Chart.js charts
-   - Documents all key services and their relationships
-   - Navigation item added: 🏗️ Architecture
-
-### Critical UI/UX Fixes ✅
-1. **Camera Controls & Object Detection Buttons Now Clickable**
-   - Fixed pointer-events blocking issue in object-detection-overlay component
-   - Removed pointer-events: none from :host to allow hit testing into shadow DOM
-   - Set pointer-events: none on .overlay-container to allow clicks through empty space
-   - Interactive elements (toggle button, stats panel) have pointer-events: auto
-
-2. **Camera Background Full-Screen Display Fixed**
-   - Changed camera-manager :host from position: relative to position: fixed
-   - Camera now displays as full viewport background (100vw × 100vh) when enabled
-   - Set z-index: 1 on camera background (below all other UI elements)
-   - Added pointer-events: none to camera elements to allow clicks through to controls
-
-3. **Z-Index Unified for All Interactive HUD Elements**
-   - Raised all clickable icons/menus to z-index: 150 to prevent obstruction
-   - Updated: camera-controls, object-detection-overlay, rag-toggle, ui-controls, persona-carousel-hud, music-detection-hud, dual-mode-controls-hud
-   - All interactive elements guaranteed above 3D canvas (z:10) and below panels (z:200+)
-
-4. **Icon Spacing Increased to 30px Minimum**
-   - Camera controls: increased gap from 10px to 30px between buttons
-   - Object detection toggle: moved from bottom 270px → 330px (38px clearance above camera controls)
-   - Music detection HUD: moved from top 20px → 80px (60px clearance from top edge)
-   - Dual mode controls: moved from top 90px → 110px (increased spacing below persona carousel)
-   - All icons now have minimum 30px spacing preventing overlap and ensuring clickability
-
-## Recent Changes (November 18, 2025)
-
-### Settings FAB Z-Index Fix & Circular Menu Wheel ✅
-1. **Settings FAB Clickability Fixed**
-   - Raised z-index from 100 → 160 (above ui-controls at 150)
-   - FAB now clickable and no longer blocked by UI controls overlay
-   - Positioned bottom-center, draggable, with smooth animations
-
-2. **New Circular Menu Wheel Component Created**
-   - **Component**: `src/components/visualizer/circular-menu-wheel.ts`
-   - **Position**: Lower-right corner (bottom: 32px, right: 32px)
-   - **Z-Index**: 170 (above all other UI elements)
-   - **Design**: Always-visible circular icon wheel with 11 panel icons
-   - **Icons**: Custom SVG glyphs for each panel (different from settings-fab gear)
-   - **Layout**: Circular arrangement using CSS transform: rotate() + translate()
-   - **Panels**: Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help
-
-3. **Circular Menu Wheel Features**
-   - Always-visible (no toggle required)
-   - Active icon highlighting with pulsing glow animation
-   - AppStateService integration for state management
-   - Responsive offset (translateX(-220px)) when settings-dock opens
-   - Each icon opens/closes its respective panel
-   - All icons remain clickable while panel is open
-   - Smooth hover effects with scale transform
-
-4. **Dual Menu System**
-   - Settings FAB (bottom-center, z-index: 160) opens radial menu
-   - Circular Menu Wheel (bottom-right, z-index: 170) direct panel access
-   - Both systems operate independently without conflicts
-   - User can access settings via either system
-
-### Technical Implementation Details
-- **Circular Positioning Math**: `transform: rotate(angle) translate(radius) rotate(-angle)`
-- **Radius**: 110px from center hub
-- **Icon Count**: 11 icons arranged at equal intervals (360° / 11 = ~32.7° per icon)
-- **Center Hub**: Decorative gear icon (⚙️) at center with glass-morphism styling
-- **Active State**: Pulsing animation with increased glow on active panel
-- **Tooltip**: Left-side tooltips on hover for each icon
