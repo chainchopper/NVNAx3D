@@ -3881,6 +3881,223 @@ app.post('/api/models/proxy', async (req, res) => {
   }
 });
 
+app.post('/api/comfyui/test', async (req, res) => {
+  const { baseURL, authToken } = req.body;
+
+  if (!baseURL) {
+    return res.status(400).json({
+      success: false,
+      error: 'baseURL is required'
+    });
+  }
+
+  try {
+    const testUrl = new URL('/system_stats', baseURL);
+    const headers = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    const response = await fetch(testUrl.toString(), {
+      headers,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return res.json({
+        success: false,
+        error: `Connection failed: ${response.statusText}`
+      });
+    }
+
+    const data = await response.json();
+    res.json({ success: true, data });
+
+  } catch (error) {
+    console.error('[ComfyUI Test Error]', error);
+    res.json({
+      success: false,
+      error: error.message || 'Failed to connect to ComfyUI'
+    });
+  }
+});
+
+app.get('/api/comfyui/workflows', async (req, res) => {
+  res.json({
+    success: false,
+    error: 'Workflow discovery requires ComfyUI Manager extension. Please import workflows manually via the settings panel.'
+  });
+});
+
+app.post('/api/comfyui/queue', async (req, res) => {
+  const baseURL = process.env.COMFYUI_BASE_URL || req.body.baseURL;
+  const authToken = process.env.COMFYUI_AUTH_TOKEN || req.body.authToken;
+  const { prompt } = req.body;
+
+  if (!baseURL) {
+    return res.json({
+      success: false,
+      error: 'ComfyUI baseURL not configured'
+    });
+  }
+
+  if (!prompt) {
+    return res.json({
+      success: false,
+      error: 'prompt is required'
+    });
+  }
+
+  try {
+    const queueUrl = new URL('/prompt', baseURL);
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(queueUrl.toString(), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ prompt })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.json({
+        success: false,
+        error: `Queue submission failed: ${errorText}`
+      });
+    }
+
+    const result = await response.json();
+    
+    if (result.error) {
+      return res.json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      prompt_id: result.prompt_id,
+      number: result.number
+    });
+
+  } catch (error) {
+    console.error('[ComfyUI Queue Error]', error);
+    res.json({
+      success: false,
+      error: error.message || 'Failed to queue prompt'
+    });
+  }
+});
+
+app.get('/api/comfyui/status/:promptId', async (req, res) => {
+  const baseURL = req.query.baseURL || process.env.COMFYUI_BASE_URL;
+  const authToken = req.query.authToken || process.env.COMFYUI_AUTH_TOKEN;
+  const { promptId } = req.params;
+
+  if (!baseURL) {
+    return res.status(400).json({
+      success: false,
+      error: 'ComfyUI baseURL not configured'
+    });
+  }
+
+  try {
+    const historyUrl = new URL(`/history/${promptId}`, baseURL);
+    const headers = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(historyUrl.toString(), { headers });
+
+    if (!response.ok) {
+      return res.json({
+        success: false,
+        error: `Status check failed: ${response.statusText}`
+      });
+    }
+
+    const history = await response.json();
+    res.json({ success: true, data: history });
+
+  } catch (error) {
+    console.error('[ComfyUI Status Error]', error);
+    res.json({
+      success: false,
+      error: error.message || 'Failed to check status'
+    });
+  }
+});
+
+app.get('/api/comfyui/view', async (req, res) => {
+  const baseURL = req.query.baseURL || process.env.COMFYUI_BASE_URL;
+  const authToken = req.query.authToken || process.env.COMFYUI_AUTH_TOKEN;
+  const { filename, subfolder, type } = req.query;
+
+  if (!baseURL) {
+    return res.status(400).json({
+      success: false,
+      error: 'ComfyUI baseURL not configured'
+    });
+  }
+
+  if (!filename) {
+    return res.status(400).json({
+      success: false,
+      error: 'filename is required'
+    });
+  }
+
+  try {
+    const viewUrl = new URL('/view', baseURL);
+    viewUrl.searchParams.set('filename', filename);
+    if (subfolder) {
+      viewUrl.searchParams.set('subfolder', subfolder);
+    }
+    if (type) {
+      viewUrl.searchParams.set('type', type);
+    }
+
+    const headers = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(viewUrl.toString(), { headers });
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: `View failed: ${response.statusText}`
+      });
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    }
+
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
+
+  } catch (error) {
+    console.error('[ComfyUI View Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to view asset'
+    });
+  }
+});
+
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Connector Backend] Server running on port ${PORT}`);
   console.log(`[Connector Backend] Health check: http://localhost:${PORT}/health`);

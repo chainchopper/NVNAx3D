@@ -46,6 +46,7 @@ import './components/visualizer/telephony-settings-panel';
 import './components/visualizer/sms-panel';
 import './components/visualizer/voice-call-panel';
 import './components/visualizer/help-panel';
+import './components/visualizer/comfyui-settings-panel';
 import { pluginRegistry } from './services/plugin-registry';
 import { dynamicComponentGenerator } from './services/dynamic-component-generator';
 import {
@@ -71,6 +72,7 @@ import { UserProfile } from './types/user-profile';
 import { ragMemoryManager } from './services/memory/rag-memory-manager';
 import { MemoryType } from './types/memory';
 import { IdleSpeechManager } from './services/idle-speech-manager';
+import { comfyUIService } from './services/comfyui/comfyui-service';
 import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
 import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
 import './components/song-info-bubble';
@@ -1180,6 +1182,10 @@ export class GdmLiveAudio extends LitElement {
       this.ragInitialized = true;
       const storageInfo = ragMemoryManager.getStorageInfo();
       console.log(`[RAG] ✅ Initialized with ${storageInfo.type} storage and ${storageInfo.embeddingType} embeddings`);
+      
+      console.log('[ComfyUI] Initializing service...');
+      comfyUIService.initialize();
+      console.log('[ComfyUI] ✅ Service initialized');
       
       console.log('[ChatterboxTTS] Initializing...');
       await chatterboxTTS.loadConfig();
