@@ -24,9 +24,10 @@ export class PersonICarousel extends LitElement {
       display: block;
       position: fixed;
       bottom: 24px;
-      left: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 180;
-      width: 280px;
+      width: 330px;
       animation: slideInFromLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
