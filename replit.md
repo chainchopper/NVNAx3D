@@ -27,7 +27,10 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays. Camera feeds are displayed as native video elements via a Background Manager.
 - **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
 - **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
-- **Settings UI**: Centered draggable FAB button opens a radial menu. An always-visible circular menu wheel provides direct access to 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help).
+- **Settings UI**: Centered draggable FAB button. An always-visible circular menu wheel provides direct access to 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, Device, User Profile, Help) with sequential slide-in animation.
+- **Camera Controls**: Bottom-right circular menu with expandable radial submenu for Hide/Show Preview, Switch Camera, Object Detection, and Snapshot actions.
+- **PersonI Carousel**: Bottom-left single-card carousel with left/right scrolling for quick PersonI switching with live updates.
+- **Device Settings**: Dedicated panel for accelerometer, gyroscope, microphone/camera permissions, and background service configuration.
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
