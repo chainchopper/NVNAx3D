@@ -19,7 +19,6 @@ import { dualPersonIManager } from '../../services/dual-personi-manager';
 import type { MenuItem } from './settings-menu';
 import './visualizer-3d';
 import './visualizer-controls';
-import './settings-fab';
 import './circular-menu-wheel';
 import './settings-dock';
 import './dual-mode-controls-hud';
@@ -874,13 +873,7 @@ export class VisualizerShell extends LitElement {
         <personi-carousel></personi-carousel>
         <music-detection-hud></music-detection-hud>
 
-        <!-- Settings FAB (draggable gear button, z-index: 160 - Above UI Controls) -->
-        <settings-fab
-          @toggle=${this.handleFabToggle}
-          .providerStatus=${this.providerStatus}
-        ></settings-fab>
-
-        <!-- Circular Menu Wheel (always-visible icon wheel, z-index: 170 - Above FAB) -->
+        <!-- Circular Menu Wheel (always-visible icon wheel, z-index: 170) -->
         <circular-menu-wheel
           @panel-selected=${(e: CustomEvent) => console.log('Panel selected:', e.detail.panelId)}
         ></circular-menu-wheel>
