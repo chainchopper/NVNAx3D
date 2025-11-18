@@ -88,16 +88,19 @@ export class SettingsFab extends LitElement {
     const menuOpen = appStateService.getState().settingsMenuVisible;
     
     return html`
-      <button
-        class="fab-button ${menuOpen ? 'menu-open' : ''}"
-        @click=${this.toggleMenu}
-        title="Settings"
-        aria-label="Toggle settings menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v6m0 6v6m-5-13l-3 5.2m14.4 6.8l-3-5.2m0-6.8l-3 5.2M1.6 12l3 5.2m14.4 0l-3-5.2"></path>
-        </svg>
-      </button>
+      <div style="position: relative;">
+        <button
+          class="fab-button ${menuOpen ? 'menu-open' : ''}"
+          @click=${this.toggleMenu}
+          title="Settings"
+          aria-label="Toggle settings menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m-5-13l-3 5.2m14.4 6.8l-3-5.2m0-6.8l-3 5.2M1.6 12l3 5.2m14.4 0l-3-5.2"></path>
+          </svg>
+        </button>
+        <div style="position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; background: red; border-radius: 50%; border: 2px solid white; z-index: 9999;"></div>
+      </div>
     `;
   }
 
