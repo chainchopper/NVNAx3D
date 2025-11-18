@@ -21,6 +21,7 @@ interface MenuItem {
 export class CircularMenuWheel extends LitElement {
   @state() private activePanelId: ActiveSidePanel = 'none';
   @state() private settingsDockVisible = false;
+  @state() private expanded = true; // Start expanded
   
   private unsubscribeAppState: (() => void) | null = null;
 
@@ -178,7 +179,15 @@ export class CircularMenuWheel extends LitElement {
       justify-content: center;
       color: rgba(135, 206, 250, 0.8);
       font-size: 24px;
-      pointer-events: none;
+      cursor: pointer;
+      pointer-events: all;
+      transition: all 0.3s ease;
+    }
+
+    .center-hub:hover {
+      background: rgba(135, 206, 250, 0.2);
+      border-color: rgba(135, 206, 250, 0.6);
+      transform: translate(-50%, -50%) scale(1.08);
     }
 
     .menu-item {
@@ -199,8 +208,15 @@ export class CircularMenuWheel extends LitElement {
       justify-content: center;
       color: rgba(255, 255, 255, 0.7);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       pointer-events: all;
+      opacity: 1;
+    }
+
+    .menu-item.collapsed {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.3);
     }
 
     .menu-item svg {
@@ -301,6 +317,15 @@ export class CircularMenuWheel extends LitElement {
     }));
   }
 
+  private handleToggleExpand(): void {
+    this.expanded = !this.expanded;
+    
+    // If collapsing and a panel is open, close it
+    if (!this.expanded && this.activePanelId !== 'none') {
+      appStateService.setActiveSidePanel('none');
+    }
+  }
+
   private calculatePosition(index: number, total: number): string {
     const radius = 110; // Distance from center
     const angle = (360 / total) * index - 90; // Start at top (-90deg offset)
@@ -316,17 +341,25 @@ export class CircularMenuWheel extends LitElement {
 
     return html`
       <div class="wheel-container">
-        <!-- Center hub decoration -->
-        <div class="center-hub">⚙️</div>
+        <!-- Center hub (clickable to expand/collapse) -->
+        <button
+          class="center-hub"
+          @click=${this.handleToggleExpand}
+          title="${this.expanded ? 'Hide Menu' : 'Show Menu'}"
+          aria-label="Toggle settings menu"
+        >
+          ⚙️
+        </button>
 
         <!-- Menu items arranged in circle -->
         ${items.map((item, index) => {
           const isActive = this.activePanelId === item.id;
           const position = this.calculatePosition(index, items.length);
+          const collapsed = !this.expanded ? 'collapsed' : '';
           
           return html`
             <button
-              class="menu-item ${isActive ? 'active' : ''}"
+              class="menu-item ${isActive ? 'active' : ''} ${collapsed}"
               style="transform: ${position}"
               @click=${() => this.handleItemClick(item)}
               aria-pressed=${isActive}
