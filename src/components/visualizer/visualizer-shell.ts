@@ -994,8 +994,9 @@ export class VisualizerShell extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
-        <!-- UI Controls (mic/keyboard/file-upload, z-index: 60) -->
+        <!-- UI Controls (mic/keyboard/file-upload, z-index: 90) -->
         <ui-controls
+          class="${this.activeSidePanel !== 'none' || this.settingsMenuVisible ? 'menu-open' : ''}"
           .isMuted=${this.isMuted}
           .isSpeaking=${this.isSpeaking}
           .isAiSpeaking=${this.isAiSpeaking}

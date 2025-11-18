@@ -29,12 +29,17 @@ export class UIControls extends LitElement {
       top: 20px;
       right: 20px;
       pointer-events: none;
-      z-index: 9999;
-      transition: opacity 0.5s ease-out;
+      z-index: 90;
+      transition: opacity 0.5s ease-out, visibility 0s 0.5s;
     }
 
     :host(.hidden) {
       opacity: 0;
+      visibility: hidden;
+    }
+
+    :host(.menu-open) {
+      display: none;
     }
 
     .controls-container {
@@ -249,8 +254,14 @@ export class UIControls extends LitElement {
   }
 
   private handleModeToggle() {
-    const newMode: InputMode = this.inputMode === 'voice' ? 'text' : 'voice';
-    this.dispatchEvent(new CustomEvent('mode-change', { detail: { mode: newMode } }));
+    // Toggle prompt visibility (ChatGPT style)
+    if (this.inputMode === 'voice') {
+      // Open prompt
+      this.dispatchEvent(new CustomEvent('mode-change', { detail: { mode: 'text' } }));
+    } else {
+      // Close prompt
+      this.dispatchEvent(new CustomEvent('mode-change', { detail: { mode: 'voice' } }));
+    }
   }
 
   private handleTextInput(e: Event) {

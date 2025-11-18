@@ -162,11 +162,17 @@ export class CircularMenuWheel extends LitElement {
       bottom: 32px;
       right: 32px;
       z-index: 170;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out;
+      opacity: 1;
     }
 
     :host(.dock-open) {
       transform: translateX(-380px);
+    }
+
+    :host([hidden]) {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .wheel-container {
@@ -317,6 +323,13 @@ export class CircularMenuWheel extends LitElement {
         this.classList.remove('dock-open');
       }
     });
+
+    // Setup idle detection
+    document.addEventListener('mousemove', this.resetIdleTimer);
+    document.addEventListener('mousedown', this.resetIdleTimer);
+    document.addEventListener('keydown', this.resetIdleTimer);
+    document.addEventListener('touchstart', this.resetIdleTimer);
+    this.resetIdleTimer();
   }
 
   override disconnectedCallback() {
@@ -324,7 +337,31 @@ export class CircularMenuWheel extends LitElement {
     if (this.unsubscribeAppState) {
       this.unsubscribeAppState();
     }
+    
+    // Cleanup idle detection
+    document.removeEventListener('mousemove', this.resetIdleTimer);
+    document.removeEventListener('mousedown', this.resetIdleTimer);
+    document.removeEventListener('keydown', this.resetIdleTimer);
+    document.removeEventListener('touchstart', this.resetIdleTimer);
+    if (this.idleTimer !== null) {
+      window.clearTimeout(this.idleTimer);
+    }
   }
+
+  private resetIdleTimer = () => {
+    if (this.idleTimer !== null) {
+      window.clearTimeout(this.idleTimer);
+    }
+
+    this.visible = true;
+
+    this.idleTimer = window.setTimeout(() => {
+      // Only hide if no panels are open
+      if (this.activePanelId === 'none' && !this.settingsDockVisible) {
+        this.visible = false;
+      }
+    }, this.IDLE_TIMEOUT);
+  };
 
   private handleItemClick(item: MenuItem): void {
     // Close settings menu (radial from settings-fab) if open
@@ -366,6 +403,13 @@ export class CircularMenuWheel extends LitElement {
 
   override render() {
     const items = CircularMenuWheel.MENU_ITEMS;
+
+    // Apply hidden attribute when not visible
+    if (!this.visible) {
+      this.setAttribute('hidden', '');
+    } else {
+      this.removeAttribute('hidden');
+    }
 
     return html`
       <div class="wheel-container">
