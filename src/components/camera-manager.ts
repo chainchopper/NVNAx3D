@@ -23,6 +23,7 @@ export class CameraManager extends LitElement {
   @state() private isActive = false;
   @state() private error: string | null = null;
   @state() private facingMode: 'user' | 'environment' = 'user';
+  @state() private currentCameraIndex = 0;
   
   @query('video') private videoElement!: HTMLVideoElement;
   @query('canvas') private canvasElement!: HTMLCanvasElement;
@@ -30,6 +31,7 @@ export class CameraManager extends LitElement {
   private mediaStream: MediaStream | null = null;
   private captureInterval: number | null = null;
   private readonly CAPTURE_INTERVAL_MS = 5000; // Capture every 5 seconds
+  private availableCameras: MediaDeviceInfo[] = [];
 
   static styles = css`
     :host {
@@ -95,17 +97,32 @@ export class CameraManager extends LitElement {
     }
   `;
 
+  async enumerateCameras(): Promise<void> {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.availableCameras = devices.filter(device => device.kind === 'videoinput');
+      console.log(`[CameraManager] Found ${this.availableCameras.length} cameras:`, this.availableCameras);
+    } catch (err) {
+      console.error('[CameraManager] Failed to enumerate cameras:', err);
+      this.availableCameras = [];
+    }
+  }
+
   async requestPermissions(): Promise<boolean> {
     try {
-      console.log(`[CameraManager] Requesting camera permissions (${this.facingMode} camera)...`);
+      await this.enumerateCameras();
       
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: this.facingMode
-        }
-      });
+      const deviceId = this.availableCameras[this.currentCameraIndex]?.deviceId;
+      
+      console.log(`[CameraManager] Requesting camera permissions (camera ${this.currentCameraIndex + 1}/${this.availableCameras.length})...`);
+      
+      const constraints: MediaStreamConstraints = {
+        video: deviceId 
+          ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: this.facingMode }
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       this.mediaStream = stream;
       this.hasPermission = true;
@@ -125,18 +142,28 @@ export class CameraManager extends LitElement {
   }
 
   /**
-   * Switch between front (user) and back (environment) cameras
-   * This is especially useful on mobile devices
+   * Switch to next available camera (cycles through all detected cameras)
    */
   async switchCamera(): Promise<boolean> {
     const wasActive = this.isActive;
     
+    // Enumerate cameras if not done yet
+    if (this.availableCameras.length === 0) {
+      await this.enumerateCameras();
+    }
+    
+    if (this.availableCameras.length === 0) {
+      console.warn('[CameraManager] No cameras available to switch');
+      return false;
+    }
+    
     // Properly stop the camera (clears isActive flag)
     this.stop();
     
-    // Toggle facing mode
-    this.facingMode = this.facingMode === 'user' ? 'environment' : 'user';
-    console.log(`[CameraManager] Switching to ${this.facingMode} camera`);
+    // Cycle to next camera
+    this.currentCameraIndex = (this.currentCameraIndex + 1) % this.availableCameras.length;
+    const camera = this.availableCameras[this.currentCameraIndex];
+    console.log(`[CameraManager] Switching to camera ${this.currentCameraIndex + 1}/${this.availableCameras.length}: ${camera.label}`);
     
     // If was active, restart with new camera
     if (wasActive) {
@@ -144,7 +171,11 @@ export class CameraManager extends LitElement {
       if (granted) {
         await this.start();
         this.dispatchEvent(new CustomEvent('camera-switched', { 
-          detail: { facingMode: this.facingMode } 
+          detail: { 
+            cameraIndex: this.currentCameraIndex,
+            cameraLabel: camera.label,
+            totalCameras: this.availableCameras.length
+          } 
         }));
         return true;
       }

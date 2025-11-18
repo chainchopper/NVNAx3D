@@ -23,6 +23,7 @@ export class RAGToggle extends LitElement {
       left: 20px;
       z-index: 150;
       transition: opacity 0.5s ease-out;
+      pointer-events: auto;
     }
 
     :host(.hidden) {

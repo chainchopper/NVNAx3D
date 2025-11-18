@@ -26,7 +26,7 @@ export class UIControls extends LitElement {
     :host {
       display: block;
       position: fixed;
-      top: 20px;
+      top: 80px;
       right: 20px;
       pointer-events: none;
       z-index: 90;
@@ -47,7 +47,7 @@ export class UIControls extends LitElement {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 12px;
+      gap: 16px;
       pointer-events: all;
     }
 

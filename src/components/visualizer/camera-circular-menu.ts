@@ -25,6 +25,9 @@ export class CameraCircularMenu extends LitElement {
   @property({ type: String }) error: string | null = null;
   
   @state() private expanded = false;
+  
+  private inactivityTimer: number | null = null;
+  private readonly HIDE_DELAY = 5000;
 
   override updated(changedProps: Map<string, any>): void {
     if (changedProps.has('cameraActive')) {
@@ -85,9 +88,15 @@ export class CameraCircularMenu extends LitElement {
       display: block;
       position: fixed;
       bottom: 300px;
-      right: 20px;
+      left: 20px;
       z-index: 250;
       user-select: none;
+      transition: opacity 0.5s ease-out;
+    }
+    
+    :host([hidden]) {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .menu-container {
@@ -191,7 +200,7 @@ export class CameraCircularMenu extends LitElement {
     .tooltip {
       position: absolute;
       top: 50%;
-      right: calc(100% + 12px);
+      left: calc(100% + 12px);
       transform: translateY(-50%);
       background: rgba(0, 0, 0, 0.95);
       color: white;
@@ -212,7 +221,7 @@ export class CameraCircularMenu extends LitElement {
 
     .center-button .tooltip {
       top: auto;
-      right: auto;
+      left: auto;
       bottom: calc(100% + 12px);
       left: 50%;
       transform: translateX(-50%);
@@ -283,6 +292,46 @@ export class CameraCircularMenu extends LitElement {
           composed: true
         }));
         break;
+    }
+  }
+
+  private resetInactivityTimer(): void {
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
+    }
+    
+    this.removeAttribute('hidden');
+    
+    this.inactivityTimer = window.setTimeout(() => {
+      this.setAttribute('hidden', '');
+    }, this.HIDE_DELAY);
+  }
+
+  private handleUserActivity = (): void => {
+    this.resetInactivityTimer();
+  };
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    
+    document.addEventListener('mousemove', this.handleUserActivity);
+    document.addEventListener('mousedown', this.handleUserActivity);
+    document.addEventListener('keydown', this.handleUserActivity);
+    document.addEventListener('touchstart', this.handleUserActivity);
+    
+    this.resetInactivityTimer();
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    
+    document.removeEventListener('mousemove', this.handleUserActivity);
+    document.removeEventListener('mousedown', this.handleUserActivity);
+    document.removeEventListener('keydown', this.handleUserActivity);
+    document.removeEventListener('touchstart', this.handleUserActivity);
+    
+    if (this.inactivityTimer !== null) {
+      window.clearTimeout(this.inactivityTimer);
     }
   }
 
