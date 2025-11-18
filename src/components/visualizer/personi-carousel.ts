@@ -17,6 +17,8 @@ export class PersonICarousel extends LitElement {
   @state() private confirming = false;
   @state() private selectedPersoni: PersoniConfig | null = null;
 
+  private unsubscribe?: () => void;
+
   static override styles = css`
     :host {
       display: block;
@@ -204,6 +206,15 @@ export class PersonICarousel extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.loadPersonis();
+    
+    this.unsubscribe = appStateService.subscribe(() => {
+      this.loadPersonis();
+    });
+  }
+
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.unsubscribe?.();
   }
 
   private loadPersonis(): void {

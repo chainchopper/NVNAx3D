@@ -6,7 +6,7 @@
  */
 
 import { LitElement, css, html, svg, SVGTemplateResult } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 
 interface CameraAction {
   id: string;
@@ -18,12 +18,23 @@ interface CameraAction {
 
 @customElement('camera-circular-menu')
 export class CameraCircularMenu extends LitElement {
-  @state() private cameraActive = false;
-  @state() private previewVisible = true;
-  @state() private detectionActive = false;
-  @state() private facingMode: 'user' | 'environment' = 'user';
+  @property({ type: Boolean }) cameraActive = false;
+  @property({ type: Boolean }) previewVisible = true;
+  @property({ type: Boolean }) detectionActive = false;
+  @property({ type: Boolean }) hasPermission = false;
+  @property({ type: String }) error: string | null = null;
+  
   @state() private expanded = false;
-  @state() private hasPermission = false;
+
+  override updated(changedProps: Map<string, any>): void {
+    if (changedProps.has('cameraActive')) {
+      if (!this.cameraActive) {
+        this.expanded = false;
+      } else if (this.cameraActive && !changedProps.get('cameraActive')) {
+        this.expanded = true;
+      }
+    }
+  }
 
   private readonly MENU_ACTIONS: CameraAction[] = [
     {
@@ -223,24 +234,30 @@ export class CameraCircularMenu extends LitElement {
 
   private handleCenterClick(): void {
     if (!this.hasPermission) {
+      console.log('[CameraCircularMenu] Requesting camera permission...');
       this.dispatchEvent(new CustomEvent('request-camera-permission', {
         bubbles: true,
-        composed: true
+        composed: true,
+        detail: {}
       }));
       return;
     }
 
-    if (!this.cameraActive) {
+    if (this.cameraActive) {
+      this.expanded = !this.expanded;
+    } else {
+      console.log('[CameraCircularMenu] Starting camera...');
       this.dispatchEvent(new CustomEvent('camera-start', {
         bubbles: true,
-        composed: true
+        composed: true,
+        detail: {}
       }));
-    } else {
-      this.expanded = !this.expanded;
     }
   }
 
   private handleActionClick(actionId: string): void {
+    if (!this.cameraActive) return;
+    
     switch (actionId) {
       case 'preview':
         this.dispatchEvent(new CustomEvent('camera-toggle-preview', {
@@ -270,19 +287,27 @@ export class CameraCircularMenu extends LitElement {
   }
 
   override render() {
-    const centerDisabled = !this.hasPermission;
     const actionsDisabled = !this.cameraActive;
 
     return html`
       <div class="menu-container">
         <!-- Center Camera Button -->
         <button
-          class="center-button ${this.cameraActive ? 'active' : ''} ${centerDisabled ? 'disabled' : ''}"
+          class="center-button ${this.cameraActive ? 'active' : ''}"
           @click=${this.handleCenterClick}
           aria-label="Camera control"
+          title="${this.error || ''}"
         >
-          📷
-          <span class="tooltip">${this.cameraActive ? (this.expanded ? 'Hide Menu' : 'Show Menu') : 'Start Camera'}</span>
+          ${this.error ? '⚠️' : '📷'}
+          <span class="tooltip">
+            ${this.error 
+              ? this.error 
+              : !this.hasPermission
+                ? 'Grant Camera Permission'
+                : this.cameraActive 
+                  ? (this.expanded ? 'Hide Menu' : 'Show Menu') 
+                  : 'Start Camera'}
+          </span>
         </button>
 
         <!-- Action Buttons -->
