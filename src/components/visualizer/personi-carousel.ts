@@ -16,8 +16,11 @@ export class PersonICarousel extends LitElement {
   @state() private currentIndex = 0;
   @state() private confirming = false;
   @state() private selectedPersoni: PersoniConfig | null = null;
+  @state() private visible = true;
 
   private unsubscribe?: () => void;
+  private idleTimer: number | null = null;
+  private readonly IDLE_TIMEOUT = 5000; // 5 seconds
 
   static override styles = css`
     :host {
@@ -29,6 +32,13 @@ export class PersonICarousel extends LitElement {
       z-index: 180;
       width: 330px;
       animation: slideInFromLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transition: opacity 0.5s ease-out;
+      opacity: 1;
+    }
+
+    :host([hidden]) {
+      opacity: 0;
+      pointer-events: none;
     }
 
     @keyframes slideInFromLeft {
@@ -79,15 +89,15 @@ export class PersonICarousel extends LitElement {
     }
 
     .avatar {
-      width: 80px;
-      height: 80px;
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      margin: 0 auto 12px;
+      margin: 0 auto 10px;
       background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 36px;
+      font-size: 28px;
       border: 2px solid rgba(135, 206, 250, 0.4);
       box-shadow: 
         0 4px 16px rgba(0, 0, 0, 0.3),
@@ -95,6 +105,7 @@ export class PersonICarousel extends LitElement {
       overflow: hidden;
       transition: all 0.3s ease;
       position: relative;
+      flex-shrink: 0;
     }
 
     .avatar:hover {
@@ -125,50 +136,53 @@ export class PersonICarousel extends LitElement {
     }
 
     .name {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 700;
       color: #87CEFA;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .description {
-      font-size: 12px;
+      font-size: 11px;
       color: rgba(255, 255, 255, 0.65);
-      line-height: 1.5;
-      margin-bottom: 12px;
-      max-height: 54px;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      max-height: 42px;
       overflow: hidden;
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       text-overflow: ellipsis;
+      flex-shrink: 1;
     }
 
     .tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       justify-content: center;
-      margin-bottom: 12px;
-      max-height: 48px;
+      margin-bottom: 8px;
+      max-height: 36px;
       overflow: hidden;
+      flex-shrink: 0;
     }
 
     .tag {
-      padding: 4px 10px;
+      padding: 3px 8px;
       background: rgba(135, 206, 250, 0.12);
       border: 1px solid rgba(135, 206, 250, 0.25);
-      border-radius: 12px;
-      font-size: 10px;
+      border-radius: 10px;
+      font-size: 9px;
       font-weight: 600;
       color: rgba(135, 206, 250, 0.9);
       text-transform: uppercase;
-      letter-spacing: 0.3px;
+      letter-spacing: 0.2px;
       white-space: nowrap;
     }
 
@@ -321,12 +335,44 @@ export class PersonICarousel extends LitElement {
     this.unsubscribe = appStateService.subscribe(() => {
       this.loadPersonis();
     });
+
+    // Setup idle detection
+    document.addEventListener('mousemove', this.resetIdleTimer);
+    document.addEventListener('mousedown', this.resetIdleTimer);
+    document.addEventListener('keydown', this.resetIdleTimer);
+    document.addEventListener('touchstart', this.resetIdleTimer);
+    this.resetIdleTimer();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribe?.();
+    
+    // Cleanup idle detection
+    document.removeEventListener('mousemove', this.resetIdleTimer);
+    document.removeEventListener('mousedown', this.resetIdleTimer);
+    document.removeEventListener('keydown', this.resetIdleTimer);
+    document.removeEventListener('touchstart', this.resetIdleTimer);
+    if (this.idleTimer !== null) {
+      window.clearTimeout(this.idleTimer);
+    }
   }
+
+  private resetIdleTimer = () => {
+    if (this.idleTimer !== null) {
+      window.clearTimeout(this.idleTimer);
+    }
+
+    this.visible = true;
+    if (!this.visible) {
+      this.removeAttribute('hidden');
+    }
+
+    this.idleTimer = window.setTimeout(() => {
+      this.visible = false;
+      this.setAttribute('hidden', '');
+    }, this.IDLE_TIMEOUT);
+  };
 
   private loadPersonis(): void {
     const state = appStateService.getState();
