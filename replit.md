@@ -127,3 +127,43 @@ Nirvana is an advanced AI companion system designed to provide highly customizab
    - Music detection HUD: moved from top 20px → 80px (60px clearance from top edge)
    - Dual mode controls: moved from top 90px → 110px (increased spacing below persona carousel)
    - All icons now have minimum 30px spacing preventing overlap and ensuring clickability
+
+## Recent Changes (November 18, 2025)
+
+### Settings FAB Z-Index Fix & Circular Menu Wheel ✅
+1. **Settings FAB Clickability Fixed**
+   - Raised z-index from 100 → 160 (above ui-controls at 150)
+   - FAB now clickable and no longer blocked by UI controls overlay
+   - Positioned bottom-center, draggable, with smooth animations
+
+2. **New Circular Menu Wheel Component Created**
+   - **Component**: `src/components/visualizer/circular-menu-wheel.ts`
+   - **Position**: Lower-right corner (bottom: 32px, right: 32px)
+   - **Z-Index**: 170 (above all other UI elements)
+   - **Design**: Always-visible circular icon wheel with 11 panel icons
+   - **Icons**: Custom SVG glyphs for each panel (different from settings-fab gear)
+   - **Layout**: Circular arrangement using CSS transform: rotate() + translate()
+   - **Panels**: Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, User Profile, Help
+
+3. **Circular Menu Wheel Features**
+   - Always-visible (no toggle required)
+   - Active icon highlighting with pulsing glow animation
+   - AppStateService integration for state management
+   - Responsive offset (translateX(-220px)) when settings-dock opens
+   - Each icon opens/closes its respective panel
+   - All icons remain clickable while panel is open
+   - Smooth hover effects with scale transform
+
+4. **Dual Menu System**
+   - Settings FAB (bottom-center, z-index: 160) opens radial menu
+   - Circular Menu Wheel (bottom-right, z-index: 170) direct panel access
+   - Both systems operate independently without conflicts
+   - User can access settings via either system
+
+### Technical Implementation Details
+- **Circular Positioning Math**: `transform: rotate(angle) translate(radius) rotate(-angle)`
+- **Radius**: 110px from center hub
+- **Icon Count**: 11 icons arranged at equal intervals (360° / 11 = ~32.7° per icon)
+- **Center Hub**: Decorative gear icon (⚙️) at center with glass-morphism styling
+- **Active State**: Pulsing animation with increased glow on active panel
+- **Tooltip**: Left-side tooltips on hover for each icon
