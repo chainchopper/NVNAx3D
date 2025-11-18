@@ -21,6 +21,8 @@ import { routineExecutor } from './routine-executor';
 import { pluginRegistry } from './plugin-registry';
 import { ConnectorConfigManager } from '../types/connector-config';
 import { providerManager } from './provider-manager';
+import { ragMemoryManager } from './memory/rag-memory-manager';
+import { toolOrchestrator } from './tool-orchestrator';
 import type { PersoniConfig } from '../personas';
 
 export interface SystemContext {
@@ -36,12 +38,13 @@ export interface SystemContext {
     id: string;
     enabledConnectors: string[];
     capabilities: string[];
+    availableTools: string[];
   };
   dataSnapshot: {
     notes: { total: number; recentCount: number; hasData: boolean };
     tasks: { total: number; pending: number; completed: number; overdue: number; hasData: boolean };
     routines: { total: number; enabled: number; hasData: boolean };
-    memories: { total: number; hasData: boolean };
+    memories: { total: number; hasData: boolean; byType: Record<string, number> };
     plugins: { total: number; enabled: number; hasData: boolean };
   };
   connectors: {
@@ -62,6 +65,12 @@ export interface SystemContext {
 
 class SystemContextService {
   private initialized = false;
+  private contextCache: SystemContext | null = null;
+  private cacheTimestamp = 0;
+  private readonly CACHE_TTL_MS = 30000; // 30 seconds cache
+  private memoryCount = 0;
+  private memoryCountTimestamp = 0;
+  private readonly MEMORY_COUNT_CACHE_MS = 60000; // 1 minute cache for memory count
 
   async initialize(): Promise<void> {
     if (this.initialized) {
@@ -73,6 +82,7 @@ class SystemContextService {
       await notesManager.initialize();
       await tasksManager.initialize();
       await routineExecutor.initialize();
+      await ragMemoryManager.initialize();
     } catch (error) {
       console.warn('[SystemContext] Some managers failed to initialize:', error);
     }
@@ -82,13 +92,38 @@ class SystemContextService {
   }
 
   /**
-   * Get complete system context for AI awareness
+   * Get complete system context for AI awareness (with smart caching)
    */
-  async getSystemContext(personi: PersoniConfig): Promise<SystemContext> {
+  async getSystemContext(personi: PersoniConfig, forceRefresh = false): Promise<SystemContext> {
     if (!this.initialized) {
       await this.initialize();
     }
 
+    const now = Date.now();
+    const cacheValid = !forceRefresh && this.contextCache && (now - this.cacheTimestamp) < this.CACHE_TTL_MS;
+
+    if (cacheValid) {
+      // Clone cached context to avoid mutation
+      const clonedContext: SystemContext = {
+        ...this.contextCache!,
+        activePersonI: {
+          name: personi.name,
+          id: personi.id,
+          enabledConnectors: personi.enabledConnectors || [],
+          capabilities: this.extractCapabilities(personi),
+          availableTools: this.getAvailableTools(personi),
+        },
+        // Clone dataSnapshot to update volatile counts
+        dataSnapshot: {
+          ...this.contextCache!.dataSnapshot,
+          // Refresh memory count if stale
+          memories: await this.getMemoriesSnapshot(),
+        },
+      };
+      return clonedContext;
+    }
+
+    // Full refresh
     const timestamp = new Date().toISOString();
     const appState = appStateService.getState();
     const userProfile = userProfileManager.getProfile();
@@ -98,6 +133,7 @@ class SystemContextService {
     const tasksSnapshot = await this.getTasksSnapshot();
     const routinesSnapshot = await this.getRoutinesSnapshot();
     const pluginsSnapshot = await this.getPluginsSnapshot();
+    const memoriesSnapshot = await this.getMemoriesSnapshot();
     
     // Get connector status
     const connectorConfigs = ConnectorConfigManager.loadConfigs();
@@ -119,14 +155,7 @@ class SystemContextService {
       .filter(p => p.enabled && p.verified)
       .map(p => p.name);
 
-    // Build capabilities list from PersonI config
-    const capabilities: string[] = [];
-    if (personi.capabilities?.vision) capabilities.push('vision');
-    if (personi.capabilities?.imageGeneration) capabilities.push('image-generation');
-    if (personi.capabilities?.webSearch) capabilities.push('web-search');
-    if (personi.capabilities?.tools) capabilities.push('tool-calling');
-
-    return {
+    const context: SystemContext = {
       timestamp,
       userProfile: {
         name: userProfile.name,
@@ -138,13 +167,14 @@ class SystemContextService {
         name: personi.name,
         id: personi.id,
         enabledConnectors: personi.enabledConnectors || [],
-        capabilities,
+        capabilities: this.extractCapabilities(personi),
+        availableTools: this.getAvailableTools(personi),
       },
       dataSnapshot: {
         notes: notesSnapshot,
         tasks: tasksSnapshot,
         routines: routinesSnapshot,
-        memories: { total: 0, hasData: false }, // RAG memory count would go here
+        memories: memoriesSnapshot,
         plugins: pluginsSnapshot,
       },
       connectors: {
@@ -162,6 +192,42 @@ class SystemContextService {
         activePanel: appState.activeSidePanel,
       },
     };
+
+    // Cache the context
+    this.contextCache = context;
+    this.cacheTimestamp = now;
+
+    return context;
+  }
+
+  /**
+   * Extract capabilities from PersonI config
+   */
+  private extractCapabilities(personi: PersoniConfig): string[] {
+    const capabilities: string[] = [];
+    if (personi.capabilities?.vision) capabilities.push('vision');
+    if (personi.capabilities?.imageGeneration) capabilities.push('image-generation');
+    if (personi.capabilities?.webSearch) capabilities.push('web-search');
+    if (personi.capabilities?.tools) capabilities.push('tool-calling');
+    return capabilities;
+  }
+
+  /**
+   * Get available tools for PersonI
+   */
+  private getAvailableTools(personi: PersoniConfig): string[] {
+    const tools: string[] = [];
+    
+    // Get tools enabled for this PersonI via connectors
+    const enabledConnectors = personi.enabledConnectors || [];
+    
+    // Map connectors to their available tools
+    enabledConnectors.forEach(connectorId => {
+      const connectorTools = toolOrchestrator.getToolsForConnector(connectorId);
+      tools.push(...connectorTools);
+    });
+
+    return [...new Set(tools)]; // Remove duplicates
   }
 
   /**
@@ -185,6 +251,12 @@ class SystemContextService {
     sections.push(`\n## Your Capabilities`);
     sections.push(`Active PersonI: ${context.activePersonI.name}`);
     sections.push(`Capabilities: ${context.activePersonI.capabilities.join(', ') || 'basic conversation'}`);
+    
+    // Available tools
+    if (context.activePersonI.availableTools.length > 0) {
+      sections.push(`\n## Available Tools`);
+      sections.push(`You have access to these tools: ${context.activePersonI.availableTools.join(', ')}`);
+    }
     
     // Connector status
     if (context.activePersonI.enabledConnectors.length > 0) {
@@ -218,6 +290,14 @@ class SystemContextService {
     
     if (context.dataSnapshot.plugins.hasData) {
       sections.push(`🧩 Plugins: ${context.dataSnapshot.plugins.enabled} active custom components`);
+    }
+    
+    if (context.dataSnapshot.memories.hasData) {
+      const memoryTypesSummary = Object.entries(context.dataSnapshot.memories.byType)
+        .filter(([_, count]) => count > 0)
+        .map(([type, count]) => `${type}: ${count}`)
+        .join(', ');
+      sections.push(`🧠 Memories: ${context.dataSnapshot.memories.total} stored (${memoryTypesSummary})`);
     }
 
     // Current app state
@@ -313,6 +393,49 @@ class SystemContextService {
       console.warn('[SystemContext] Failed to get plugins snapshot:', error);
       return { total: 0, enabled: 0, hasData: false };
     }
+  }
+
+  /**
+   * Get memories snapshot (optimized with separate cache)
+   * Uses metadata-only query to avoid fetching documents/embeddings
+   */
+  private async getMemoriesSnapshot(): Promise<{ total: number; hasData: boolean; byType: Record<string, number> }> {
+    const now = Date.now();
+    
+    // Use cached memory count if valid (avoids repeated Chroma queries)
+    if ((now - this.memoryCountTimestamp) < this.MEMORY_COUNT_CACHE_MS) {
+      return {
+        total: this.memoryCount,
+        hasData: this.memoryCount > 0,
+        byType: {}, // Type breakdown only on full refresh
+      };
+    }
+
+    try {
+      // Lightweight metadata-only query - no documents or embeddings
+      const memoryStats = await ragMemoryManager.getMemoryStats();
+      
+      // Update cache
+      this.memoryCount = memoryStats.total;
+      this.memoryCountTimestamp = now;
+
+      return {
+        total: memoryStats.total,
+        hasData: memoryStats.total > 0,
+        byType: memoryStats.byType,
+      };
+    } catch (error) {
+      console.warn('[SystemContext] Failed to get memories snapshot:', error);
+      return { total: 0, hasData: false, byType: {} };
+    }
+  }
+
+  /**
+   * Clear the context cache (useful for testing or forcing refresh)
+   */
+  clearCache(): void {
+    this.contextCache = null;
+    this.cacheTimestamp = 0;
   }
 }
 
