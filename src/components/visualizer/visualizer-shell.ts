@@ -39,6 +39,7 @@ import '../personi-settings-panel';
 import '../ui-controls';
 import '../camera-controls';
 import '../camera-manager';
+import '../background-manager';
 import '../rag-toggle';
 import '../object-detection-overlay';
 import '../file-upload';
@@ -850,10 +851,16 @@ export class VisualizerShell extends LitElement {
   render() {
     return html`
       <div class="visualizer-container">
+        <!-- Background Manager (z-index: 1 - Full viewport background for camera/streams) -->
+        <background-manager
+          .source=${this.cameraEnabled ? 'camera' : 'none'}
+          .videoElement=${this.cameraManager?.videoElement || null}
+        ></background-manager>
+
         <!-- 3D Audio Visualizer with Codrops shaders (z-index: 10, pointer-events: none) -->
         <visualizer-3d
-          .cameraVideoElement=${this.cameraManager?.videoElement || null}
-          .cameraRenderMode=${'texture'}
+          .cameraVideoElement=${null}
+          .cameraRenderMode=${'none'}
         ></visualizer-3d>
 
         <!-- HUD Overlays -->
