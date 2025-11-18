@@ -4,7 +4,7 @@
  * and identifying songs for RAG/idle commentary
  */
 
-import { ragService } from './memory/rag-service';
+import { ragMemoryManager } from './memory/rag-memory-manager';
 import { AudioAnalysisData, AudioConsumer } from '../utils';
 
 interface MusicDetectionEvent {
@@ -137,7 +137,7 @@ class MusicDetectionService {
     
     // Store event in RAG for context-aware suggestions
     try {
-      await ragService.addMemory(
+      await ragMemoryManager.addMemory(
         `Music detected at ${new Date(event.timestamp).toLocaleTimeString()}`,
         'environmental',
         {
