@@ -385,6 +385,101 @@ Content: ${memory.text}`;
       throw new Error('No storage backend available');
     }
   }
+
+  /**
+   * Get all memories (metadata-only for list views)
+   * WARNING: This can be slow with large corpora. Use getMemoryStats() for counts.
+   */
+  async getAllMemoriesRaw(): Promise<Memory[]> {
+    if (!this.isReady()) {
+      return [];
+    }
+
+    if (this.usingChroma && this.collection) {
+      try {
+        // Fetch minimal data: metadata only (no documents or embeddings)
+        // If document text is needed, caller should use getMemoryById()
+        const result = await this.collection.get({
+          include: ['metadatas'],
+        });
+        
+        if (!result.ids || result.ids.length === 0) {
+          return [];
+        }
+
+        const memories: Memory[] = [];
+        for (let i = 0; i < result.ids.length; i++) {
+          memories.push({
+            id: result.ids[i],
+            text: '', // Not fetched for performance - use getMemoryById() if needed
+            embedding: null,
+            metadata: result.metadatas[i],
+          });
+        }
+
+        return memories;
+      } catch (error) {
+        console.error('[RAGMemoryManager] Failed to get all memories from ChromaDB:', error);
+        return [];
+      }
+    } else if (this.localFallback) {
+      return this.localFallback.getAllMemories();
+    } else {
+      return [];
+    }
+  }
+
+  /**
+   * Get lightweight memory statistics (optimized for system context)
+   * Only fetches metadata, no documents or embeddings
+   */
+  async getMemoryStats(): Promise<{ total: number; byType: Record<string, number> }> {
+    if (!this.isReady()) {
+      return { total: 0, byType: {} };
+    }
+
+    if (this.usingChroma && this.collection) {
+      try {
+        // Metadata-only query for optimal performance
+        const result = await this.collection.get({
+          include: ['metadatas'],
+        });
+        
+        if (!result.ids || result.ids.length === 0) {
+          return { total: 0, byType: {} };
+        }
+
+        const byType: Record<string, number> = {};
+        result.metadatas.forEach((metadata: any) => {
+          const type = metadata.type || 'general';
+          byType[type] = (byType[type] || 0) + 1;
+        });
+
+        return {
+          total: result.ids.length,
+          byType,
+        };
+      } catch (error) {
+        console.error('[RAGMemoryManager] Failed to get memory stats from ChromaDB:', error);
+        return { total: 0, byType: {} };
+      }
+    } else if (this.localFallback) {
+      const memories = this.localFallback.getAllMemories();
+      const byType: Record<string, number> = {};
+      
+      memories.forEach(memory => {
+        const type = memory.metadata.type || 'general';
+        byType[type] = (byType[type] || 0) + 1;
+      });
+
+      return {
+        total: memories.length,
+        byType,
+      };
+    } else {
+      return { total: 0, byType: {} };
+    }
+  }
 }
 
 export const ragMemoryManager = new RAGMemoryManager();

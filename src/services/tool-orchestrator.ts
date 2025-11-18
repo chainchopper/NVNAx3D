@@ -19,6 +19,7 @@ export interface Tool {
   category: 'financial' | 'communication' | 'automation' | 'data';
   parameters: ToolParameter[];
   requiresConfirmation: boolean;
+  requiredConnectors?: string[]; // Connectors needed for this tool
   handler: (params: any) => Promise<ToolResult>;
 }
 
@@ -261,6 +262,7 @@ class ToolOrchestrator {
       description: 'Send SMS message via Twilio',
       category: 'communication',
       requiresConfirmation: true,
+      requiredConnectors: ['twilio'],
       parameters: [
         { name: 'to', type: 'string', description: 'Phone number to send to (E.164 format, e.g., +15551234567)', required: true },
         { name: 'message', type: 'string', description: 'Message content (up to 1600 characters)', required: true }
@@ -277,6 +279,7 @@ class ToolOrchestrator {
       description: 'Initiate phone call via Twilio',
       category: 'communication',
       requiresConfirmation: true,
+      requiredConnectors: ['twilio'],
       parameters: [
         { name: 'to', type: 'string', description: 'Phone number to call (E.164 format)', required: true },
         { name: 'personaVoice', type: 'string', description: 'Persona voice to use', required: false }
@@ -575,6 +578,37 @@ class ToolOrchestrator {
       avgExecutionTime: Math.round(avgExecutionTime),
       toolUsage: Object.fromEntries(toolUsage)
     };
+  }
+
+  /**
+   * Get tools for a specific connector (driven by tool metadata)
+   */
+  getToolsForConnector(connectorId: string): string[] {
+    const toolNames: string[] = [];
+    
+    // Map connectors to tool names using requiredConnectors metadata
+    for (const tool of this.tools.values()) {
+      // Check if this tool requires this connector
+      if (tool.requiredConnectors && tool.requiredConnectors.includes(connectorId)) {
+        toolNames.push(tool.name);
+      }
+      // Fallback for tools without requiredConnectors metadata
+      else if (!tool.requiredConnectors) {
+        // Use category-based mapping for backward compatibility
+        if (connectorId.includes('financial') && tool.category === 'financial') {
+          toolNames.push(tool.name);
+        }
+      }
+    }
+    
+    return toolNames;
+  }
+
+  /**
+   * Get all available tools (for debugging/introspection)
+   */
+  getAllTools(): Tool[] {
+    return Array.from(this.tools.values());
   }
 }
 
