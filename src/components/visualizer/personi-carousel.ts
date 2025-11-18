@@ -22,14 +22,16 @@ export class PersonICarousel extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      width: 100%;
-      max-width: 500px;
-      margin: 0 auto;
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      z-index: 180;
+      width: 320px;
     }
 
     .carousel-container {
       position: relative;
-      padding: 40px 80px;
+      padding: 16px 60px;
     }
 
     .card {

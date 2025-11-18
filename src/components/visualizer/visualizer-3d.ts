@@ -119,7 +119,7 @@ export class Visualizer3D extends LitElement {
     });
     this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(0x0a0a1a, 1);
+    this.renderer.setClearColor(0x000000, 0); // Fully transparent background
 
     // Handle resize
     window.addEventListener('resize', this.handleResize);
