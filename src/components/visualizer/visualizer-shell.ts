@@ -247,19 +247,68 @@ export class VisualizerShell extends LitElement {
     }
   };
 
-  private handleCameraSnapshot = () => {
-    if (this.cameraManager) {
-      (this.cameraManager as any).captureSnapshot?.();
+  private handleCameraSnapshot = async () => {
+    if (!this.cameraManager) return;
+
+    try {
+      // Capture frame from camera
+      const frame = (this.cameraManager as any).captureFrame?.();
+      if (!frame || !frame.dataUrl) {
+        console.error('[VisualizerShell] Failed to capture snapshot');
+        return;
+      }
+
+      console.log('[VisualizerShell] Snapshot captured, analyzing with Gemini Vision...');
+
+      // Download the image
+      const link = document.createElement('a');
+      link.href = frame.dataUrl;
+      link.download = `snapshot-${Date.now()}.jpg`;
+      link.click();
+
+      // Analyze with Gemini Vision
+      const analysisPrompt = 'Analyze this image in detail. Describe what you see, identify any objects, people, text, or notable features. Provide a comprehensive description.';
+      
+      const analysisResult = await providerManager.processImageWithPrompt(
+        frame.dataUrl,
+        analysisPrompt
+      );
+
+      if (analysisResult) {
+        console.log('[VisualizerShell] Gemini Vision analysis:', analysisResult);
+
+        // Store snapshot and analysis in RAG
+        await ragMemoryManager.storeMemory({
+          content: `Camera Snapshot Analysis: ${analysisResult}`,
+          type: 'vision_observation',
+          metadata: {
+            imageDataUrl: frame.dataUrl,
+            timestamp: frame.timestamp,
+            dimensions: `${frame.width}x${frame.height}`,
+            source: 'camera_snapshot'
+          }
+        });
+
+        console.log('[VisualizerShell] ✅ Snapshot saved, analyzed, and stored in RAG');
+      }
+    } catch (err) {
+      console.error('[VisualizerShell] Snapshot processing failed:', err);
     }
   };
 
   private handleCameraPermissions = () => {
     this.cameraHasPermission = true;
     this.cameraError = null;
+    this.updateCameraStream();
+  };
+
+  private updateCameraStream = () => {
     if (this.cameraManager) {
       const stream = (this.cameraManager as any).mediaStream;
       if (stream) {
         this.cameraStream = stream;
+        console.log('[VisualizerShell] Camera stream updated:', stream);
+        this.requestUpdate(); // Force re-render to pass stream to background-manager
       }
     }
   };
@@ -871,7 +920,7 @@ export class VisualizerShell extends LitElement {
         <!-- Background Manager (z-index: 1 - Full viewport background for camera/streams) -->
         <background-manager
           .source=${this.cameraEnabled ? 'camera' : 'none'}
-          .videoElement=${this.cameraManager?.videoElement || null}
+          .stream=${this.cameraStream}
         ></background-manager>
 
         <!-- 3D Audio Visualizer with Codrops shaders (z-index: 10, pointer-events: none) -->
@@ -925,23 +974,11 @@ export class VisualizerShell extends LitElement {
         <camera-manager
           .enabled=${this.cameraEnabled}
           .showPreview=${true}
-          .renderMode=${'native'}
+          .renderMode=${'texture'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
-          @camera-started=${() => {
-            if (this.cameraManager) {
-              this.cameraStream = (this.cameraManager as any).mediaStream || null;
-              console.log('[VisualizerShell] Camera stream captured:', this.cameraStream);
-            }
-          }}
+          @camera-started=${this.updateCameraStream}
         ></camera-manager>
-
-        <!-- Camera Preview Box (z-index: 200 - bottom-left corner) -->
-        <camera-preview-box
-          .visible=${this.cameraEnabled && this.cameraShowPreview}
-          .stream=${this.cameraStream}
-          .hasPermission=${this.cameraHasPermission}
-        ></camera-preview-box>
 
         <!-- RAG Toggle (z-index: 45 - HUD tier) -->
         <rag-toggle

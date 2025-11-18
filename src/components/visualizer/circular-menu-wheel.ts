@@ -22,8 +22,11 @@ export class CircularMenuWheel extends LitElement {
   @state() private activePanelId: ActiveSidePanel = 'none';
   @state() private settingsDockVisible = false;
   @state() private expanded = true; // Start expanded
+  @state() private visible = true; // Auto-hide state
   
   private unsubscribeAppState: (() => void) | null = null;
+  private idleTimer: number | null = null;
+  private readonly IDLE_TIMEOUT = 5000; // 5 seconds
 
   // Menu items with custom SVG icons
   private static readonly MENU_ITEMS: MenuItem[] = [
