@@ -152,7 +152,7 @@ export class CircularMenuWheel extends LitElement {
     }
 
     :host(.dock-open) {
-      transform: translateX(-220px);
+      transform: translateX(-380px);
     }
 
     .wheel-container {

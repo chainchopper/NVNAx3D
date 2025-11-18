@@ -12,6 +12,7 @@ export class CameraControls extends LitElement {
   @property({ type: Boolean }) isActive = false;
   @property({ type: Boolean }) showPreview = false;
   @property({ type: String }) error: string | null = null;
+  @property({ type: Boolean }) expanded = false;
 
   private inactivityTimer: number | null = null;
   private readonly HIDE_DELAY = 5000;
@@ -34,7 +35,23 @@ export class CameraControls extends LitElement {
       z-index: 150;
       display: flex;
       flex-direction: column;
-      gap: 30px;
+      gap: 12px;
+    }
+
+    .sub-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.3s ease;
+      opacity: 0;
+    }
+
+    .sub-controls.expanded {
+      max-height: 200px;
+      opacity: 1;
     }
 
     .icon-button {
@@ -105,6 +122,10 @@ export class CameraControls extends LitElement {
     this.dispatchEvent(new CustomEvent('toggle-camera'));
   }
 
+  private handleToggleExpand() {
+    this.expanded = !this.expanded;
+  }
+
   private handleTogglePreview() {
     if (!this.hasPermission || !this.isActive) return;
     this.dispatchEvent(new CustomEvent('toggle-preview'));
@@ -163,34 +184,37 @@ export class CameraControls extends LitElement {
 
     return html`
       <div class="camera-controls">
-        <!-- Switch Camera icon: Front/Back (mobile) -->
-        <div 
-          class="icon-button ${switchDisabled}"
-          @click="${this.handleSwitchCamera}"
-          title="Switch camera (front/back)"
-        >
-          🔄
-          <span class="tooltip">Switch Camera</span>
+        <!-- Sub-controls (collapsible) -->
+        <div class="sub-controls ${this.expanded ? 'expanded' : ''}">
+          <!-- Switch Camera icon: Front/Back (mobile) -->
+          <div 
+            class="icon-button ${switchDisabled}"
+            @click="${this.handleSwitchCamera}"
+            title="Switch camera (front/back)"
+          >
+            🔄
+            <span class="tooltip">Switch Camera</span>
+          </div>
+
+          <!-- Eye icon: Show/Hide Preview -->
+          <div 
+            class="icon-button ${previewClass} ${previewDisabled}"
+            @click="${this.handleTogglePreview}"
+            title="Toggle camera preview"
+          >
+            ${this.showPreview ? '👁️' : '🙈'}
+            <span class="tooltip">${this.showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+          </div>
         </div>
 
-        <!-- Eye icon: Show/Hide Preview -->
-        <div 
-          class="icon-button ${previewClass} ${previewDisabled}"
-          @click="${this.handleTogglePreview}"
-          title="Toggle camera preview"
-        >
-          ${this.showPreview ? '👁️' : '🙈'}
-          <span class="tooltip">${this.showPreview ? 'Hide Preview' : 'Show Preview'}</span>
-        </div>
-
-        <!-- Camera icon: On/Off -->
+        <!-- Main Camera icon (always visible, expands/collapses sub-controls) -->
         <div 
           class="icon-button ${cameraClass}"
-          @click="${this.handleToggleCamera}"
-          title="Toggle camera"
+          @click="${this.handleToggleExpand}"
+          title="Camera controls"
         >
           📷
-          <span class="tooltip">${this.isActive ? 'Camera Off' : 'Camera On'}</span>
+          <span class="tooltip">${this.expanded ? 'Hide Controls' : 'Show Controls'}</span>
         </div>
       </div>
     `;
