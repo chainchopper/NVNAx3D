@@ -748,6 +748,36 @@ export class PersoniSettingsPanel extends LitElement {
           </div>
         </div>
 
+        <!-- Dual Mode Section -->
+        <div class="section">
+          <h3 class="section-title">🤝 Dual PersonI Mode</h3>
+          <div class="helper-text" style="margin-bottom: 16px;">
+            Collaborate with two PersonI simultaneously for richer conversations
+          </div>
+          
+          <personi-carousel></personi-carousel>
+          
+          <div class="field-group" style="margin-top: 24px;">
+            <label class="field-label">Collaboration Mode</label>
+            <select
+              @change=${(e: Event) => {
+                const mode = (e.target as HTMLSelectElement).value;
+                const event = new CustomEvent('dual-mode-changed', {
+                  detail: { mode },
+                  bubbles: true,
+                  composed: true
+                });
+                this.dispatchEvent(event);
+              }}
+            >
+              <option value="single">Single PersonI (Default)</option>
+              <option value="collaborative">Collaborative Discussion</option>
+              <option value="debate">Debate & Contrast</option>
+              <option value="teaching">Teaching & Examples</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Capabilities Section -->
         <div class="section">
           <h3 class="section-title">Capabilities</h3>
