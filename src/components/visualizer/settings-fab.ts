@@ -28,7 +28,7 @@ export class SettingsFab extends LitElement {
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 100;
+      z-index: 160;
       transition: opacity 0.5s ease-out;
     }
 
