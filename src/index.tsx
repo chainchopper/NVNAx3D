@@ -4987,6 +4987,23 @@ export class GdmLiveAudio extends LitElement {
             @close=${this.closeSidePanel}
             @stt-preferences-changed=${(e: CustomEvent) => {
               this.sttPreferences = e.detail;
+              
+              // Re-determine STT mode when preferences change
+              const previousMode = this.useBrowserStt;
+              this.determineSttMode();
+              
+              // If STT mode changed, restart listening
+              if (previousMode !== this.useBrowserStt) {
+                console.log(`[STT] Mode changed: ${previousMode ? 'browser' : 'whisper/provider'} -> ${this.useBrowserStt ? 'browser' : 'whisper/provider'}`);
+                // Stop current mode
+                if (previousMode) {
+                  this.stopBrowserSttRecognition();
+                }
+                // Restart with new mode
+                this.startListening();
+              }
+              
+              // Load Whisper model if enabled
               if (this.sttPreferences.enabled) {
                 localWhisperService.loadModel(this.sttPreferences.modelSize).catch(err => {
                   console.error('Failed to load Whisper model:', err);
