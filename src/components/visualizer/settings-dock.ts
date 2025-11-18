@@ -341,6 +341,11 @@ export class SettingsDock extends LitElement {
         title: 'Telephony',
         content: html`<telephony-settings-panel @close=${this.handlePanelCloseRequest}></telephony-settings-panel>`,
       },
+      'device': {
+        id: 'device',
+        title: 'Device Settings',
+        content: html`<device-settings-panel @close=${this.handlePanelCloseRequest}></device-settings-panel>`,
+      },
       'help': {
         id: 'help',
         title: 'Help & Documentation',
