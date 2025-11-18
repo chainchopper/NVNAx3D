@@ -28,7 +28,6 @@ export class UIControls extends LitElement {
       position: fixed;
       top: 80px;
       right: 20px;
-      pointer-events: none;
       z-index: 90;
       transition: opacity 0.5s ease-out, visibility 0s 0.5s;
     }
@@ -48,7 +47,6 @@ export class UIControls extends LitElement {
       flex-direction: column;
       align-items: flex-end;
       gap: 16px;
-      pointer-events: all;
     }
 
     .main-controls {
@@ -241,7 +239,6 @@ export class UIControls extends LitElement {
 
     .fade-out {
       opacity: 0.3;
-      pointer-events: none;
     }
   `;
 
