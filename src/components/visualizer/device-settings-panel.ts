@@ -49,9 +49,15 @@ export class DeviceSettingsPanel extends LitElement {
   @state() private availableCameras: MediaDeviceInfo[] = [];
 
   private getDefaultSettings(): DeviceSettings {
-    const stored = localStorage.getItem('nirvana_device_settings');
-    if (stored) {
-      return JSON.parse(stored);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('nirvana_device_settings');
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      }
+    } catch (error) {
+      console.warn('[DeviceSettings] localStorage not available:', error);
     }
     return {
       sensors: {
@@ -245,7 +251,13 @@ export class DeviceSettingsPanel extends LitElement {
   }
 
   private saveSettings(): void {
-    localStorage.setItem('nirvana_device_settings', JSON.stringify(this.settings));
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('nirvana_device_settings', JSON.stringify(this.settings));
+      }
+    } catch (error) {
+      console.error('[DeviceSettings] Failed to save settings:', error);
+    }
     
     this.dispatchEvent(new CustomEvent('device-settings-changed', {
       detail: this.settings,

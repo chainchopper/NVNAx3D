@@ -39,6 +39,9 @@ import '../personi-settings-panel';
 import '../ui-controls';
 import '../camera-controls';
 import '../camera-manager';
+import './camera-circular-menu';
+import './device-settings-panel';
+import './personi-carousel';
 import '../background-manager';
 import '../rag-toggle';
 import '../object-detection-overlay';
@@ -239,6 +242,12 @@ export class VisualizerShell extends LitElement {
   private handleSwitchCamera = () => {
     if (this.cameraManager) {
       (this.cameraManager as any).switchCamera?.();
+    }
+  };
+
+  private handleCameraSnapshot = () => {
+    if (this.cameraManager) {
+      (this.cameraManager as any).captureSnapshot?.();
     }
   };
 
@@ -888,16 +897,34 @@ export class VisualizerShell extends LitElement {
         <!-- Settings Dock (right-side docked panel with multi-layer nav) -->
         <settings-dock></settings-dock>
 
-        <!-- Camera Controls (z-index: 45 - HUD tier) -->
-        <camera-controls
+        <!-- Camera Circular Menu (z-index: 150 - above controls) -->
+        <camera-circular-menu
+          .cameraActive=${this.cameraEnabled}
+          .previewVisible=${this.cameraShowPreview}
+          .detectionActive=${this.objectDetectionEnabled}
           .hasPermission=${this.cameraHasPermission}
-          .isActive=${this.cameraEnabled}
-          .showPreview=${this.cameraShowPreview}
           .error=${this.cameraError}
-          @toggle-camera=${this.handleToggleCameraControl}
-          @toggle-preview=${this.handleToggleCameraPreview}
-          @switch-camera=${this.handleSwitchCamera}
-        ></camera-controls>
+          @request-camera-permission=${async () => {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+              stream.getTracks().forEach(track => track.stop());
+              this.cameraHasPermission = true;
+              this.cameraError = null;
+              
+              if (!this.cameraEnabled) {
+                this.cameraEnabled = true;
+              }
+            } catch (err: any) {
+              this.cameraError = err?.message || 'Camera permission denied';
+              this.cameraHasPermission = false;
+            }
+          }}
+          @camera-start=${this.handleToggleCameraControl}
+          @camera-toggle-preview=${this.handleToggleCameraPreview}
+          @camera-switch=${this.handleSwitchCamera}
+          @camera-toggle-detection=${this.handleToggleObjectDetection}
+          @camera-snapshot=${this.handleCameraSnapshot}
+        ></camera-circular-menu>
 
         <!-- Camera Manager (z-index: 1 - Background layer below 3D canvas) -->
         <camera-manager
