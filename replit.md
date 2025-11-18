@@ -32,9 +32,10 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
 - **Agentic Intelligence Architecture**: PersonI utilize a Perception → Reasoning → Planning → Action pipeline. Core services include PerceptionOrchestrator, PlannerService, and AgenticReasoningEngine, supporting 8 action types (telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create) and an 'app_control' action for voice commands.
+- **System Context Service**: Provides complete AI awareness of all menu/panel states across model/provider changes. Aggregates notes, tasks, routines, memories, plugins, connectors, user profile, and available tools into every conversation. Uses smart caching (30s for full context, 60s for memory stats) and metadata-only Chroma queries for optimal performance. PersonI always has full visibility into system state.
 - **Connector Backend Proxy**: Secure Express.js server for external service integrations with OAuth token handling.
 - **Model Provider System**: Configures and integrates multiple AI providers with flexible model selection.
-- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries.
+- **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries. Optimized with metadata-only queries to avoid expensive document/embedding fetches.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
 - **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and OpenAI TTS integration.
 - **Environmental Awareness Suite**: Real-time camera-based contextual observation, Vision-Enhanced Idle Speech, Environmental Observer Service, and multi-format file upload with RAG.
