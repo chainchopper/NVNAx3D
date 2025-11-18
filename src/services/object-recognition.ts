@@ -96,6 +96,16 @@ export class ObjectRecognitionService {
         this.fpsStartTime = now;
       }
       
+      // Guard: Only run detection if video has valid dimensions and data
+      const videoReady = videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && 
+                         videoElement.videoWidth > 0 && 
+                         videoElement.videoHeight > 0;
+      
+      if (!videoReady) {
+        this.animationFrameId = requestAnimationFrame(detect);
+        return;
+      }
+      
       const objects = await this.detectObjects(videoElement);
       
       if (this.detectionCallback) {
