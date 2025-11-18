@@ -122,8 +122,16 @@ export class CameraControls extends LitElement {
     this.dispatchEvent(new CustomEvent('toggle-camera'));
   }
 
-  private handleToggleExpand() {
-    this.expanded = !this.expanded;
+  private handleMainCameraClick() {
+    // Main camera icon does BOTH: toggles camera on/off AND manages sub-control visibility
+    if (!this.hasPermission) return;
+    
+    // Toggle camera
+    this.dispatchEvent(new CustomEvent('toggle-camera'));
+    
+    // Manage sub-control visibility based on camera state
+    // When turning ON → expand, when turning OFF → collapse
+    this.expanded = !this.isActive;
   }
 
   private handleTogglePreview() {
@@ -207,14 +215,14 @@ export class CameraControls extends LitElement {
           </div>
         </div>
 
-        <!-- Main Camera icon (always visible, expands/collapses sub-controls) -->
+        <!-- Main Camera icon (always visible, toggles camera + expands sub-controls) -->
         <div 
           class="icon-button ${cameraClass}"
-          @click="${this.handleToggleExpand}"
-          title="Camera controls"
+          @click="${this.handleMainCameraClick}"
+          title="Toggle camera"
         >
           📷
-          <span class="tooltip">${this.expanded ? 'Hide Controls' : 'Show Controls'}</span>
+          <span class="tooltip">${this.isActive ? 'Camera Off' : 'Camera On'}</span>
         </div>
       </div>
     `;
