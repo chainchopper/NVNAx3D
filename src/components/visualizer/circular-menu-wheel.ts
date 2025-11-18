@@ -345,10 +345,10 @@ export class CircularMenuWheel extends LitElement {
         <button
           class="center-hub"
           @click=${this.handleToggleExpand}
-          title="${this.expanded ? 'Hide Menu' : 'Show Menu'}"
           aria-label="Toggle settings menu"
         >
           ⚙️
+          <span class="tooltip">${this.expanded ? 'Hide Menu' : 'Show Menu'}</span>
         </button>
 
         <!-- Menu items arranged in circle -->
@@ -364,7 +364,6 @@ export class CircularMenuWheel extends LitElement {
               @click=${() => this.handleItemClick(item)}
               aria-pressed=${isActive}
               aria-label="${item.label}"
-              title="${item.label}"
             >
               ${item.icon()}
               <span class="tooltip">${item.label}</span>
