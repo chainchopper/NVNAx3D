@@ -58,7 +58,7 @@ export class PersonICarousel extends LitElement {
         0 8px 32px rgba(0, 0, 0, 0.5),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      min-height: 280px;
+      height: 200px;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;

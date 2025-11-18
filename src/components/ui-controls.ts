@@ -26,11 +26,10 @@ export class UIControls extends LitElement {
     :host {
       display: block;
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      top: 20px;
+      right: 20px;
       pointer-events: none;
-      z-index: 150;
+      z-index: 9999;
       transition: opacity 0.5s ease-out;
     }
 
@@ -40,36 +39,59 @@ export class UIControls extends LitElement {
 
     .controls-container {
       position: relative;
-      bottom: 40px;
-      margin: 0 auto;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 16px;
+      align-items: flex-end;
+      gap: 12px;
       pointer-events: all;
     }
 
     .main-controls {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 12px;
+      flex-direction: row-reverse;
     }
 
     .control-button {
-      width: 60px;
-      height: 60px;
+      width: 50px;
+      height: 50px;
       border-radius: 50%;
       border: 2px solid rgba(255, 255, 255, 0.3);
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(15px);
       color: white;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 20px;
       transition: all 0.3s ease;
       user-select: none;
+      position: relative;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .control-button .tooltip {
+      position: absolute;
+      right: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      z-index: 10001;
+    }
+
+    .control-button:hover .tooltip {
+      opacity: 1;
     }
 
     .control-button:hover {
@@ -105,33 +127,57 @@ export class UIControls extends LitElement {
     }
 
     .mic-button {
-      width: 80px;
-      height: 80px;
-      font-size: 32px;
+      width: 56px;
+      height: 56px;
+      font-size: 24px;
     }
 
     .text-input-container {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      padding: 12px 20px;
-      border-radius: 30px;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      min-width: 400px;
-      animation: slideUp 0.3s ease-out;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(15px);
+      padding: 10px 16px;
+      border-radius: 25px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      min-width: 350px;
+      max-width: 400px;
+      animation: slideLeft 0.3s ease-out;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
     }
 
-    @keyframes slideUp {
+    @keyframes slideLeft {
       from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateX(20px);
       }
       to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
       }
+    }
+
+    .file-upload-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(135, 206, 250, 0.2);
+      border: 2px solid rgba(135, 206, 250, 0.4);
+      color: #87CEFA;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .file-upload-btn:hover {
+      background: rgba(135, 206, 250, 0.3);
+      border-color: rgba(135, 206, 250, 0.6);
+      transform: scale(1.05);
     }
 
     .text-input {
@@ -149,8 +195,8 @@ export class UIControls extends LitElement {
     }
 
     .send-button {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       background: rgba(100, 200, 255, 0.3);
       border: 2px solid rgba(100, 200, 255, 0.6);
@@ -159,8 +205,9 @@ export class UIControls extends LitElement {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 16px;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     }
 
     .send-button:hover {
@@ -171,6 +218,10 @@ export class UIControls extends LitElement {
     .send-button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    input[type="file"] {
+      display: none;
     }
 
     .status-text {
@@ -311,29 +362,27 @@ export class UIControls extends LitElement {
           <div 
             class="control-button mic-button ${this.isSpeaking ? 'recording' : ''} ${this.isAiSpeaking ? 'ai-speaking' : ''}"
             @click="${this.handleMicClick}"
-            title="${this.isMuted ? 'Unmute' : 'Mute'}"
           >
             ${this.isMuted ? '🔇' : '🎤'}
+            <span class="tooltip">${this.isMuted ? 'Unmute' : 'Mute'}</span>
           </div>
 
           ${this.isAiSpeaking && !isTextMode ? html`
             <div 
               class="control-button"
               @click="${this.handleInterruptClick}"
-              title="Interrupt"
             >
               ⏸️
+              <span class="tooltip">Interrupt</span>
             </div>
           ` : nothing}
-        </div>
-
-        <div class="main-controls">
+          
           <div 
             class="control-button ${isTextMode ? 'active' : ''}"
             @click="${this.handleModeToggle}"
-            title="${isTextMode ? 'Switch to Voice' : 'Switch to Text'}"
           >
             ${isTextMode ? '🎤' : '⌨️'}
+            <span class="tooltip">${isTextMode ? 'Switch to Voice' : 'Switch to Text'}</span>
           </div>
         </div>
       </div>

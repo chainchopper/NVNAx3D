@@ -8,17 +8,19 @@
 
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { ref } from 'lit/directives/ref.js';
 
 export type BackgroundSource = 'none' | 'camera' | 'external-stream';
 
 @customElement('background-manager')
 export class BackgroundManager extends LitElement {
   @property({ type: String }) source: BackgroundSource = 'none';
-  @property({ type: Object }) videoElement: HTMLVideoElement | null = null;
+  @property({ type: Object }) stream: MediaStream | null = null;
   @property({ type: String }) externalStreamUrl: string | null = null;
   
   @state() private isLoading = false;
   @state() private error: string | null = null;
+  @state() private videoRef: HTMLVideoElement | null = null;
 
   static override styles = css`
     :host {
@@ -95,11 +97,27 @@ export class BackgroundManager extends LitElement {
   `;
 
   private renderCameraFeed() {
-    if (!this.videoElement) {
+    if (!this.stream) {
       return html`<div class="error-overlay">No camera feed available</div>`;
     }
 
-    return html`${this.videoElement}`;
+    return html`
+      <video 
+        ${ref((el) => {
+          if (el && el instanceof HTMLVideoElement) {
+            this.videoRef = el;
+            if (this.stream && el.srcObject !== this.stream) {
+              el.srcObject = this.stream;
+              el.play().catch(err => console.error('[BackgroundManager] Video play failed:', err));
+            }
+          }
+        })}
+        autoplay 
+        playsinline 
+        muted
+        style="transform: scaleX(-1);"
+      ></video>
+    `;
   }
 
   private renderExternalStream() {
