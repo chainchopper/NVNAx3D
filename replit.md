@@ -21,13 +21,14 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **3D Graphics**: Three.js (planned WebGPU migration)
 - **Language**: TypeScript
 - **Backend**: Express.js (Node.js) for secure connector API proxy
+- **Media Generation**: ComfyUI integration for image/video/audio workflows
 
 ### UI/UX Decisions
 - **Design Philosophy**: Minimalist, glass-morphism, clean, and uncluttered interfaces.
 - **Visuals**: AI-generated liquid-themed avatars, dynamic 3D objects with audio-reactive visuals, object detection overlays. Camera feeds are displayed as native video elements via a Background Manager.
 - **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
 - **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
-- **Settings UI**: Centered draggable FAB button. An always-visible circular menu wheel provides direct access to 11 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, Telephony, Device, User Profile, Help) with sequential slide-in animation.
+- **Settings UI**: Centered draggable FAB button. An always-visible circular menu wheel provides direct access to 12 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, ComfyUI, Telephony, Device, User Profile, Help) with sequential slide-in animation.
 - **Camera Controls**: Bottom-right (300px from bottom) circular menu with expandable radial submenu for Hide/Show Preview, Switch Camera, Object Detection, and Snapshot actions.
 - **Camera Preview**: Native HTML5 `<video>` element displaying real camera feed in a small glass-morphic box (320x240px) at bottom-left corner (z-index 200). Uses browser's native getUserMedia API, not 3D textures.
 - **PersonI Carousel**: Bottom-center (horizontally centered, 330px wide) single-card carousel with uniform card heights (280px min-height) for quick PersonI switching with live updates.
@@ -54,6 +55,7 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Plugin System**: Dynamic UI plugin architecture with registry, sandbox, and persistence.
 - **CommandRouter Service**: Handles 13 app control functions exposed via LLM function calling.
 - **Background Manager**: Centralized full-viewport background content management for device camera feeds and external video sources.
+- **ComfyUI Integration**: User-configurable endpoint for advanced image/video/audio generation workflows with REST API proxy, workflow registry, job submission, status polling, and asset retrieval.
 
 ## External Dependencies
 - **Google Gemini API**: Conversational AI and embeddings.
