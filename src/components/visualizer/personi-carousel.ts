@@ -89,6 +89,7 @@ export class PersonICarousel extends LitElement {
         inset 0 2px 8px rgba(255, 255, 255, 0.1);
       overflow: hidden;
       transition: all 0.3s ease;
+      position: relative;
     }
 
     .avatar:hover {
@@ -96,10 +97,25 @@ export class PersonICarousel extends LitElement {
       border-color: rgba(135, 206, 250, 0.6);
     }
 
-    .avatar img {
+    .avatar img,
+    .avatar video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .avatar video {
+      pointer-events: none;
+    }
+
+    .avatar iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
       border-radius: 50%;
     }
 
@@ -378,6 +394,56 @@ export class PersonICarousel extends LitElement {
     return tags;
   }
 
+  private isYouTubeUrl(url: string): boolean {
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  }
+
+  private normalizeYouTubeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      let videoId = '';
+
+      // Handle youtube.com/watch?v=ABC
+      if (urlObj.hostname.includes('youtube.com') && urlObj.pathname === '/watch') {
+        videoId = urlObj.searchParams.get('v') || '';
+      }
+      // Handle youtu.be/ABC
+      else if (urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.substring(1); // Remove leading /
+      }
+
+      if (videoId) {
+        // Preserve other query parameters
+        const params = new URLSearchParams();
+        urlObj.searchParams.forEach((value, key) => {
+          if (key !== 'v') { // Don't include 'v' param in embed URL
+            params.set(key, value);
+          }
+        });
+        const queryString = params.toString();
+        return `https://www.youtube.com/embed/${videoId}${queryString ? '?' + queryString : ''}`;
+      }
+    } catch (e) {
+      // If URL parsing fails, return original
+    }
+    return url;
+  }
+
+  private isVideoUrl(url: string): boolean {
+    // Check for data URL videos
+    if (url.startsWith('data:video/')) {
+      return true;
+    }
+    // Check for video file extensions (before query/hash)
+    try {
+      const urlObj = new URL(url);
+      return /\.(mp4|webm|ogg)$/i.test(urlObj.pathname);
+    } catch (e) {
+      // Fallback to simple regex for relative paths
+      return /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(url);
+    }
+  }
+
   override render() {
     if (this.personis.length === 0) {
       return html`
@@ -406,7 +472,22 @@ export class PersonICarousel extends LitElement {
         </button>
 
         <div class="card ${this.confirming ? 'confirming' : ''}">
-          <div class="avatar">${currentPersoni.avatarUrl ? html`<img src="${currentPersoni.avatarUrl}" alt="${currentPersoni.name}">` : '🤖'}</div>
+          <div class="avatar">
+            ${currentPersoni.avatarUrl ? 
+              this.isYouTubeUrl(currentPersoni.avatarUrl) ? html`
+                <iframe 
+                  src="${this.normalizeYouTubeUrl(currentPersoni.avatarUrl)}" 
+                  frameborder="0"
+                  allow="autoplay; encrypted-media"
+                  allowfullscreen
+                ></iframe>
+              ` : this.isVideoUrl(currentPersoni.avatarUrl) ? html`
+                <video src="${currentPersoni.avatarUrl}" loop muted autoplay playsinline></video>
+              ` : html`
+                <img src="${currentPersoni.avatarUrl}" alt="${currentPersoni.name}">
+              `
+            : '🤖'}
+          </div>
           <div class="name">${currentPersoni.name}</div>
           <div class="description">${currentPersoni.systemInstruction || currentPersoni.tagline || 'AI Assistant'}</div>
           

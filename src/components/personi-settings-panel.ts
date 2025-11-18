@@ -38,6 +38,7 @@ export class PersoniSettingsPanel extends LitElement {
   @state() private name = '';
   @state() private tagline = '';
   @state() private systemInstruction = '';
+  @state() private avatarUrl = '';
   @state() private voiceName = 'Puck';
   @state() private conversationModel = '';
   @state() private visionModel = '';
@@ -368,6 +369,98 @@ export class PersoniSettingsPanel extends LitElement {
       font-size: 14px;
       text-align: center;
     }
+
+    .avatar-preview {
+      position: relative;
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 16px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(135, 206, 250, 0.3);
+      background: rgba(10, 14, 26, 0.6);
+      backdrop-filter: blur(12px);
+      box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar-preview img,
+    .avatar-preview video,
+    .avatar-preview iframe {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .avatar-preview iframe {
+      aspect-ratio: 16/9;
+    }
+
+    .remove-avatar-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(244, 67, 54, 0.25);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(244, 67, 54, 0.5);
+      color: #F44336;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+    }
+
+    .remove-avatar-btn:hover {
+      background: rgba(244, 67, 54, 0.4);
+      border-color: rgba(244, 67, 54, 0.7);
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+    }
+
+    .avatar-upload-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .upload-btn {
+      padding: 12px 20px;
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid rgba(33, 150, 243, 0.4);
+      border-radius: 12px;
+      color: #2196f3;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .upload-btn:hover {
+      background: rgba(33, 150, 243, 0.3);
+      border-color: rgba(33, 150, 243, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .url-input-group {
+      width: 100%;
+    }
+
+    .url-input-group input {
+      width: 100%;
+    }
   `;
 
   connectedCallback() {
@@ -396,6 +489,7 @@ export class PersoniSettingsPanel extends LitElement {
       this.name = activePersoni.name;
       this.tagline = activePersoni.tagline;
       this.systemInstruction = activePersoni.systemInstruction;
+      this.avatarUrl = activePersoni.avatarUrl || '';
       this.voiceName = activePersoni.voiceName || 'Puck';
       
       // Extract model IDs (handles both string and ProviderModelSelection formats)
@@ -450,6 +544,7 @@ export class PersoniSettingsPanel extends LitElement {
       name: this.name,
       tagline: this.tagline,
       systemInstruction: this.systemInstruction,
+      avatarUrl: this.avatarUrl || undefined,
       voiceName: this.voiceName,
       models: {
         conversation: this.conversationModel,
@@ -501,6 +596,56 @@ export class PersoniSettingsPanel extends LitElement {
       this.enabledConnectors = [...this.enabledConnectors, connectorId];
     }
     this.markChanged();
+  }
+
+  private isYouTubeUrl(url: string): boolean {
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  }
+
+  private normalizeYouTubeUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      let videoId = '';
+
+      // Handle youtube.com/watch?v=ABC
+      if (urlObj.hostname.includes('youtube.com') && urlObj.pathname === '/watch') {
+        videoId = urlObj.searchParams.get('v') || '';
+      }
+      // Handle youtu.be/ABC
+      else if (urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.substring(1); // Remove leading /
+      }
+
+      if (videoId) {
+        // Preserve other query parameters
+        const params = new URLSearchParams();
+        urlObj.searchParams.forEach((value, key) => {
+          if (key !== 'v') { // Don't include 'v' param in embed URL
+            params.set(key, value);
+          }
+        });
+        const queryString = params.toString();
+        return `https://www.youtube.com/embed/${videoId}${queryString ? '?' + queryString : ''}`;
+      }
+    } catch (e) {
+      // If URL parsing fails, return original
+    }
+    return url;
+  }
+
+  private isVideoUrl(url: string): boolean {
+    // Check for data URL videos
+    if (url.startsWith('data:video/')) {
+      return true;
+    }
+    // Check for video file extensions (before query/hash)
+    try {
+      const urlObj = new URL(url);
+      return /\.(mp4|webm|ogg)$/i.test(urlObj.pathname);
+    } catch (e) {
+      // Fallback to simple regex for relative paths
+      return /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(url);
+    }
   }
 
   private renderModelDropdown(
@@ -600,6 +745,81 @@ export class PersoniSettingsPanel extends LitElement {
             ></textarea>
             <div class="helper-text">
               This is the core prompt that defines how the AI behaves and responds
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">Avatar Image/Video</label>
+            
+            ${this.avatarUrl ? html`
+              <div class="avatar-preview">
+                ${this.isYouTubeUrl(this.avatarUrl) ? html`
+                  <iframe 
+                    src="${this.normalizeYouTubeUrl(this.avatarUrl)}" 
+                    frameborder="0" 
+                    allow="autoplay; encrypted-media"
+                    allowfullscreen
+                  ></iframe>
+                ` : this.isVideoUrl(this.avatarUrl) ? html`
+                  <video src="${this.avatarUrl}" controls loop muted playsinline></video>
+                ` : html`
+                  <img src="${this.avatarUrl}" alt="Avatar" />
+                `}
+                <button 
+                  class="remove-avatar-btn"
+                  @click=${() => {
+                    this.avatarUrl = '';
+                    this.markChanged();
+                  }}
+                  title="Remove avatar"
+                >✕</button>
+              </div>
+            ` : ''}
+
+            <div class="avatar-upload-controls">
+              <input
+                type="file"
+                id="avatar-file-input"
+                accept="image/*,video/*"
+                @change=${(e: Event) => {
+                  const input = e.target as HTMLInputElement;
+                  const file = input.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      this.avatarUrl = event.target?.result as string;
+                      this.markChanged();
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                style="display: none;"
+              />
+              <button 
+                class="upload-btn"
+                @click=${() => {
+                  const input = this.shadowRoot?.getElementById('avatar-file-input') as HTMLInputElement;
+                  input?.click();
+                }}
+              >
+                📁 Upload Image/Video
+              </button>
+              
+              <div class="url-input-group">
+                <input
+                  type="text"
+                  .value=${this.avatarUrl && !this.avatarUrl.startsWith('data:') ? this.avatarUrl : ''}
+                  @input=${(e: Event) => {
+                    this.avatarUrl = (e.target as HTMLInputElement).value;
+                    this.markChanged();
+                  }}
+                  placeholder="Or paste image/video/YouTube URL"
+                />
+              </div>
+            </div>
+            
+            <div class="helper-text">
+              Upload an image or video file, or provide a URL (supports images, videos, and YouTube)
             </div>
           </div>
         </div>
