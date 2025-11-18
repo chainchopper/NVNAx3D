@@ -873,7 +873,7 @@ export class VisualizerShell extends LitElement {
         ></visualizer-3d>
 
         <!-- HUD Overlays -->
-        <persona-carousel-hud></persona-carousel-hud>
+        <personi-carousel></personi-carousel>
         <dual-mode-controls-hud></dual-mode-controls-hud>
         <music-detection-hud></music-detection-hud>
 
@@ -887,12 +887,6 @@ export class VisualizerShell extends LitElement {
         <circular-menu-wheel
           @panel-selected=${(e: CustomEvent) => console.log('Panel selected:', e.detail.panelId)}
         ></circular-menu-wheel>
-
-        <!-- Radial Settings Menu (deprecated - kept for backward compat) -->
-        <settings-menu
-          .visible=${this.settingsMenuVisible}
-          @menu-item-click=${this.handleMenuItemClick}
-        ></settings-menu>
 
         <!-- Settings Dock (right-side docked panel with multi-layer nav) -->
         <settings-dock></settings-dock>

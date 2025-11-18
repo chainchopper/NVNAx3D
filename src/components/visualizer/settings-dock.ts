@@ -184,7 +184,7 @@ export class SettingsDock extends LitElement {
       const state = appStateService.getState();
       
       // Panel IDs managed by this dock (all panels now opened via radial menu)
-      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig', 'help', 'telephony'];
+      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig', 'help', 'telephony', 'device'];
       const isDockManaged = dockManagedPanels.includes(state.activeSidePanel);
       
       if (isDockManaged) {
@@ -348,7 +348,7 @@ export class SettingsDock extends LitElement {
       },
       'help': {
         id: 'help',
-        title: 'Help & Documentation',
+        title: 'NIRVANA HELP AND DOCUMENTATION',
         content: html`<help-panel @close=${this.handlePanelCloseRequest}></help-panel>`,
       },
     };

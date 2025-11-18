@@ -229,6 +229,19 @@ export class CircularMenuWheel extends LitElement {
       transform: scale(0.3);
     }
 
+    /* Sequential slide-in animation for each icon */
+    .menu-item:nth-child(1) { transition-delay: 0.05s; }
+    .menu-item:nth-child(2) { transition-delay: 0.10s; }
+    .menu-item:nth-child(3) { transition-delay: 0.15s; }
+    .menu-item:nth-child(4) { transition-delay: 0.20s; }
+    .menu-item:nth-child(5) { transition-delay: 0.25s; }
+    .menu-item:nth-child(6) { transition-delay: 0.30s; }
+    .menu-item:nth-child(7) { transition-delay: 0.35s; }
+    .menu-item:nth-child(8) { transition-delay: 0.40s; }
+    .menu-item:nth-child(9) { transition-delay: 0.45s; }
+    .menu-item:nth-child(10) { transition-delay: 0.50s; }
+    .menu-item:nth-child(11) { transition-delay: 0.55s; }
+
     .menu-item svg {
       width: 24px;
       height: 24px;

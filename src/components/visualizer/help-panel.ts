@@ -1310,51 +1310,93 @@ TWILIO_PHONE_NUMBER=
   private renderPlugins() {
     return html`
       <h3>🧩 Plugin System</h3>
-      <p>The plugin system lets you (or PersonI) create custom UI components that extend Nirvana's functionality.</p>
+      <p>The plugin system allows you to create custom UI components and integrate them into Nirvana. Plugins are dynamic Lit-based web components that can be loaded via file upload (ZIP) or GitHub URL.</p>
 
-      <h4>Plugin Architecture</h4>
+      <h4>Plugin Structure</h4>
+      <p>A plugin consists of:</p>
       <ul>
-        <li><strong>Dynamic UI Generation</strong>: PersonI can create plugins via natural language</li>
-        <li><strong>Registry</strong>: Centralized plugin registry with localStorage persistence</li>
-        <li><strong>Sandbox</strong>: Secure execution environment</li>
-        <li><strong>Categories</strong>: dashboard, chart, form, table, card, list, custom</li>
+        <li><strong>Metadata</strong>: Name, version, author, description, tags, creation date</li>
+        <li><strong>Component Definition</strong>: Props (typed, with defaults), template (HTML), styles (CSS), optional methods</li>
+        <li><strong>Permissions</strong>: Required capabilities and system access</li>
       </ul>
 
-      <h4>Plugin Components</h4>
-      <p>Each plugin consists of:</p>
-      <ul>
-        <li><strong>Metadata</strong>: ID, name, description, author, version, category, tags</li>
-        <li><strong>Template</strong>: HTML structure using Lit template syntax</li>
-        <li><strong>Styles</strong>: CSS for appearance</li>
-        <li><strong>Props</strong>: Configurable parameters</li>
-        <li><strong>Events</strong>: User interactions</li>
-        <li><strong>Methods</strong>: JavaScript functions for behavior</li>
-      </ul>
+      <h4>Loading Plugins</h4>
+      <p><strong>Method 1: ZIP File Upload</strong></p>
+      <ol>
+        <li>Create your plugin.json file with metadata, component, and permissions</li>
+        <li>Optionally include assets (images, data files)</li>
+        <li>Compress into a ZIP file</li>
+        <li>Navigate to <strong>Settings → Plugins</strong></li>
+        <li>Click <strong>Upload Plugin</strong> and select your ZIP</li>
+        <li>Plugin will be extracted and registered automatically</li>
+      </ol>
 
-      <h4>Creating Plugins</h4>
-      <p>Ask any PersonI to create a plugin for you:</p>
+      <p><strong>Method 2: GitHub URL</strong></p>
+      <ol>
+        <li>Host your plugin.json in a GitHub repository</li>
+        <li>Get the raw file URL (e.g., https://raw.githubusercontent.com/username/repo/main/plugin.json)</li>
+        <li>Navigate to <strong>Settings → Plugins</strong></li>
+        <li>Click <strong>Load from URL</strong></li>
+        <li>Paste the GitHub raw URL</li>
+        <li>Plugin will be fetched and registered</li>
+      </ol>
+
+      <h4>Basic Plugin Format (JSON)</h4>
       <div class="code-block">
-"Create a plugin that shows my top 5 most important notes 
-in a card layout with color-coded importance levels"
-
-PersonI will:
-1. Design the plugin structure
-2. Generate HTML/CSS/JS code
-3. Register the plugin
-4. Add an instance to your dashboard
+{
+  "metadata": {
+    "id": "my-custom-plugin",
+    "name": "My Custom Plugin",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "description": "A custom plugin for Nirvana"
+  },
+  "component": {
+    "props": {
+      "title": { "type": "string", "default": "Dashboard" },
+      "darkMode": { "type": "boolean", "default": true }
+    },
+    "template": "&lt;div class='plugin-container'>&lt;h2>\${this.title}&lt;/h2>&lt;/div>",
+    "styles": ".plugin-container { padding: 20px; background: rgba(0,0,0,0.8); }"
+  },
+  "permissions": [],
+  "enabled": true
+}
       </div>
+
+      <h4>Accessing System Services</h4>
+      <p>Plugins can access Nirvana services via global exports:</p>
+      <div class="code-block">
+// In your plugin template:
+&lt;button @click="\${async () => {
+  const { ragMemoryManager } = await import('/src/services/memory/rag-memory-manager.js');
+  await ragMemoryManager.addMemory('User clicked button', { type: 'interaction' });
+}}">
+  Save to Memory
+&lt;/button>
+      </div>
+
+      <h4>Best Practices</h4>
+      <ul>
+        <li><strong>Keep plugins lightweight</strong> - Large plugins impact performance</li>
+        <li><strong>Use semantic HTML</strong> - Ensure accessibility</li>
+        <li><strong>Scope your CSS</strong> - Avoid global style conflicts</li>
+        <li><strong>Handle errors gracefully</strong> - Wrap async operations in try-catch</li>
+        <li><strong>Version your plugins</strong> - Use semantic versioning (1.0.0, 1.1.0, etc.)</li>
+      </ul>
 
       <h4>Managing Plugins</h4>
       <p>Access plugin management via <strong>Settings → Plugins</strong>:</p>
       <ul>
         <li>View all registered plugins</li>
-        <li>Create new plugin instances</li>
-        <li>Configure plugin props (position, size, data sources)</li>
-        <li>Delete plugins or instances</li>
+        <li>Upload ZIP files or load from GitHub URLs</li>
+        <li>Enable/disable plugins</li>
+        <li>Export plugins as JSON</li>
+        <li>Delete unwanted plugins</li>
       </ul>
 
       <div class="warning-box">
-        ⚠️ <strong>Security Note</strong>: Plugins run in a sandboxed environment with limited access to Nirvana APIs. They cannot access your credentials, modify core system files, or execute arbitrary code outside the sandbox. However, only install plugins from trusted sources or created by your PersonI.
+        ⚠️ <strong>Security Note</strong>: Plugins run with access to Nirvana's services. Only install plugins from trusted sources. Plugins cannot access raw credentials but can interact with configured connectors and memory systems.
       </div>
     `;
   }
