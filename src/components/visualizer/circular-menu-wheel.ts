@@ -221,6 +221,7 @@ export class CircularMenuWheel extends LitElement {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       pointer-events: all;
       opacity: 1;
+      z-index: 200;
     }
 
     .menu-item.collapsed {
@@ -280,17 +281,18 @@ export class CircularMenuWheel extends LitElement {
       left: -10px;
       top: 50%;
       transform: translate(-100%, -50%);
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.95);
       color: white;
       padding: 6px 12px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: 600;
       white-space: nowrap;
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s ease;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      z-index: 10;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      z-index: 9999;
     }
 
     .menu-item:hover .tooltip {
