@@ -21,9 +21,7 @@ import './visualizer-3d';
 import './visualizer-controls';
 import './settings-fab';
 import './circular-menu-wheel';
-import './settings-menu';
 import './settings-dock';
-import './persona-carousel-hud';
 import './dual-mode-controls-hud';
 import './music-detection-hud';
 import '../models-panel';
@@ -874,7 +872,6 @@ export class VisualizerShell extends LitElement {
 
         <!-- HUD Overlays -->
         <personi-carousel></personi-carousel>
-        <dual-mode-controls-hud></dual-mode-controls-hud>
         <music-detection-hud></music-detection-hud>
 
         <!-- Settings FAB (draggable gear button, z-index: 160 - Above UI Controls) -->
