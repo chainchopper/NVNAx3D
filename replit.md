@@ -29,17 +29,19 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Panels**: Comprehensive Notes, Tasks, Memory Management, User Profile, and Calendar views.
 - **Usability**: Intuitive settings for AI providers and PersonI capabilities, visual indicators for system status, distinct UI sections for OAuth and API tools in PersonI settings. Model selection dropdowns filter by appropriate capabilities.
 - **Settings UI**: Centered draggable FAB button. An always-visible circular menu wheel provides direct access to 12 panels (Models, PersonI, Connectors, Notes, Tasks, Memory, Routines, Plugins, ComfyUI, Telephony, Device, User Profile, Help) with sequential slide-in animation.
-- **Camera Controls**: Bottom-right (300px from bottom) circular menu with expandable radial submenu for Hide/Show Preview, Switch Camera, Object Detection, and Snapshot actions.
+- **Camera Controls**: Bottom-left (300px from bottom) circular menu with expandable radial submenu for Hide/Show Preview, Switch Camera, Object Detection, and Snapshot actions. Auto-hides after 5 seconds of inactivity.
 - **Camera Preview**: Native HTML5 `<video>` element displaying real camera feed in a small glass-morphic box (320x240px) at bottom-left corner (z-index 200). Uses browser's native getUserMedia API, not 3D textures.
 - **PersonI Carousel**: Bottom-center (horizontally centered, 330px wide) single-card carousel with uniform card heights (280px min-height) for quick PersonI switching with live updates.
 - **Device Settings**: Dedicated panel for accelerometer, gyroscope, microphone/camera permissions, and background service configuration.
+- **Music Detection**: Lightweight background service for detecting music vs. other audio, with pattern-based frequency analysis and song identification for RAG/idle commentary.
+- **Camera Multi-Device Support**: Automatic enumeration and cycling through all available cameras (not just front/back), with proper device ID handling.
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
 - **Agentic Intelligence Architecture**: PersonI utilize a Perception → Reasoning → Planning → Action pipeline. Core services include PerceptionOrchestrator, PlannerService, and AgenticReasoningEngine, supporting 8 action types (telephony_call, telephony_sms, email_send, store_memory, create_task, calendar_event, web_search, routine_create) and an 'app_control' action for voice commands.
 - **System Context Service**: Provides complete AI awareness of all menu/panel states across model/provider changes. Aggregates notes, tasks, routines, memories, plugins, connectors, user profile, and available tools into every conversation. Uses smart caching (30s for full context, 60s for memory stats) and metadata-only Chroma queries for optimal performance. PersonI always has full visibility into system state.
 - **Connector Backend Proxy**: Secure Express.js server for external service integrations with OAuth token handling.
-- **Model Provider System**: Configures and integrates multiple AI providers with flexible model selection.
+- **Model Provider System**: Configures and integrates multiple AI providers with flexible model selection. OpenAI-compatible providers (Ollama, LM Studio, vLLM) automatically normalize endpoints by appending `/v1` path and support optional API keys for local servers.
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries. Optimized with metadata-only queries to avoid expensive document/embedding fetches.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
 - **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and OpenAI TTS integration.

@@ -6,17 +6,34 @@ import { BaseProvider, ProviderMessage, StreamingResponse } from './base-provide
 import { ModelInfo } from '../types/providers';
 
 export class OpenAIProvider extends BaseProvider {
+  private normalizeEndpoint(endpoint?: string): string {
+    if (!endpoint) return 'https://api.openai.com/v1';
+    
+    let normalized = endpoint.trim();
+    
+    // Remove trailing slash
+    normalized = normalized.replace(/\/+$/, '');
+    
+    // For Ollama/LM Studio/vLLM: if endpoint doesn't include /v1, append it
+    // Common patterns: http://localhost:11434, http://localhost:1234, etc.
+    if (!normalized.includes('/v1')) {
+      normalized = `${normalized}/v1`;
+    }
+    
+    return normalized;
+  }
+
   async verify(): Promise<boolean> {
-    if (!this.config.apiKey) return false;
-
     try {
-      const endpoint = this.config.endpoint || 'https://api.openai.com/v1';
-      const response = await fetch(`${endpoint}/models`, {
-        headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
-      });
-
+      const endpoint = this.normalizeEndpoint(this.config.endpoint);
+      const headers: Record<string, string> = {};
+      
+      // API key is optional for local servers (Ollama, LM Studio)
+      if (this.config.apiKey) {
+        headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      }
+      
+      const response = await fetch(`${endpoint}/models`, { headers });
       return response.ok;
     } catch (error) {
       console.error('OpenAI provider verification failed:', error);
@@ -25,14 +42,15 @@ export class OpenAIProvider extends BaseProvider {
   }
 
   async getAvailableModels(): Promise<ModelInfo[]> {
-    const endpoint = this.config.endpoint || 'https://api.openai.com/v1';
+    const endpoint = this.normalizeEndpoint(this.config.endpoint);
     
     try {
-      const response = await fetch(`${endpoint}/models`, {
-        headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-        },
-      });
+      const headers: Record<string, string> = {};
+      if (this.config.apiKey) {
+        headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+      }
+      
+      const response = await fetch(`${endpoint}/models`, { headers });
 
       if (!response.ok) {
         throw new Error('Failed to fetch models');
@@ -79,14 +97,19 @@ export class OpenAIProvider extends BaseProvider {
     messages: ProviderMessage[],
     onChunk?: (chunk: StreamingResponse) => void
   ): Promise<string> {
-    const endpoint = this.config.endpoint || 'https://api.openai.com/v1';
+    const endpoint = this.normalizeEndpoint(this.config.endpoint);
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (this.config.apiKey) {
+      headers['Authorization'] = `Bearer ${this.config.apiKey}`;
+    }
 
     const response = await fetch(`${endpoint}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         model: this.config.model,
         messages,

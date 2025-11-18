@@ -75,6 +75,7 @@ import { IdleSpeechManager } from './services/idle-speech-manager';
 import { comfyUIService } from './services/comfyui/comfyui-service';
 import { musicDetector, MusicDetectionResult, MusicDetectorConfig } from './services/music-detector';
 import { songIdentificationService, SongInfo, LyricsInfo, SongIdentificationConfig } from './services/song-identification-service';
+import { musicDetectionService } from './services/music-detection-service';
 import './components/song-info-bubble';
 import { activePersonasManager, PersonaSlot } from './services/active-personas-manager';
 import { connectorHandlers, ConnectorResult } from './services/connector-handlers';
@@ -1092,6 +1093,10 @@ export class GdmLiveAudio extends LitElement {
     this.musicDetectorConfig = musicDetector.getConfig();
     this.setupMusicDetector();
     
+    // Initialize music detection service
+    const sharedMic = getSharedMicrophone();
+    musicDetectionService.register(sharedMic);
+    
     // Initialize voice command system
     this.initializeVoiceCommands();
   }
@@ -1107,6 +1112,9 @@ export class GdmLiveAudio extends LitElement {
     // Cleanup music detector
     const sharedMic = getSharedMicrophone();
     sharedMic.unregisterConsumer('music-detector');
+    
+    // Cleanup music detection service
+    musicDetectionService.unregister(sharedMic);
   }
 
   protected async firstUpdated() {
