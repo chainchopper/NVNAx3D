@@ -84,7 +84,7 @@ export class CameraCircularMenu extends LitElement {
     :host {
       display: block;
       position: fixed;
-      bottom: 250px;
+      bottom: 300px;
       right: 20px;
       z-index: 250;
       user-select: none;
