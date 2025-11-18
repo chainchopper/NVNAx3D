@@ -257,6 +257,21 @@ export class RAGMemoryManager extends VectorMemoryManager {
     return results;
   }
 
+  /**
+   * Legacy compatibility wrapper for queryMemories
+   * Maps to retrieveRelevantMemories and returns plain Memory objects
+   */
+  async queryMemories(query: string, limit: number = 10, options?: MemorySearchOptions): Promise<Memory[]> {
+    try {
+      const searchOptions = { ...options, maxResults: limit };
+      const results = await this.retrieveRelevantMemories(query, searchOptions);
+      return results.map(result => result.memory);
+    } catch (error) {
+      console.error('[RAGMemoryManager] queryMemories error:', error);
+      return [];
+    }
+  }
+
   formatMemoriesForContext(results: MemorySearchResult[]): string {
     if (results.length === 0) {
       return 'No relevant memories found.';
