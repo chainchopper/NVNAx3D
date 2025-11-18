@@ -26,102 +26,167 @@ export class PersonICarousel extends LitElement {
       bottom: 24px;
       left: 24px;
       z-index: 180;
-      width: 320px;
+      width: 280px;
+      animation: slideInFromLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        transform: translateX(-120px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
     }
 
     .carousel-container {
       position: relative;
-      padding: 16px 60px;
+      padding: 0 48px;
     }
 
     .card {
-      background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(20, 28, 58, 0.95));
-      border: 1px solid rgba(135, 206, 250, 0.3);
-      border-radius: 20px;
-      padding: 32px;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      border: 1px solid rgba(135, 206, 250, 0.25);
+      padding: 20px 16px;
       text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(12px);
-      transition: all 0.3s ease;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .card.confirming {
       border-color: rgba(255, 193, 7, 0.6);
-      box-shadow: 0 0 32px rgba(255, 193, 7, 0.3);
+      box-shadow: 
+        0 0 40px rgba(255, 193, 7, 0.4),
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
     }
 
     .avatar {
-      width: 120px;
-      height: 120px;
+      width: 80px;
+      height: 80px;
       border-radius: 50%;
-      margin: 0 auto 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      margin: 0 auto 12px;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 48px;
-      border: 3px solid rgba(135, 206, 250, 0.3);
+      font-size: 36px;
+      border: 2px solid rgba(135, 206, 250, 0.4);
+      box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 2px 8px rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .avatar:hover {
+      transform: scale(1.08);
+      border-color: rgba(135, 206, 250, 0.6);
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
     }
 
     .name {
-      font-size: 28px;
-      font-weight: 600;
+      font-size: 20px;
+      font-weight: 700;
       color: #87CEFA;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .description {
-      font-size: 15px;
-      color: rgba(255, 255, 255, 0.7);
-      line-height: 1.6;
-      margin-bottom: 20px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.5;
+      margin-bottom: 12px;
+      max-height: 54px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      text-overflow: ellipsis;
     }
 
     .tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
-      margin-bottom: 24px;
+      margin-bottom: 12px;
+      max-height: 48px;
+      overflow: hidden;
     }
 
     .tag {
-      padding: 6px 12px;
-      background: rgba(135, 206, 250, 0.15);
-      border: 1px solid rgba(135, 206, 250, 0.3);
-      border-radius: 20px;
-      font-size: 12px;
-      color: #87CEFA;
+      padding: 4px 10px;
+      background: rgba(135, 206, 250, 0.12);
+      border: 1px solid rgba(135, 206, 250, 0.25);
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(135, 206, 250, 0.9);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
     }
 
     .nav-button {
       position: absolute;
       top: 50%;
       transform: translateY(-50%);
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(12px);
       border: 2px solid rgba(135, 206, 250, 0.3);
-      color: white;
-      font-size: 24px;
+      color: rgba(135, 206, 250, 0.8);
+      font-size: 14px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
-      backdrop-filter: blur(8px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
-    .nav-button:hover {
+    .nav-button:hover:not(:disabled) {
       background: rgba(135, 206, 250, 0.2);
       border-color: rgba(135, 206, 250, 0.6);
-      transform: translateY(-50%) scale(1.1);
+      color: #87CEFA;
+      transform: translateY(-50%) scale(1.15);
+      box-shadow: 
+        0 6px 24px rgba(135, 206, 250, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     }
 
     .nav-button:disabled {
-      opacity: 0.3;
+      opacity: 0.25;
       cursor: not-allowed;
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .nav-button.prev {
@@ -133,75 +198,98 @@ export class PersonICarousel extends LitElement {
     }
 
     .confirmation-panel {
-      margin-top: 24px;
-      padding: 20px;
-      background: rgba(255, 193, 7, 0.1);
-      border: 2px solid rgba(255, 193, 7, 0.4);
-      border-radius: 12px;
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(255, 193, 7, 0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      border-radius: 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 10px;
+      box-shadow: 
+        0 4px 16px rgba(255, 193, 7, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     .confirmation-text {
       color: #FFC107;
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
     }
 
     .confirmation-buttons {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       justify-content: center;
     }
 
     .confirm-btn, .cancel-btn {
-      padding: 10px 24px;
-      border-radius: 8px;
-      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 11px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border: none;
-      font-size: 14px;
+      backdrop-filter: blur(8px);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .confirm-btn {
-      background: rgba(76, 175, 80, 0.3);
-      border: 1px solid rgba(76, 175, 80, 0.6);
+      background: rgba(76, 175, 80, 0.25);
+      border: 1px solid rgba(76, 175, 80, 0.5);
       color: #4CAF50;
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
     }
 
     .confirm-btn:hover {
-      background: rgba(76, 175, 80, 0.4);
+      background: rgba(76, 175, 80, 0.35);
+      border-color: rgba(76, 175, 80, 0.7);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
     }
 
     .cancel-btn {
-      background: rgba(244, 67, 54, 0.2);
-      border: 1px solid rgba(244, 67, 54, 0.4);
+      background: rgba(244, 67, 54, 0.15);
+      border: 1px solid rgba(244, 67, 54, 0.35);
       color: #F44336;
+      box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15);
     }
 
     .cancel-btn:hover {
-      background: rgba(244, 67, 54, 0.3);
+      background: rgba(244, 67, 54, 0.25);
+      border-color: rgba(244, 67, 54, 0.5);
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.25);
     }
 
     .indicator {
       text-align: center;
-      margin-top: 16px;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 13px;
+      margin-top: 8px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
     }
 
     .active-badge {
       display: inline-block;
-      padding: 4px 12px;
-      background: rgba(76, 175, 80, 0.2);
+      padding: 5px 12px;
+      background: rgba(76, 175, 80, 0.15);
       border: 1px solid rgba(76, 175, 80, 0.4);
       border-radius: 12px;
       color: #4CAF50;
-      font-size: 12px;
-      font-weight: 600;
-      margin-top: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
     }
   `;
 
