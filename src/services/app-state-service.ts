@@ -22,8 +22,6 @@ export type ActiveSidePanel =
   | 'models'
   | 'personis'
   | 'tts'
-  | 'help'
-  | 'telephony'
   | 'connectorConfig'
   | 'notes'
   | 'tasks'
@@ -31,6 +29,7 @@ export type ActiveSidePanel =
   | 'routines'
   | 'plugins'
   | 'telephony'
+  | 'device'
   | 'help';
 
 export type PersonaSlot = 'primary' | 'secondary';
