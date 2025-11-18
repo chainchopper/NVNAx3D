@@ -20,6 +20,7 @@ import type { MenuItem } from './settings-menu';
 import './visualizer-3d';
 import './visualizer-controls';
 import './settings-fab';
+import './circular-menu-wheel';
 import './settings-menu';
 import './settings-dock';
 import './persona-carousel-hud';
@@ -860,11 +861,16 @@ export class VisualizerShell extends LitElement {
         <dual-mode-controls-hud></dual-mode-controls-hud>
         <music-detection-hud></music-detection-hud>
 
-        <!-- Settings FAB (draggable gear button, z-index: 100 - Panels tier) -->
+        <!-- Settings FAB (draggable gear button, z-index: 160 - Above UI Controls) -->
         <settings-fab
           @toggle=${this.handleFabToggle}
           .providerStatus=${this.providerStatus}
         ></settings-fab>
+
+        <!-- Circular Menu Wheel (always-visible icon wheel, z-index: 170 - Above FAB) -->
+        <circular-menu-wheel
+          @panel-selected=${(e: CustomEvent) => console.log('Panel selected:', e.detail.panelId)}
+        ></circular-menu-wheel>
 
         <!-- Radial Settings Menu (deprecated - kept for backward compat) -->
         <settings-menu
