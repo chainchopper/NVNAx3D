@@ -924,13 +924,14 @@ export class VisualizerShell extends LitElement {
         <!-- Camera Manager (z-index: 1 - Background layer below 3D canvas) -->
         <camera-manager
           .enabled=${this.cameraEnabled}
-          .showPreview=${false}
+          .showPreview=${true}
           .renderMode=${'native'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
           @camera-started=${() => {
             if (this.cameraManager) {
               this.cameraStream = (this.cameraManager as any).mediaStream || null;
+              console.log('[VisualizerShell] Camera stream captured:', this.cameraStream);
             }
           }}
         ></camera-manager>

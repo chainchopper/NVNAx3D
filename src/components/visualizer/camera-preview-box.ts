@@ -26,7 +26,9 @@ export class CameraPreviewBox extends LitElement {
     }
 
     :host(:not([visible])) {
-      display: none;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .preview-container {
