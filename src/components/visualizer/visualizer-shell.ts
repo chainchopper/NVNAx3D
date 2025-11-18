@@ -37,6 +37,7 @@ import '../ui-controls';
 import '../camera-controls';
 import '../camera-manager';
 import './camera-circular-menu';
+import './camera-preview-box';
 import './device-settings-panel';
 import './personi-carousel';
 import '../background-manager';
@@ -85,6 +86,7 @@ export class VisualizerShell extends LitElement {
   @state() private cameraShowPreview = false;
   @state() private cameraHasPermission = false;
   @state() private cameraError: string | null = null;
+  @state() private cameraStream: MediaStream | null = null;
   
   // RAG state
   @state() private ragEnabled = true;
@@ -230,6 +232,9 @@ export class VisualizerShell extends LitElement {
 
   private handleToggleCameraControl = () => {
     this.cameraEnabled = !this.cameraEnabled;
+    if (this.cameraEnabled) {
+      this.cameraShowPreview = true;
+    }
   };
 
   private handleToggleCameraPreview = () => {
@@ -251,6 +256,12 @@ export class VisualizerShell extends LitElement {
   private handleCameraPermissions = () => {
     this.cameraHasPermission = true;
     this.cameraError = null;
+    if (this.cameraManager) {
+      const stream = (this.cameraManager as any).mediaStream;
+      if (stream) {
+        this.cameraStream = stream;
+      }
+    }
   };
 
   private handleCameraPermissionsDenied = () => {
@@ -913,11 +924,23 @@ export class VisualizerShell extends LitElement {
         <!-- Camera Manager (z-index: 1 - Background layer below 3D canvas) -->
         <camera-manager
           .enabled=${this.cameraEnabled}
-          .showPreview=${this.cameraShowPreview}
+          .showPreview=${false}
           .renderMode=${'native'}
           @permissions-granted=${this.handleCameraPermissions}
           @permissions-denied=${this.handleCameraPermissionsDenied}
+          @camera-started=${() => {
+            if (this.cameraManager) {
+              this.cameraStream = (this.cameraManager as any).mediaStream || null;
+            }
+          }}
         ></camera-manager>
+
+        <!-- Camera Preview Box (z-index: 200 - bottom-left corner) -->
+        <camera-preview-box
+          .visible=${this.cameraEnabled && this.cameraShowPreview}
+          .stream=${this.cameraStream}
+          .hasPermission=${this.cameraHasPermission}
+        ></camera-preview-box>
 
         <!-- RAG Toggle (z-index: 45 - HUD tier) -->
         <rag-toggle
