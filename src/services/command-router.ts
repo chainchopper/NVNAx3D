@@ -84,6 +84,22 @@ export class CommandRouter {
       handler: (params) => this.handleToggleObjectDetection(params.enabled as boolean | undefined),
     });
 
+    this.registerCommand({
+      name: 'analyze_camera_view',
+      description: 'Analyze what the camera currently sees using local vision AI (Moondream/LLaVA). Captures frame and answers questions about the image.',
+      parameters: {
+        type: 'object',
+        properties: {
+          prompt: {
+            type: 'string',
+            description: 'Question or instruction about the image (e.g., "What do you see?", "Describe this scene", "What objects are present?")',
+          },
+        },
+        required: ['prompt'],
+      },
+      handler: (params) => this.handleAnalyzeCameraView(params.prompt as string),
+    });
+
     // PersonI Management
     this.registerCommand({
       name: 'switch_personi',
@@ -350,6 +366,19 @@ export class CommandRouter {
       success: true,
       message: `Object detection ${enabled ? 'started' : 'stopped'}`,
       data: { enabled },
+    };
+  }
+
+  private handleAnalyzeCameraView(prompt: string): CommandResult {
+    // Dispatch event for VisualizerShell to handle vision analysis
+    window.dispatchEvent(
+      new CustomEvent('command-analyze-camera-view', { detail: { prompt } })
+    );
+
+    return {
+      success: true,
+      message: 'Analyzing camera view...',
+      data: { prompt },
     };
   }
 

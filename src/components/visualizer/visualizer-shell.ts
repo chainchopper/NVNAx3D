@@ -49,6 +49,7 @@ import { conversationOrchestrator } from '../../services/conversation-orchestrat
 import { speechOutputService } from '../../services/speech-output-service';
 import { voiceInputService } from '../../services/voice-input-service';
 import { cameraVisionService } from '../../services/camera-vision-service';
+import { visionModelService } from '../../services/vision-model-service';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -99,6 +100,7 @@ export class VisualizerShell extends LitElement {
   @query('visualizer-3d') private visualizer3d!: any;
   @query('settings-fab') private settingsFab!: any;
   @query('camera-manager') private cameraManager!: any;
+  @query('background-manager') private backgroundManager!: any;
   @query('object-detection-overlay') private objectDetectionOverlay!: any;
   
   private outputAnalyser: Analyser | null = null;
@@ -402,6 +404,101 @@ export class VisualizerShell extends LitElement {
   }
 
   /**
+   * Get a ready video element with retry logic for camera initialization
+   * Defaults to 10 retries × 500ms = 5s total wait time to cover observed 2.8-3.2s camera init
+   */
+  private async getReadyVideoElement(maxRetries: number = 10, delayMs: number = 500): Promise<HTMLVideoElement | null> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      // Try camera-manager first
+      let videoElement: HTMLVideoElement | null = null;
+      
+      if (this.cameraManager) {
+        videoElement = this.cameraManager.getVideoElement();
+      }
+      
+      // Fallback to background-manager
+      if (!videoElement && this.backgroundManager && this.backgroundManager.videoRef) {
+        videoElement = this.backgroundManager.videoRef as HTMLVideoElement;
+      }
+      
+      // Check if video is ready with data
+      if (videoElement && videoElement.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+          videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+        console.log(`[VisionAnalysis] Video element ready after ${attempt + 1} attempt(s)`);
+        return videoElement;
+      }
+      
+      // Wait before retry (except on last attempt)
+      if (attempt < maxRetries - 1) {
+        console.log(`[VisionAnalysis] Video not ready, retry ${attempt + 1}/${maxRetries}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+    
+    console.warn('[VisionAnalysis] Video element not ready after retries');
+    return null;
+  }
+
+  private async handleAnalyzeCameraView(prompt: string): Promise<void> {
+    try {
+      // Check if vision model is configured
+      const activeConfig = visionModelService.getActiveConfig();
+      if (!activeConfig) {
+        console.warn('[VisionAnalysis] No active vision model configured');
+        this.status = 'No vision AI model configured. Please configure in Vision settings.';
+        setTimeout(() => { this.status = 'Ready'; }, 3000);
+        return;
+      }
+
+      // Wait for video element to be ready (with retries - up to 5s total to cover 2.8-3.2s typical init)
+      this.status = 'Waiting for camera...';
+      const videoElement = await this.getReadyVideoElement(10, 500);
+      
+      if (!videoElement) {
+        console.warn('[VisionAnalysis] Camera not available after waiting ~5s');
+        this.status = 'Camera not ready. Please ensure camera is enabled and try again.';
+        setTimeout(() => { this.status = 'Ready'; }, 3000);
+        return;
+      }
+
+      console.log('[VisionAnalysis] Capturing frame and analyzing with prompt:', prompt);
+      this.status = 'Analyzing camera view...';
+
+      // Capture frame
+      const imageDataUrl = visionModelService.captureFrameFromVideo(videoElement);
+
+      // Analyze image
+      const result = await visionModelService.analyzeImage({
+        imageDataUrl,
+        prompt,
+        maxTokens: 256,
+        temperature: 0.7
+      });
+
+      console.log('[VisionAnalysis] Analysis complete:', result.text);
+      
+      // Speak the vision analysis result via conversation orchestrator
+      await conversationOrchestrator.handleUserInput(
+        `[System: Vision AI Analysis] ${result.text}`,
+        { ragEnabled: false, enableTools: false },
+        (chunk) => {
+          if (chunk.isComplete) {
+            console.log('[VisionAnalysis] Response spoken');
+          }
+        }
+      );
+
+      this.status = 'Vision analysis complete';
+      setTimeout(() => { this.status = 'Ready'; }, 2000);
+
+    } catch (error) {
+      console.error('[VisionAnalysis] Failed:', error);
+      this.status = `Vision analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      setTimeout(() => { this.status = 'Ready'; }, 3000);
+    }
+  }
+
+  /**
    * Register command event handlers for voice/text commands
    */
   private registerCommandHandlers(): void {
@@ -440,10 +537,18 @@ export class VisualizerShell extends LitElement {
       console.log('[Command] Object detection toggled:', enabled);
     }) as EventListener);
 
+    window.addEventListener('command-analyze-camera-view', ((event: CustomEvent) => {
+      const { prompt } = event.detail;
+      this.handleAnalyzeCameraView(prompt).catch(error => {
+        console.error('[Command] Vision analysis failed:', error);
+      });
+    }) as EventListener);
+
     // PersonI management commands
     window.addEventListener('command-switch-personi', ((event: CustomEvent) => {
       const { personaName } = event.detail;
-      const personi = this.personis.find(p => p.name.toUpperCase() === personaName.toUpperCase());
+      const personis = appStateService.getState().personis;
+      const personi = personis.find(p => p.name.toUpperCase() === personaName.toUpperCase());
       if (personi) {
         appStateService.setActivePersoni(personi);
         console.log('[Command] Switched to persona:', personaName);
@@ -454,8 +559,9 @@ export class VisualizerShell extends LitElement {
 
     window.addEventListener('command-enable-dual-mode', ((event: CustomEvent) => {
       const { primary, secondary, mode } = event.detail;
-      const primaryPersona = this.personis.find(p => p.name.toUpperCase() === primary);
-      const secondaryPersona = this.personis.find(p => p.name.toUpperCase() === secondary);
+      const personis = appStateService.getState().personis;
+      const primaryPersona = personis.find(p => p.name.toUpperCase() === primary);
+      const secondaryPersona = personis.find(p => p.name.toUpperCase() === secondary);
       
       if (primaryPersona && secondaryPersona) {
         appStateService.setActivePersoni(primaryPersona);
