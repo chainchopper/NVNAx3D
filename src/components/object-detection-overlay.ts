@@ -28,9 +28,13 @@ export class ObjectDetectionOverlay extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 210;
+      z-index: 15;
       transition: opacity 0.5s ease-out;
       pointer-events: none;
+    }
+
+    :host([hidden]) {
+      display: none;
     }
 
     :host(.hidden) {
@@ -150,6 +154,17 @@ export class ObjectDetectionOverlay extends LitElement {
     
     if (this.inactivityTimer !== null) {
       window.clearTimeout(this.inactivityTimer);
+    }
+  }
+
+  override updated(changedProperties: Map<string, any>) {
+    super.updated(changedProperties);
+    if (changedProperties.has('enabled')) {
+      if (this.enabled) {
+        this.removeAttribute('hidden');
+      } else {
+        this.setAttribute('hidden', '');
+      }
     }
   }
 
