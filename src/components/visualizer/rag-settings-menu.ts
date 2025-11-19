@@ -121,7 +121,7 @@ export class RAGSettingsMenu extends LitElement {
       border-radius: 50%;
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(12px);
-      border: 2px solid rgba(255, 255, 255, 0.2);
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -133,15 +133,13 @@ export class RAGSettingsMenu extends LitElement {
 
     .center-button:hover {
       background: rgba(0, 0, 0, 0.95);
-      border-color: rgba(255, 255, 255, 0.4);
       transform: translate(-50%, -50%) scale(1.1);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 24px rgba(135, 206, 250, 0.5);
     }
 
     .center-button.active {
       background: rgba(76, 175, 80, 0.25);
-      border-color: rgba(76, 175, 80, 0.6);
-      box-shadow: 0 0 20px rgba(76, 175, 80, 0.4);
+      box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
     }
 
     .center-button.disabled {
@@ -171,7 +169,7 @@ export class RAGSettingsMenu extends LitElement {
       border-radius: 50%;
       background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.15);
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -191,15 +189,13 @@ export class RAGSettingsMenu extends LitElement {
 
     .action-button:hover {
       background: rgba(0, 0, 0, 0.95);
-      border-color: rgba(135, 206, 250, 0.5);
       transform: scale(1.15);
-      box-shadow: 0 4px 16px rgba(135, 206, 250, 0.3);
+      box-shadow: 0 0 20px rgba(135, 206, 250, 0.5);
     }
 
     .action-button.active {
       background: rgba(135, 206, 250, 0.2);
-      border-color: rgba(135, 206, 250, 0.6);
-      box-shadow: 0 0 16px rgba(135, 206, 250, 0.4);
+      box-shadow: 0 0 16px rgba(135, 206, 250, 0.6);
     }
 
     .action-button.disabled {
@@ -233,7 +229,7 @@ export class RAGSettingsMenu extends LitElement {
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s ease;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: none;
     }
 
     .action-button:hover .tooltip {
@@ -380,20 +376,22 @@ export class RAGSettingsMenu extends LitElement {
     const centerTooltip = this.initialized 
       ? (this.enabled ? 'Click to configure, Double-click to disable' : 'Click to enable RAG')
       : 'RAG Not Initialized';
+    const actionsDisabled = !this.enabled;
 
     return html`
       <div class="menu-container">
         <!-- Center toggle button -->
-        <div 
+        <button
           class="center-button ${this.enabled ? 'active' : ''} ${!this.initialized ? 'disabled' : ''}"
           @click=${this.handleCenterClick}
+          aria-label="RAG Memory control"
         >
           ${centerIcon}
           ${this.enabled && this.lastRetrievedCount > 0 ? html`
-            <div class="memory-count">${this.lastRetrievedCount}</div>
+            <span class="memory-count">${this.lastRetrievedCount}</span>
           ` : ''}
-          <div class="tooltip">${centerTooltip}</div>
-        </div>
+          <span class="tooltip">${centerTooltip}</span>
+        </button>
 
         <!-- Radial action buttons -->
         ${this.MENU_ACTIONS.map((action, index) => {
@@ -405,21 +403,18 @@ export class RAGSettingsMenu extends LitElement {
             case 'events': isActive = this.includeEvents; break;
             case 'system': isActive = this.includeSystemContext; break;
           }
+          const visible = this.expanded && this.enabled;
           
           return html`
-            <div 
-              class="action-button ${this.expanded ? 'visible' : ''} ${isActive ? 'active' : ''}"
-              style="
-                top: calc(50% + ${pos.y}px);
-                left: calc(50% + ${pos.x}px);
-                transform: translate(-50%, -50%);
-                transition-delay: ${index * 0.05}s;
-              "
+            <button
+              class="action-button ${visible ? 'visible' : ''} ${isActive ? 'active' : ''} ${actionsDisabled ? 'disabled' : ''}"
+              style="left: calc(50% + ${pos.x}px - 24px); top: calc(50% + ${pos.y}px - 24px);"
               @click=${() => this.handleActionClick(action.id)}
+              aria-label="${action.label}"
             >
               ${action.icon()}
-              <div class="tooltip">${action.label}</div>
-            </div>
+              <span class="tooltip">${action.label}</span>
+            </button>
           `;
         })}
       </div>
