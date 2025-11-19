@@ -49,6 +49,7 @@ import { speechOutputService } from '../../services/speech-output-service';
 import { voiceInputService } from '../../services/voice-input-service';
 import { cameraVisionService } from '../../services/camera-vision-service';
 import { visionModelService } from '../../services/vision-model-service';
+import { storageQuotaManager } from '../../services/storage-quota-manager';
 
 // Register GSAP plugins
 gsap.registerPlugin(Draggable);
@@ -788,6 +789,10 @@ export class VisualizerShell extends LitElement {
         this.ragEnabled = false;
         this.ragInitialized = false;
       }
+
+      // Initialize storage quota manager (monitors and auto-cleans localStorage)
+      storageQuotaManager.logStorageUsage();
+      console.log('[VisualizerShell] ✅ Storage quota manager initialized');
       
       // Initialize voice input service and listeners
       this.initializeVoiceInput();

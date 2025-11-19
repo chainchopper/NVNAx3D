@@ -121,10 +121,10 @@ export class StorageQuotaManager {
         return { deletedKeys: 0, bytesFreed: 0, success: true };
       }
 
-      // Sort by timestamp, keep most recent
+      // Sort by timestamp in metadata, keep most recent
       memories.sort((a: any, b: any) => {
-        const aTime = a.timestamp || 0;
-        const bTime = b.timestamp || 0;
+        const aTime = a.metadata?.timestamp ? new Date(a.metadata.timestamp).getTime() : 0;
+        const bTime = b.metadata?.timestamp ? new Date(b.metadata.timestamp).getTime() : 0;
         return bTime - aTime;
       });
 
