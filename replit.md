@@ -3,6 +3,14 @@
 ## Overview
 Nirvana is an advanced AI companion system offering customizable, engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, providing a rich, interactive, and personalized AI experience with autonomous, always-aware PersonI agents that reason, plan, learn, and suggest.
 
+## Recent Changes (Nov 19, 2025)
+- **Vision AI Panel Fixed**: Added missing panel registration in settings-dock; now properly accessible from circular menu
+- **Image Generation Rebranded**: Renamed "ComfyUI" to "Image Generation" across UI; documented multi-provider architecture plan supporting ComfyUI, Gemini Imagen, Stable Diffusion, DALL-E, and Google Veo (see ARCHITECTURE_IMAGE_GENERATION.md)
+- **New Connectors Implemented**: Added SMTP, Telegram, Discord, WhatsApp with backend handlers, function declarations, and server routes - all using Settings UI configuration
+- **Plugin Card System Complete**: Created .nirvana-card import/export format with PluginCardManager service, validation, versioning, and marketplace metadata support
+- **PersonI Plugin Integration**: Added UI Plugins section to PersonI settings panel with toggle controls and persistent storage of enabled plugins per-PersonI
+- **Default Plugins**: Created 5 pre-packaged plugins (System Monitor, Quick Notes, Crypto Ticker, Memory Browser, Conversation Stats) with auto-import on first launch
+
 ## User Preferences
 - **Graphics Preference**: WebGPU over WebGL (better performance)
 - **Local-First**: Prefer on-device processing (Whisper for STT)
