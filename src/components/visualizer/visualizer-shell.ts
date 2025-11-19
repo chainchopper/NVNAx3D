@@ -204,13 +204,24 @@ export class VisualizerShell extends LitElement {
       this.isAiSpeaking = true;
 
       const activePersona = conversationOrchestrator.getActivePersona();
+      let fullResponse = '';
       
       await conversationOrchestrator.handleUserInput(
         text,
-        {},
+        { enableTools: true },
         async (chunk) => {
           if (chunk.text) {
+            fullResponse += chunk.text;
             console.log('[VisualizerShell] Response chunk:', chunk.text);
+          }
+          
+          // 🔊 Trigger TTS when response is complete
+          if (chunk.isComplete && fullResponse.trim()) {
+            console.log('[VisualizerShell] 🔊 Response complete, triggering TTS...');
+            const provider = activePersona?.models?.conversation
+              ? providerManager.getProviderInstance(activePersona.models.conversation)
+              : null;
+            await speechOutputService.speak(fullResponse, provider, activePersona);
           }
         }
       );
