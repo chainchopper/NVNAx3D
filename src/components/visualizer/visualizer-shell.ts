@@ -22,7 +22,6 @@ import './visualizer-controls';
 import './circular-menu-wheel';
 import './settings-dock';
 import './dual-mode-controls-hud';
-import './music-detection-hud';
 import '../models-panel';
 import '../user-profile-panel';
 import '../notes-panel';
@@ -1182,7 +1181,6 @@ export class VisualizerShell extends LitElement {
 
         <!-- HUD Overlays -->
         <personi-carousel></personi-carousel>
-        <music-detection-hud></music-detection-hud>
 
         <!-- Circular Menu Wheel (always-visible icon wheel, z-index: 170) -->
         <circular-menu-wheel

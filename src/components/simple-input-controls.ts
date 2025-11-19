@@ -7,6 +7,8 @@ export class SimpleInputControls extends LitElement {
   @property({ type: Boolean }) isRecording = false;
   @property({ type: String }) textInput = '';
   @property({ type: Boolean }) textInputVisible = false;
+  @property({ type: Boolean }) thinkingEnabled = false;
+  @property({ type: Boolean }) searchEnabled = false;
 
   static styles = css`
     :host {
@@ -27,69 +29,118 @@ export class SimpleInputControls extends LitElement {
       flex-direction: row;
     }
 
-    .icon-button {
+    .n-button {
       width: 70px;
       height: 70px;
       border-radius: 50%;
       background: rgba(20, 20, 30, 0.95);
-      border: 3px solid rgba(100, 200, 255, 0.6);
+      border: none;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 32px;
-      transition: all 0.3s ease;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+      font-size: 42px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #87CEFA;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(135, 206, 250, 0.6);
       user-select: none;
+      animation: glow 2s ease-in-out infinite;
     }
 
-    .icon-button:hover {
+    .n-button:hover {
       transform: scale(1.1);
-      border-color: rgba(100, 200, 255, 1);
-      box-shadow: 0 12px 48px rgba(100, 200, 255, 0.4);
+      box-shadow: 0 12px 48px rgba(135, 206, 250, 0.6), 0 0 40px rgba(135, 206, 250, 0.8);
     }
 
-    .icon-button:active {
+    .n-button:active {
       transform: scale(0.95);
     }
 
-    .icon-button.active {
-      background: rgba(100, 200, 255, 0.3);
-      border-color: rgba(100, 200, 255, 1);
-      animation: pulse 2s infinite;
+    .n-button.active {
+      animation: glow-active 1s ease-in-out infinite;
     }
 
-    .icon-button.recording {
-      background: rgba(255, 50, 50, 0.3);
-      border-color: rgba(255, 50, 50, 1);
-      animation: pulse 1s infinite;
+    @keyframes glow {
+      0%, 100% { 
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(135, 206, 250, 0.4);
+      }
+      50% { 
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 40px rgba(135, 206, 250, 0.8);
+      }
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
+    @keyframes glow-active {
+      0%, 100% { 
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 40px rgba(135, 206, 250, 1);
+      }
+      50% { 
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 60px rgba(135, 206, 250, 1);
+      }
     }
 
     .text-input-box {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       background: rgba(20, 20, 30, 0.95);
-      border: 3px solid rgba(100, 200, 255, 0.6);
+      border: none;
       border-radius: 40px;
-      padding: 12px 24px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-      min-width: 400px;
+      padding: 8px 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(135, 206, 250, 0.3);
+      min-width: 500px;
       opacity: 0;
-      transform: translateX(-20px);
+      transform: translateY(20px) scale(0.9);
       pointer-events: none;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .text-input-box.visible {
       opacity: 1;
-      transform: translateX(0);
+      transform: translateY(0) scale(1);
       pointer-events: auto;
+    }
+
+    .input-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(135, 206, 250, 0.1);
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .input-icon:hover {
+      background: rgba(135, 206, 250, 0.2);
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(135, 206, 250, 0.4);
+    }
+
+    .input-icon.active {
+      background: rgba(135, 206, 250, 0.3);
+      color: #87CEFA;
+      box-shadow: 0 0 16px rgba(135, 206, 250, 0.6);
+    }
+
+    .input-icon.recording {
+      background: rgba(255, 50, 50, 0.3);
+      color: #ff5050;
+      box-shadow: 0 0 16px rgba(255, 50, 50, 0.6);
+      animation: pulse-mic 1s infinite;
+    }
+
+    @keyframes pulse-mic {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
     }
 
     .text-input-box input {
@@ -174,10 +225,28 @@ export class SimpleInputControls extends LitElement {
     }));
   }
 
-  private handleKeyboardClick() {
-    console.log('[SimpleInputControls] ⌨️ KEYBOARD BUTTON CLICKED - Toggling text input visibility');
+  private handleNButtonClick() {
+    console.log('[SimpleInputControls] N BUTTON CLICKED - Toggling text input visibility');
     this.textInputVisible = !this.textInputVisible;
     this.requestUpdate();
+  }
+
+  private handleThinkingToggle() {
+    this.thinkingEnabled = !this.thinkingEnabled;
+    this.dispatchEvent(new CustomEvent('thinking-toggle', {
+      detail: { enabled: this.thinkingEnabled },
+      bubbles: true,
+      composed: true
+    }));
+  }
+
+  private handleSearchToggle() {
+    this.searchEnabled = !this.searchEnabled;
+    this.dispatchEvent(new CustomEvent('search-toggle', {
+      detail: { enabled: this.searchEnabled },
+      bubbles: true,
+      composed: true
+    }));
   }
 
   private handleTextInput(e: Event) {
@@ -208,18 +277,27 @@ export class SimpleInputControls extends LitElement {
   render() {
     return html`
       <div class="container">
-        <!-- Mic button - always visible -->
-        <div 
-          class="icon-button ${this.isRecording ? 'recording' : ''}"
-          @click=${this.handleMicClick}
-          title="Click to speak"
+        <!-- Animated glowing N button - reveals text input -->
+        <button
+          class="n-button ${this.textInputVisible ? 'active' : ''}"
+          @click=${this.handleNButtonClick}
+          title="Nirvana Input"
         >
-          🎤
-          <div class="label">${this.isRecording ? 'Recording...' : 'Voice Input'}</div>
-        </div>
+          N
+        </button>
 
-        <!-- Text input box - slides in/out -->
+        <!-- Text input box with all controls - slides in/out -->
         <div class="text-input-box ${this.textInputVisible ? 'visible' : ''}">
+          <!-- Mic toggle icon -->
+          <button
+            class="input-icon ${this.isRecording ? 'recording' : ''}"
+            @click=${this.handleMicClick}
+            title="${this.isRecording ? 'Stop recording' : 'Voice input'}"
+          >
+            🎤
+          </button>
+
+          <!-- File upload icon -->
           <file-upload
             @file-uploaded=${(e: CustomEvent) => {
               this.dispatchEvent(new CustomEvent('file-uploaded', {
@@ -230,6 +308,26 @@ export class SimpleInputControls extends LitElement {
             }}
             style="flex-shrink: 0;"
           ></file-upload>
+
+          <!-- Brain icon (thinking toggle) -->
+          <button
+            class="input-icon ${this.thinkingEnabled ? 'active' : ''}"
+            @click=${this.handleThinkingToggle}
+            title="${this.thinkingEnabled ? 'Thinking enabled' : 'Enable thinking'}"
+          >
+            🧠
+          </button>
+
+          <!-- Web icon (search toggle) -->
+          <button
+            class="input-icon ${this.searchEnabled ? 'active' : ''}"
+            @click=${this.handleSearchToggle}
+            title="${this.searchEnabled ? 'Search enabled' : 'Enable web search'}"
+          >
+            🌐
+          </button>
+
+          <!-- Text input field -->
           <input
             type="text"
             .value=${this.textInput}
@@ -238,6 +336,8 @@ export class SimpleInputControls extends LitElement {
             placeholder="Type your message..."
             ?autofocus=${this.textInputVisible}
           />
+
+          <!-- Send button -->
           <button
             class="send-btn"
             @click=${this.handleSendClick}
@@ -245,16 +345,6 @@ export class SimpleInputControls extends LitElement {
           >
             ➤
           </button>
-        </div>
-        
-        <!-- Keyboard toggle - always visible -->
-        <div 
-          class="icon-button ${this.textInputVisible ? 'active' : ''}"
-          @click=${this.handleKeyboardClick}
-          title="Toggle text input"
-        >
-          ⌨️
-          <div class="label">${this.textInputVisible ? 'Hide Text Input' : 'Show Text Input'}</div>
         </div>
       </div>
     `;

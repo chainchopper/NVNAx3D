@@ -28,7 +28,7 @@ export class ObjectDetectionOverlay extends LitElement {
       left: 0;
       width: 100%;
       height: 100%;
-      z-index: 150;
+      z-index: 210;
       transition: opacity 0.5s ease-out;
       pointer-events: none;
     }
@@ -98,38 +98,6 @@ export class ObjectDetectionOverlay extends LitElement {
       color: #00ff00;
       font-weight: 600;
     }
-
-    .toggle-button {
-      position: absolute;
-      bottom: 330px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      border: 2px solid rgba(255, 255, 255, 0.15);
-      border-radius: 50%;
-      width: 44px;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: white;
-      font-size: 18px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      pointer-events: auto;
-    }
-
-    .toggle-button:hover {
-      background: rgba(0, 0, 0, 0.85);
-      border-color: rgba(255, 255, 255, 0.3);
-      transform: scale(1.08);
-    }
-
-    .toggle-button.active {
-      background: rgba(0, 255, 0, 0.25);
-      border-color: rgba(0, 255, 0, 0.5);
-    }
   `;
 
   updateDetections(result: DetectionResult) {
@@ -142,15 +110,6 @@ export class ObjectDetectionOverlay extends LitElement {
     this.detections = [];
     this.fps = 0;
     this.isActive = false;
-  }
-
-  private handleToggle() {
-    const newState = !this.enabled;
-    this.dispatchEvent(new CustomEvent('toggle-detection', {
-      detail: { enabled: newState },
-      bubbles: true,
-      composed: true
-    }));
   }
 
   private resetInactivityTimer() {
@@ -195,11 +154,7 @@ export class ObjectDetectionOverlay extends LitElement {
 
   render() {
     if (!this.enabled) {
-      return html`
-        <div class="toggle-button" @click="${this.handleToggle}" title="Enable object detection">
-          🔍
-        </div>
-      `;
+      return html``;
     }
 
     const scaleX = this.videoWidth > 0 ? this.videoWidth / 640 : 1;
@@ -239,10 +194,6 @@ export class ObjectDetectionOverlay extends LitElement {
             </div>
           </div>
         ` : ''}
-
-        <div class="toggle-button active" @click="${this.handleToggle}" title="Disable object detection">
-          🔍
-        </div>
       </div>
     `;
   }
