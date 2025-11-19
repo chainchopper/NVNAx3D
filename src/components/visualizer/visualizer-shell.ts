@@ -40,7 +40,7 @@ import './camera-preview-box';
 import './device-settings-panel';
 import './personi-carousel';
 import '../background-manager';
-import '../rag-toggle';
+import './rag-settings-menu';
 import '../object-detection-overlay';
 import '../file-upload';
 import '../simple-input-controls';
@@ -1177,6 +1177,7 @@ export class VisualizerShell extends LitElement {
         <visualizer-3d
           .cameraVideoElement=${null}
           .cameraRenderMode=${'none'}
+          .cameraActive=${this.cameraEnabled}
         ></visualizer-3d>
 
         <!-- HUD Overlays -->
@@ -1230,13 +1231,29 @@ export class VisualizerShell extends LitElement {
           @camera-started=${this.updateCameraStream}
         ></camera-manager>
 
-        <!-- RAG Toggle (z-index: 45 - HUD tier) -->
-        <rag-toggle
+        <!-- RAG Settings Menu (z-index: 150 - replaces brain icon) -->
+        <rag-settings-menu
           .enabled=${this.ragEnabled}
           .initialized=${this.ragInitialized}
           .lastRetrievedCount=${this.lastRetrievedMemories}
           @rag-toggle=${this.handleRAGToggle}
-        ></rag-toggle>
+          @rag-open-context-settings=${() => {
+            console.log('[VisualizerShell] Opening RAG context settings panel');
+            this.activeSidePanel = 'memory';
+          }}
+          @rag-toggle-history=${(e: CustomEvent) => {
+            console.log('[VisualizerShell] Toggle RAG history:', e.detail.enabled);
+            // TODO: Implement history toggle in RAG system
+          }}
+          @rag-toggle-events=${(e: CustomEvent) => {
+            console.log('[VisualizerShell] Toggle RAG events:', e.detail.enabled);
+            // TODO: Implement events toggle in RAG system
+          }}
+          @rag-toggle-system-context=${(e: CustomEvent) => {
+            console.log('[VisualizerShell] Toggle system context:', e.detail.enabled);
+            // TODO: Implement system context toggle in RAG system
+          }}
+        ></rag-settings-menu>
 
         <!-- Object Detection Overlay -->
         <object-detection-overlay
@@ -1244,16 +1261,12 @@ export class VisualizerShell extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
-        <!-- Simple Input Controls (unified input system, bottom-center, z-index: 200) -->
+        <!-- Simple Input Controls (unified input system - no mode switching, bottom-center, z-index: 200) -->
         <simple-input-controls
-          .mode=${this.inputMode}
           .isRecording=${this.isSpeaking}
           @voice-input-toggle=${this.handleVoiceInputToggle}
           @text-input-submit=${this.handleTextInputSubmit}
           @file-uploaded=${this.handleFileUploaded}
-          @mode-change=${(e: CustomEvent) => {
-            this.inputMode = e.detail.mode;
-          }}
         ></simple-input-controls>
 
         <!-- Active Side Panel (conditional render) -->
