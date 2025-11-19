@@ -7,6 +7,7 @@ import { ModelProvider, STTProvider, TTSProvider, DEFAULT_PROVIDERS, ModelInfo }
 import { BaseProvider } from '../providers/base-provider';
 import { ProviderFactory } from '../providers/provider-factory';
 import { getBackendUrl } from '../config/backend-url';
+import { ModelAutoAssignmentService, ModelAssignment } from './model-auto-assignment.js';
 
 const PROVIDERS_KEY = 'nirvana-providers';
 const STT_CONFIG_KEY = 'nirvana-stt-config';
@@ -390,7 +391,7 @@ export class ProviderManager {
 
   /**
    * Intelligently auto-assign models to ALL PersonI configurations
-   * Similar to the user's example code - auto-select best models by capability
+   * Uses ModelAutoAssignmentService for intelligent heuristics
    */
   private autoAssignModelsToPersonis(providerId: string, models: ModelInfo[]) {
     try {
@@ -400,21 +401,20 @@ export class ProviderManager {
       const personis = JSON.parse(saved);
       let updated = false;
 
-      // Find best models for each capability
-      const conversationModel = models.find(m => m.capabilities.conversation) || models[0];
-      const visionModel = models.find(m => 
-        m.capabilities.vision && m.id.toLowerCase().includes('vision')
-      ) || models.find(m => m.capabilities.vision) || conversationModel;
-      const embeddingModel = models.find(m => 
-        m.capabilities.embedding && (
-          m.id.toLowerCase().includes('embed') || 
-          m.id.toLowerCase().includes('embedding')
-        )
-      );
+      // Use intelligent model auto-assignment service
+      const modelIds = models.map(m => m.id);
+      const assignments = ModelAutoAssignmentService.autoAssign(modelIds);
+      
+      console.log('[ProviderManager] Intelligent model assignments:', assignments);
+      
+      // Map assignments to actual ModelInfo objects
+      const conversationModel = models.find(m => m.id === assignments.chat);
+      const visionModel = models.find(m => m.id === assignments.vision);
+      const embeddingModel = models.find(m => m.id === assignments.embedding);
       const functionCallingModel = models.find(m => m.capabilities.functionCalling) || conversationModel;
-      const imageGenModel = models.find(m => m.capabilities.imageGeneration);
-      const ttsModel = models.find(m => m.id.toLowerCase().includes('tts'));
-      const sttModel = models.find(m => m.id.toLowerCase().includes('whisper') || m.id.toLowerCase().includes('stt'));
+      const imageGenModel = models.find(m => m.id === assignments.imageGeneration);
+      const ttsModel = models.find(m => m.id === assignments.tts);
+      const sttModel = models.find(m => m.id === assignments.stt);
 
       // Update each PersonI
       for (const personi of personis) {
@@ -724,6 +724,42 @@ export class ProviderManager {
     } else {
       this.providerInstances.clear();
     }
+  }
+
+  /**
+   * Get intelligent model assignments from fetched model IDs
+   * Uses heuristics to auto-assign models to capability slots
+   * 
+   * @param modelIds - Array of model IDs from provider endpoint
+   * @param currentAssignments - Optional existing assignments to preserve
+   * @returns Recommended model assignments for each capability
+   */
+  getModelAssignments(
+    modelIds: string[], 
+    currentAssignments?: Partial<ModelAssignment>
+  ): ModelAssignment {
+    return ModelAutoAssignmentService.autoAssign(modelIds, currentAssignments);
+  }
+
+  /**
+   * Get capability summary for a model ID
+   * Useful for UI tooltips and model selection guidance
+   * 
+   * @param modelId - Model identifier
+   * @returns Array of capability names (e.g., ['Chat', 'Vision'])
+   */
+  getModelCapabilitySummary(modelId: string): string[] {
+    return ModelAutoAssignmentService.getCapabilitySummary(modelId);
+  }
+
+  /**
+   * Detect provider type from model naming patterns
+   * 
+   * @param modelId - Model identifier
+   * @returns Provider type (ollama, lm-studio, vllm, openai, unknown)
+   */
+  detectProviderType(modelId: string): string {
+    return ModelAutoAssignmentService.detectProviderType(modelId);
   }
 }
 
