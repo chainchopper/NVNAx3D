@@ -465,8 +465,10 @@ export class PersoniSettingsPanel extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadPersoniData();
+    // Load available models FIRST before loading personi data
+    // so legacy string IDs can be converted to composite format
     this.loadAvailableModels();
+    this.loadPersoniData();
     this.loadOAuthStatuses();
     
     // Subscribe to OAuth status changes
@@ -492,18 +494,22 @@ export class PersoniSettingsPanel extends LitElement {
       this.avatarUrl = activePersoni.avatarUrl || '';
       this.voiceName = activePersoni.voiceName || 'Puck';
       
-      // Extract model IDs (handles both string and ProviderModelSelection formats)
-      const extractModelId = (value: string | { providerId: string; modelId: string } | undefined): string => {
+      // Extract composite "providerId:::modelId" for dropdown binding (handles both formats)
+      const extractCompositeValue = (value: string | { providerId: string; modelId: string } | undefined): string => {
         if (!value) return '';
-        if (typeof value === 'string') return value;
-        return value.modelId || '';
+        if (typeof value === 'string') {
+          // Legacy format: try to find matching model in available models
+          const model = this.availableModels.find(m => m.id === value);
+          return model ? `${model.providerId}:::${model.id}` : value;
+        }
+        return `${value.providerId}:::${value.modelId}`;
       };
       
-      this.conversationModel = extractModelId(activePersoni.models?.conversation);
-      this.visionModel = extractModelId(activePersoni.models?.vision);
-      this.embeddingModel = extractModelId(activePersoni.models?.embedding);
-      this.functionCallingModel = extractModelId(activePersoni.models?.functionCalling);
-      this.imageGenerationModel = extractModelId(activePersoni.models?.imageGeneration);
+      this.conversationModel = extractCompositeValue(activePersoni.models?.conversation);
+      this.visionModel = extractCompositeValue(activePersoni.models?.vision);
+      this.embeddingModel = extractCompositeValue(activePersoni.models?.embedding);
+      this.functionCallingModel = extractCompositeValue(activePersoni.models?.functionCalling);
+      this.imageGenerationModel = extractCompositeValue(activePersoni.models?.imageGeneration);
       
       this.shape = activePersoni.visuals.shape;
       this.accentColor = activePersoni.visuals.accentColor;
@@ -539,10 +545,15 @@ export class PersoniSettingsPanel extends LitElement {
   private handleSave() {
     if (!this.personi) return;
 
-    // Helper to find full provider+model selection from model ID
-    const findModelSelection = (modelId: string) => {
-      if (!modelId) return undefined;
-      const model = this.availableModels.find(m => m.id === modelId);
+    // Helper to parse composite "providerId:::modelId" value
+    const parseModelSelection = (compositeValue: string) => {
+      if (!compositeValue) return undefined;
+      const parts = compositeValue.split(':::');
+      if (parts.length === 2) {
+        return { providerId: parts[0], modelId: parts[1] };
+      }
+      // Legacy: plain model ID without provider - try to find it
+      const model = this.availableModels.find(m => m.id === compositeValue);
       return model ? { providerId: model.providerId, modelId: model.id } : undefined;
     };
 
@@ -554,11 +565,11 @@ export class PersoniSettingsPanel extends LitElement {
       avatarUrl: this.avatarUrl || undefined,
       voiceName: this.voiceName,
       models: {
-        conversation: findModelSelection(this.conversationModel),
-        vision: findModelSelection(this.visionModel),
-        embedding: findModelSelection(this.embeddingModel),
-        functionCalling: findModelSelection(this.functionCallingModel),
-        imageGeneration: findModelSelection(this.imageGenerationModel),
+        conversation: parseModelSelection(this.conversationModel),
+        vision: parseModelSelection(this.visionModel),
+        embedding: parseModelSelection(this.embeddingModel),
+        functionCalling: parseModelSelection(this.functionCallingModel),
+        imageGeneration: parseModelSelection(this.imageGenerationModel),
       },
       capabilities: { ...this.capabilities },
       enabledConnectors: [...this.enabledConnectors],
@@ -689,9 +700,12 @@ export class PersoniSettingsPanel extends LitElement {
             }}
           >
             <option value="">None</option>
-            ${filteredModels.map(model => html`
-              <option value="${model.id}">${model.name} (${model.providerId})</option>
-            `)}
+            ${filteredModels.map(model => {
+              const compositeValue = `${model.providerId}:::${model.id}`;
+              return html`
+                <option value="${compositeValue}">${model.name} (${model.providerId})</option>
+              `;
+            })}
           </select>
         </div>
         ${helpText ? html`<div class="helper-text">${helpText}</div>` : ''}
