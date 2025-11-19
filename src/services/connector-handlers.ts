@@ -557,6 +557,42 @@ export class ConnectorHandlers {
       },
     };
   }
+
+  async handleSmtp(params: {
+    to: string;
+    subject: string;
+    body: string;
+    html?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('SMTP', 'sendEmail', params);
+    return this.callBackend('/api/connectors/smtp/send', params);
+  }
+
+  async handleTelegram(params: {
+    chatId?: string;
+    message: string;
+    parseMode?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Telegram', 'sendMessage', params);
+    return this.callBackend('/api/connectors/telegram/send', params);
+  }
+
+  async handleDiscord(params: {
+    content: string;
+    username?: string;
+    avatarUrl?: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('Discord', 'sendWebhook', params);
+    return this.callBackend('/api/connectors/discord/webhook', params);
+  }
+
+  async handleWhatsapp(params: {
+    to: string;
+    message: string;
+  }): Promise<ConnectorResult> {
+    this.logOperation('WhatsApp', 'sendMessage', params);
+    return this.callBackend('/api/connectors/whatsapp/send', params);
+  }
 }
 
 export const connectorHandlers = new ConnectorHandlers();
