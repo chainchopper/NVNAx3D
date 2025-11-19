@@ -9,6 +9,7 @@ import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { appStateService } from '../../services/app-state-service';
 import { activePersonasManager } from '../../services/active-personas-manager';
+import { speechOutputService } from '../../services/speech-output-service';
 import type { PersoniConfig } from '../../personas';
 
 @customElement('persona-carousel-hud')
@@ -127,11 +128,62 @@ export class PersonaCarouselHUD extends LitElement {
     this.activePersoni = appStateService.getActivePersoni();
   }
 
-  private handleSelectPersoni(personi: PersoniConfig): void {
+  private async handleSelectPersoni(personi: PersoniConfig): Promise<void> {
+    // Don't switch if clicking the already active PersonI
+    if (this.activePersoni?.id === personi.id) {
+      return;
+    }
+
+    // Store previous PersonI for goodbye message
+    const previousPersoni = this.activePersoni;
+    
+    // Play goodbye message from departing PersonI
+    if (previousPersoni) {
+      const farewellMessages = [
+        `Switching to ${personi.name}. See you later!`,
+        `${personi.name} is taking over. Talk soon!`,
+        `Handing things over to ${personi.name}.`,
+        `${personi.name} will help you now. Goodbye for now!`
+      ];
+      const farewell = farewellMessages[Math.floor(Math.random() * farewellMessages.length)];
+      
+      // Get current provider for the departing PersonI
+      const currentProvider = activePersonasManager.getProvider('primary');
+      
+      // Speak farewell (don't await to avoid blocking)
+      speechOutputService.speak(farewell, currentProvider, previousPersoni).catch(err => {
+        console.warn('[PersonaCarousel] Failed to play farewell:', err);
+      });
+      
+      // Small delay to let farewell start
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // Update state
     appStateService.setActivePersoni(personi);
     
     // Sync with activePersonasManager (primary slot)
     activePersonasManager.setPersona('primary', personi);
+    
+    // Play introduction from new PersonI after a brief moment
+    setTimeout(async () => {
+      const greetingMessages = [
+        `Hi! ${personi.name} here. How can I help?`,
+        `${personi.name} ready to assist!`,
+        `Hello! I'm ${personi.name}. What can I do for you?`,
+        `${personi.name} at your service!`
+      ];
+      const greeting = greetingMessages[Math.floor(Math.random() * greetingMessages.length)];
+      
+      // Get new provider for the arriving PersonI
+      const newProvider = activePersonasManager.getProvider('primary');
+      
+      await speechOutputService.speak(greeting, newProvider, personi).catch(err => {
+        console.warn('[PersonaCarousel] Failed to play introduction:', err);
+      });
+    }, previousPersoni ? 800 : 0);
+    
+    console.log(`[PersonaCarousel] Switched from ${previousPersoni?.name || 'none'} to ${personi.name}`);
   }
 
   private handleCreateNew(): void {
