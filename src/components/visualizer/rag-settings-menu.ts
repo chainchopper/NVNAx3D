@@ -309,7 +309,7 @@ export class RAGSettingsMenu extends LitElement {
     
     switch (actionId) {
       case 'upload':
-        // Trigger file upload - always available
+        // Dispatch bubbling event to trigger file upload
         this.dispatchEvent(new CustomEvent('rag-file-upload', {
           bubbles: true,
           composed: true

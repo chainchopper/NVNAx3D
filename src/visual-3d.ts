@@ -151,6 +151,9 @@ export class GdmLiveAudioVisuals3D extends LitElement {
       this.accentColor.set(this.visuals.accentColor);
       this.recreateCentralObject();
       this.updateMaterialForVisuals();
+      
+      // Animate visual transition for PersonI switch
+      this.animatePersonITransition();
     }
     
     if (changedProperties.has('cameraVideoElement')) {
@@ -161,6 +164,33 @@ export class GdmLiveAudioVisuals3D extends LitElement {
     if (changedProperties.has('dualModeActive') || changedProperties.has('secondaryVisuals')) {
       this.updateDualModeVisuals();
     }
+  }
+  
+  private animatePersonITransition(): void {
+    if (!this.centralObject || !this.sphereMaterial) return;
+    
+    // Smoothly animate emissive intensity based on visuals.accentColor
+    const targetIntensity = 0.15; // Slightly higher intensity for visual distinction
+    const currentIntensity = this.sphereMaterial.emissiveIntensity;
+    
+    // Lerp to new intensity over 500ms
+    const duration = 0.5;
+    const startTime = Date.now();
+    
+    const animate = () => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Smooth ease-out
+      const eased = 1 - Math.pow(1 - progress, 3);
+      this.sphereMaterial.emissiveIntensity = currentIntensity + (targetIntensity - currentIntensity) * eased;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    animate();
   }
 
   private updateCameraBackground(): void {

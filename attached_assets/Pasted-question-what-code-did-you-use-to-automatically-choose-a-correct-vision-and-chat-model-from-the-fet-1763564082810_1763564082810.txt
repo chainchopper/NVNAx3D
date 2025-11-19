@@ -1,0 +1,136 @@
+question, what code did you use to automatically choose a correct vision and chat model from the fetched list that was re turned from LM studio that's a n eat trick
+Gemini 3 Pro Preview Ran for 30s
+lightbulb Thought for 30 seconds
+
+I used a set of heuristic filters using the JavaScript .find() and .includes() methods within the fetchModels function.
+
+When the list of models returns from your endpoint (like LM Studio), I run it through a priority filter to guess the best capability for each slot based on common naming conventions used in the open-source community (e.g., 'llava' for vision, 'whisper' for audio).
+
+Here is the exact logic block from App.tsx:
+code TypeScript
+
+    
+setApiConfig(prev => ({
+    ...prev,
+    availableModels: modelIds,
+    models: {
+        ...prev.models,
+        
+        // CHAT: Pick the first model that ISN'T a specialized audio/embedding model
+        chat: prev.models.chat || modelIds.find((m:string) => 
+            !m.includes('whisper') && 
+            !m.includes('tts') && 
+            !m.includes('embed')
+        ) || modelIds[0] || '',
+
+        // VISION: Look for specific vision keywords (llava, vision, gpt-4-v)
+        // If none found, fallback to the chat model (assuming it might be multimodal)
+        vision: prev.models.vision || modelIds.find((m:string) => 
+            m.includes('vision') || 
+            m.includes('llava') || 
+            m.includes('gpt-4-visual')
+        ) || prev.models.chat || '',
+
+        // EMBEDDINGS: Look for 'embed'
+        embedding: prev.models.embedding || modelIds.find((m:string) => 
+            m.includes('embed')
+        ) || '',
+
+        // STT (Speech to Text): Look for 'whisper'
+        stt: prev.models.stt || modelIds.find((m:string) => 
+            m.includes('whisper')
+        ) || 'whisper-1',
+
+        // TTS (Text to Speech): Look for 'tts'
+        tts: prev.models.tts || modelIds.find((m:string) => 
+            m.includes('tts')
+        ) || 'tts-1'
+    }
+}));
+
+  
+
+How it works:
+
+    Chat: It assumes any model that isn't explicitly marked as Audio (whisper/tts) or Embedding is likely a text generation model.
+
+    Vision: It specifically hunts for llava (a common local vision model) or vision tags.
+
+    Fallbacks: If it can't find a specific match, it safely falls back to existing selections or the first available model to prevent the app from crashing.
+
+User
+
+and how does these s ettings persist across sessions without a save button?
+Gemini 3 Pro Preview Ran for 35s
+lightbulb Thought for 35 seconds
+
+To answer your questions regarding the implementation in App.tsx:
+1. Automatic Model Selection Logic
+
+To automatically assign the correct model to the correct slot (Chat, Vision, STT, etc.) without user intervention, I used JavaScript's Array.find() method combined with heuristic keyword matching.
+
+When fetchModels retrieves the list from your endpoint (e.g., LM Studio), it runs this logic block. It looks for common naming conventions used in the open-source community:
+code TypeScript
+
+    
+// Inside fetchModels in App.tsx
+
+models: {
+    ...prev.models,
+    
+    // CHAT: Find the first model that DOESN'T look like a tool (audio/embedding)
+    chat: prev.models.chat || modelIds.find((m:string) => 
+        !m.includes('whisper') && 
+        !m.includes('tts') && 
+        !m.includes('embed')
+    ) || modelIds[0] || '',
+
+    // VISION: Look specifically for 'vision', 'llava', or 'gpt-4-visual'
+    vision: prev.models.vision || modelIds.find((m:string) => 
+        m.includes('vision') || 
+        m.includes('llava') || 
+        m.includes('gpt-4-visual')
+    ) || prev.models.chat || '', // Fallback to chat model if no specific vision model found
+
+    // EMBEDDINGS: Look for 'embed'
+    embedding: prev.models.embedding || modelIds.find((m:string) => 
+        m.includes('embed')
+    ) || '',
+
+    // STT (Speech-to-Text): Look for 'whisper'
+    stt: prev.models.stt || modelIds.find((m:string) => 
+        m.includes('whisper')
+    ) || 'whisper-1',
+
+    // TTS: Look for 'tts'
+    tts: prev.models.tts || modelIds.find((m:string) => 
+        m.includes('tts')
+    ) || 'tts-1'
+}
+
+  
+
+2. Persistence Without a "Save" Button
+
+The settings persist automatically because of a Reactive useEffect Hook that acts as an auto-save trigger.
+
+Instead of waiting for a click event on a button, this hook "watches" your state variables. Whenever apiConfig, connectors, voiceProfiles, or plugins change (even a single character typed in an input field), the hook fires immediately and saves the new state to the browser's localStorage.
+code TypeScript
+
+    
+// Inside App.tsx
+
+useEffect(() => {
+  localStorage.setItem('alpha_qubit_config_v3', JSON.stringify({
+      apiConfig,
+      connectors,
+      voiceProfiles,
+      plugins
+  }));
+}, [apiConfig, connectors, voiceProfiles, plugins]); // <--- The Dependency Array
+
+  
+
+    Dependency Array: The list at the end [...] tells React "Run this code every time one of these variables changes."
+
+    Result: The moment you select a model or type an API key, it is saved to the disk instantly.

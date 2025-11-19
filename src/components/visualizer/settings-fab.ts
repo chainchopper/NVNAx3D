@@ -10,6 +10,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { gsap } from 'gsap';
 import { Draggable } from 'gsap/Draggable';
 import { appStateService } from '../../services/app-state-service';
+import { audioFeedback } from '../../services/audio-feedback-service';
 
 @customElement('settings-fab')
 export class SettingsFab extends LitElement {
@@ -200,6 +201,10 @@ export class SettingsFab extends LitElement {
   }
 
   private toggleMenu(): void {
+    // Play sound effect
+    const menuOpen = appStateService.getState().settingsMenuVisible;
+    audioFeedback.play(menuOpen ? 'close' : 'open');
+    
     // Stateless: just emit toggle event, let visualizer-shell manage state via appStateService
     this.dispatchEvent(new CustomEvent('toggle', {
       detail: { position: this.position },
