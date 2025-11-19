@@ -1,6 +1,5 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import './file-upload';
 
 @customElement('simple-input-controls')
 export class SimpleInputControls extends LitElement {
@@ -274,6 +273,44 @@ export class SimpleInputControls extends LitElement {
     }
   }
 
+  private handleFileUploadClick() {
+    const input = this.shadowRoot?.querySelector('.file-input') as HTMLInputElement;
+    input?.click();
+  }
+
+  private async handleFileSelect(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const files = input.files;
+    
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        this.dispatchEvent(new CustomEvent('file-uploaded', {
+          detail: {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            data: event.target?.result,
+            timestamp: Date.now()
+          },
+          bubbles: true,
+          composed: true
+        }));
+      };
+
+      if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+        reader.readAsDataURL(file);
+      } else {
+        reader.readAsText(file);
+      }
+    }
+
+    input.value = '';
+  }
+
   render() {
     return html`
       <div class="container">
@@ -298,16 +335,23 @@ export class SimpleInputControls extends LitElement {
           </button>
 
           <!-- File upload icon -->
-          <file-upload
-            @file-uploaded=${(e: CustomEvent) => {
-              this.dispatchEvent(new CustomEvent('file-uploaded', {
-                detail: e.detail,
-                bubbles: true,
-                composed: true
-              }));
-            }}
-            style="flex-shrink: 0;"
-          ></file-upload>
+          <button
+            class="input-icon"
+            @click=${this.handleFileUploadClick}
+            title="Upload file"
+          >
+            📎
+          </button>
+
+          <!-- Hidden file input -->
+          <input
+            type="file"
+            class="file-input"
+            @change=${this.handleFileSelect}
+            multiple
+            accept="image/*,application/pdf,text/*"
+            style="display: none;"
+          />
 
           <!-- Brain icon (thinking toggle) -->
           <button
