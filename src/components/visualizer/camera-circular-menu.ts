@@ -29,11 +29,13 @@ export class CameraCircularMenu extends LitElement {
   private inactivityTimer: number | null = null;
   private readonly HIDE_DELAY = 5000;
 
-  override updated(changedProps: Map<string, any>): void {
+  override willUpdate(changedProps: Map<string, any>): void {
+    // Use willUpdate instead of updated to avoid scheduling updates during update cycle
     if (changedProps.has('cameraActive')) {
-      if (!this.cameraActive) {
+      const previousValue = changedProps.get('cameraActive');
+      if (!this.cameraActive && this.expanded) {
         this.expanded = false;
-      } else if (this.cameraActive && !changedProps.get('cameraActive')) {
+      } else if (this.cameraActive && !previousValue) {
         this.expanded = true;
       }
     }

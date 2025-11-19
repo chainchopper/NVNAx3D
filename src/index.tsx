@@ -23,6 +23,7 @@ import {
 } from './utils';
 import './visual-3d';
 import './components/models-panel';
+import './components/vision-panel';
 import './components/user-profile-panel';
 import './components/notes-panel';
 import './components/tasks-panel';
@@ -148,7 +149,7 @@ const NIRVANA_HOURLY_COLORS = [
 ];
 
 type ConfigPanelMode = 'list' | 'selectTemplate' | 'edit';
-type ActiveSidePanel = 'none' | 'personis' | 'connectorConfig' | 'models' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines' | 'plugins';
+type ActiveSidePanel = 'none' | 'personis' | 'connectorConfig' | 'models' | 'vision' | 'userProfile' | 'notes' | 'tasks' | 'memory' | 'routines' | 'plugins';
 
 interface TranscriptEntry {
   speaker: 'user' | 'ai' | 'system';
@@ -5011,6 +5012,11 @@ export class GdmLiveAudio extends LitElement {
               }
             }}
           ></models-panel>
+        ` : ''}
+        ${this.activeSidePanel === 'vision' ? html`
+          <vision-panel 
+            @close=${this.closeSidePanel}
+          ></vision-panel>
         ` : ''}
         ${this.activeSidePanel === 'userProfile' ? html`
           <user-profile-panel

@@ -41,6 +41,17 @@ export class CircularMenuWheel extends LitElement {
       `
     },
     {
+      id: 'vision',
+      label: 'Vision AI',
+      icon: () => svg`
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+      `
+    },
+    {
       id: 'personis',
       label: 'PersonI',
       icon: () => svg`

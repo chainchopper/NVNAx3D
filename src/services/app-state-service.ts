@@ -20,6 +20,7 @@ export type ActiveSidePanel =
   | 'none'
   | 'userProfile'
   | 'models'
+  | 'vision'
   | 'personis'
   | 'tts'
   | 'connectorConfig'
