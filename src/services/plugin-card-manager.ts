@@ -119,9 +119,9 @@ class PluginCardManager {
         errors.push('Missing plugin component');
       } else {
         if (!card.plugin.component.template) errors.push('Missing component template');
-        if (!card.plugin.component.styles) warnings.push('Missing component styles');
-        if (!card.plugin.component.props) errors.push('Missing component props definition');
-        if (!card.plugin.component.events) warnings.push('Missing component events definition');
+        if (!card.plugin.component.styles) warnings.push('Missing component styles (optional)');
+        if (!card.plugin.component.props) warnings.push('Missing component props definition (optional)');
+        if (!card.plugin.component.events) warnings.push('Missing component events definition (optional)');
       }
     }
 

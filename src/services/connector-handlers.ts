@@ -558,7 +558,7 @@ export class ConnectorHandlers {
     };
   }
 
-  async handleSmtp(params: {
+  async handleSMTP(params: {
     to: string;
     subject: string;
     body: string;
@@ -574,7 +574,7 @@ export class ConnectorHandlers {
     parseMode?: string;
   }): Promise<ConnectorResult> {
     this.logOperation('Telegram', 'sendMessage', params);
-    return this.callBackend('/api/connectors/telegram/send', params);
+    return this.callBackend('/api/connectors/telegram/sendMessage', params);
   }
 
   async handleDiscord(params: {
@@ -583,15 +583,15 @@ export class ConnectorHandlers {
     avatarUrl?: string;
   }): Promise<ConnectorResult> {
     this.logOperation('Discord', 'sendWebhook', params);
-    return this.callBackend('/api/connectors/discord/webhook', params);
+    return this.callBackend('/api/connectors/discord/sendWebhook', params);
   }
 
-  async handleWhatsapp(params: {
+  async handleWhatsApp(params: {
     to: string;
     message: string;
   }): Promise<ConnectorResult> {
     this.logOperation('WhatsApp', 'sendMessage', params);
-    return this.callBackend('/api/connectors/whatsapp/send', params);
+    return this.callBackend('/api/connectors/whatsapp/sendMessage', params);
   }
 }
 
