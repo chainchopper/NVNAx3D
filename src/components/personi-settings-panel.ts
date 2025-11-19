@@ -19,6 +19,8 @@ import { providerManager } from '../services/provider-manager';
 import { ModelInfo } from '../types/providers';
 import { oauthService } from '../services/oauth-service';
 import { PERSONIS_KEY } from '../constants/storage.js';
+import { pluginRegistry } from '../services/plugin-registry';
+import type { Plugin } from '../types/plugin-types';
 
 const VOICE_OPTIONS = [
   { id: 'Puck', name: 'Puck (Mature Male, US)' },
@@ -51,6 +53,8 @@ export class PersoniSettingsPanel extends LitElement {
   @state() private idleAnimation: IdleAnimation = 'subtle_breath';
   @state() private capabilities: PersoniCapabilities = { ...DEFAULT_CAPABILITIES };
   @state() private enabledConnectors: string[] = [];
+  @state() private enabledPlugins: string[] = [];
+  @state() private availablePlugins: Plugin[] = [];
   @state() private oauthStatuses: Map<string, boolean> = new Map();
   
   private oauthUnsubscribe?: () => void;
@@ -470,11 +474,25 @@ export class PersoniSettingsPanel extends LitElement {
     this.loadAvailableModels();
     this.loadPersoniData();
     this.loadOAuthStatuses();
+    this.loadAvailablePlugins();
     
     // Subscribe to OAuth status changes
     this.oauthUnsubscribe = oauthService.subscribe(() => {
       this.loadOAuthStatuses();
     });
+  }
+
+  private loadAvailablePlugins() {
+    this.availablePlugins = pluginRegistry.getAllPlugins().filter(p => p.enabled);
+  }
+
+  private togglePlugin(pluginId: string) {
+    if (this.enabledPlugins.includes(pluginId)) {
+      this.enabledPlugins = this.enabledPlugins.filter(id => id !== pluginId);
+    } else {
+      this.enabledPlugins = [...this.enabledPlugins, pluginId];
+    }
+    this.markChanged();
   }
 
   disconnectedCallback() {
@@ -517,6 +535,7 @@ export class PersoniSettingsPanel extends LitElement {
       this.idleAnimation = activePersoni.visuals.idleAnimation || 'subtle_breath';
       this.capabilities = activePersoni.capabilities || { ...DEFAULT_CAPABILITIES };
       this.enabledConnectors = [...(activePersoni.enabledConnectors || [])];
+      this.enabledPlugins = [...((activePersoni as any).enabledPlugins || [])];
       this.hasChanges = false;
     }
   }
@@ -579,7 +598,10 @@ export class PersoniSettingsPanel extends LitElement {
         textureName: this.textureName,
         idleAnimation: this.idleAnimation,
       },
-    };
+    } as PersoniConfig & { enabledPlugins: string[] };
+
+    // Add enabledPlugins (type-extended field)
+    (updated as any).enabledPlugins = [...this.enabledPlugins];
 
     // Update personi in app state (updates array + saves to localStorage)
     appStateService.updatePersoni(updated);
@@ -1142,6 +1164,40 @@ export class PersoniSettingsPanel extends LitElement {
               `;
             })}
           </div>
+        </div>
+
+        <!-- UI Plugins Section -->
+        <div class="section">
+          <h3 class="section-title">UI Plugins</h3>
+          <div class="helper-text" style="margin-bottom: 12px;">
+            Custom UI components available for this PersonI
+          </div>
+          
+          ${this.availablePlugins.length === 0 ? html`
+            <div class="helper-text" style="opacity: 0.6;">
+              No plugins available. Create plugins in the Plugin Manager panel.
+            </div>
+          ` : html`
+            <div class="connectors-list">
+              ${this.availablePlugins.map(plugin => {
+                return html`
+                  <div
+                    class="connector-item ${this.enabledPlugins.includes(plugin.metadata.id) ? 'active' : ''}"
+                    @click=${() => this.togglePlugin(plugin.metadata.id)}
+                  >
+                    <div class="checkbox"></div>
+                    <div class="connector-info">
+                      <div class="connector-name">${plugin.metadata.name}</div>
+                      <div class="connector-description">${plugin.metadata.description}</div>
+                    </div>
+                    <div class="connector-badge" style="background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.4);">
+                      v${plugin.metadata.version}
+                    </div>
+                  </div>
+                `;
+              })}
+            </div>
+          `}
         </div>
       </div>
 
