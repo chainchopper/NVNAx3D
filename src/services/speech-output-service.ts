@@ -98,16 +98,27 @@ export class SpeechOutputService {
    */
   private async speakWithCustomTTS(
     text: string,
-    ttsModelId: string,
+    ttsModelId: string | any,
     provider: BaseProvider,
     persona: PersoniConfig | null
   ): Promise<void> {
-    // Parse ttsModelId which may be in composite format: "providerId:::modelId"
-    // or legacy format: "tts-1"
-    let model = ttsModelId;
-    if (ttsModelId.includes(':::')) {
+    // Normalize ttsModelId which may be:
+    // - Composite format: "providerId:::modelId"
+    // - Legacy string: "tts-1"
+    // - Legacy object: { id: "tts-1" } or { providerId: "...", id: "tts-1" }
+    let model: string;
+    
+    if (typeof ttsModelId === 'object' && ttsModelId !== null) {
+      // Legacy object format - extract model ID
+      model = ttsModelId.id || ttsModelId.modelId || String(ttsModelId);
+      console.warn('[SpeechOutputService] Normalizing legacy TTS model object:', ttsModelId, '→', model);
+    } else if (typeof ttsModelId === 'string' && ttsModelId.includes(':::')) {
+      // Composite format - extract model part
       const parts = ttsModelId.split(':::');
-      model = parts[1] || ttsModelId; // Use model part after :::
+      model = parts[1] || ttsModelId;
+    } else {
+      // Plain string - use as-is
+      model = String(ttsModelId);
     }
     
     let voice = persona?.voiceName || 'alloy';

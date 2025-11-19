@@ -423,18 +423,63 @@ export class ProviderManager {
           personi.models = {};
         }
 
+        // FIRST: Normalize any legacy formats to canonical string format
+        // This ensures code safety even if we don't auto-assign from current provider
+        const normalizeModelEntry = (entry: any, fallbackProviderId: string): string | undefined => {
+          if (!entry) return undefined;
+          
+          // Handle string entries
+          if (typeof entry === 'string') {
+            // If already in composite format, return as-is
+            if (entry.includes(':::')) return entry;
+            // Legacy plain string - prepend provider ID
+            return `${fallbackProviderId}:::${entry}`;
+          }
+          
+          // Handle object entries
+          if (typeof entry === 'object' && entry !== null) {
+            // Extract providerId and modelId from object
+            const objProviderId = entry.providerId || fallbackProviderId;
+            const modelId = entry.id || entry.modelId || '';
+            if (modelId) {
+              return `${objProviderId}:::${modelId}`;
+            }
+          }
+          
+          return undefined;
+        };
+
+        // Normalize all model entries to prevent runtime crashes
+        ['conversation', 'vision', 'embedding', 'imageGeneration', 'textToSpeech', 'functionCalling'].forEach(capability => {
+          const existing = personi.models[capability];
+          const normalized = normalizeModelEntry(existing, providerId);
+          if (normalized && normalized !== existing) {
+            personi.models[capability] = normalized;
+            updated = true;
+          }
+        });
+
         // Auto-assign models if not already configured (or if user wants to update)
         // Only assign if the model isn't already set OR if it's from this provider
         const shouldUpdate = (existing: any) => {
           if (!existing) return true;
           // If existing is a composite string with this provider ID, update it
           if (typeof existing === 'string' && existing.includes(`${providerId}:::`)) return true;
-          // If existing is an object with this provider ID, update it
-          if (typeof existing === 'object' && existing.providerId === providerId) return true;
+          // MIGRATION: Normalize ALL objects to string format (regardless of providerId)
+          // This ensures we migrate legacy shapes like { id, name } or { providerId, id }
+          // to the canonical string format, even if from a different provider
+          if (typeof existing === 'object') {
+            // If object has providerId matching current sync, update it
+            if (existing.providerId === providerId) return true;
+            // If object lacks providerId (pure legacy), migrate it
+            if (!existing.providerId) return true;
+            // If object has different providerId, don't override (multi-provider setup)
+            // BUT we still need to normalize to string format for code safety
+            // So return false here - we'll handle normalization separately
+            return false;
+          }
           // MIGRATION: If existing is a legacy string without provider prefix, migrate it
           if (typeof existing === 'string' && !existing.includes(':::')) return true;
-          // MIGRATION: If existing is a legacy object without providerId, migrate it
-          if (typeof existing === 'object' && !existing.providerId) return true;
           // Don't override models from other providers
           return false;
         };
