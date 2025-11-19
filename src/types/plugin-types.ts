@@ -76,3 +76,41 @@ export interface PluginGenerationResponse {
   error?: string;
   suggestions?: string[];
 }
+
+/**
+ * .nirvana-card format for plugin import/export
+ * Portable plugin distribution format
+ */
+export interface NirvanaCard {
+  version: string;  // Card format version (e.g., '1.0.0')
+  metadata: PluginMetadata;
+  plugin: {
+    component: PluginComponent;
+    enabled: boolean;
+    autoLoad: boolean;
+  };
+  dependencies?: {
+    'nirvana-api': string;  // e.g., '^1.0.0'
+    [key: string]: string;  // Other plugin IDs or npm packages
+  };
+  signature?: string;  // Cryptographic signature for verification (future)
+  exportedAt?: string;
+  exportedBy?: string;  // User or system identifier
+}
+
+/**
+ * Plugin card validation result
+ */
+export interface CardValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Plugin enable/disable state for PersonI
+ */
+export interface PersoniPluginConfig {
+  enabledPlugins: string[];  // Array of plugin IDs
+  autoLoadPlugins: string[];  // Array of plugin IDs to auto-load
+}

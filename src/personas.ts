@@ -410,6 +410,118 @@ export const AVAILABLE_CONNECTORS: Connector[] = [
     },
   },
   {
+    id: 'smtp',
+    type: 'api_tool',
+    name: 'SMTP Email',
+    description: 'Send emails via SMTP (supports Gmail, Outlook, custom mail servers).',
+    functionDeclaration: {
+      name: 'sendEmail',
+      description: 'Sends an email via SMTP server configured in settings.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          to: {
+            type: Type.STRING,
+            description: 'Recipient email address (e.g., "user@example.com").',
+          },
+          subject: {
+            type: Type.STRING,
+            description: 'Email subject line.',
+          },
+          body: {
+            type: Type.STRING,
+            description: 'Plain text email body.',
+          },
+          html: {
+            type: Type.STRING,
+            description: 'Optional: HTML version of email body.',
+          },
+        },
+        required: ['to', 'subject', 'body'],
+      },
+    },
+  },
+  {
+    id: 'telegram',
+    type: 'api_tool',
+    name: 'Telegram',
+    description: 'Send messages to Telegram chats and channels via Bot API.',
+    functionDeclaration: {
+      name: 'sendMessage',
+      description: 'Sends a message to a Telegram chat or channel using the Bot API.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          chatId: {
+            type: Type.STRING,
+            description: 'Optional: Telegram chat ID, channel username, or user ID. Uses default from settings if not provided.',
+          },
+          message: {
+            type: Type.STRING,
+            description: 'The message text to send (supports Telegram markdown).',
+          },
+          parseMode: {
+            type: Type.STRING,
+            description: 'Optional: Message formatting mode ("Markdown", "HTML", or "MarkdownV2").',
+          },
+        },
+        required: ['message'],
+      },
+    },
+  },
+  {
+    id: 'discord',
+    type: 'api_tool',
+    name: 'Discord',
+    description: 'Send messages to Discord channels via webhooks.',
+    functionDeclaration: {
+      name: 'sendWebhook',
+      description: 'Sends a message to a Discord channel using a webhook URL.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          content: {
+            type: Type.STRING,
+            description: 'The message content to send (supports Discord markdown).',
+          },
+          username: {
+            type: Type.STRING,
+            description: 'Optional: Override the webhook username.',
+          },
+          avatarUrl: {
+            type: Type.STRING,
+            description: 'Optional: Override the webhook avatar image URL.',
+          },
+        },
+        required: ['content'],
+      },
+    },
+  },
+  {
+    id: 'whatsapp',
+    type: 'api_tool',
+    name: 'WhatsApp Business',
+    description: 'Send messages via WhatsApp Business API.',
+    functionDeclaration: {
+      name: 'sendMessage',
+      description: 'Sends a WhatsApp message using the WhatsApp Business API.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          to: {
+            type: Type.STRING,
+            description: 'Recipient phone number in international format (e.g., "+1234567890").',
+          },
+          message: {
+            type: Type.STRING,
+            description: 'The message text to send.',
+          },
+        },
+        required: ['to', 'message'],
+      },
+    },
+  },
+  {
     id: 'homeassistant',
 
     type: 'api_tool',
