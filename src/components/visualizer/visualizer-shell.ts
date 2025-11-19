@@ -228,8 +228,107 @@ export class VisualizerShell extends LitElement {
     }
   };
 
-  private handleFileUploaded = (e: CustomEvent) => {
+  private handleFileUploaded = async (e: CustomEvent) => {
     console.log('[VisualizerShell] File uploaded:', e.detail);
+    
+    const uploadedFile = e.detail.file;
+    
+    // Check if it's an image file
+    if (uploadedFile.type.startsWith('image/')) {
+      try {
+        this.status = 'Analyzing image...';
+        console.log('[VisualizerShell] Analyzing uploaded image:', uploadedFile.name);
+        
+        // Get active PersonI to determine which vision model to use
+        const activePersoni = conversationOrchestrator.getActivePersona();
+        
+        // Try vision model service first (for local models)
+        let analysis = '';
+        try {
+          const result = await visionModelService.analyzeImage({
+            imageDataUrl: uploadedFile.data as string,
+            prompt: `Analyze this image in detail. Describe what you see, including objects, people, text, colors, and any notable features.`
+          });
+          analysis = result.text; // visionModelService returns { text, model, timestamp }
+          console.log('[VisualizerShell] Local vision analysis:', analysis.substring(0, 100) + '...');
+        } catch (visionError: any) {
+          // Fallback: If vision model service fails, try using the main LLM provider with vision capability
+          console.log('[VisualizerShell] Local vision model unavailable, trying provider vision...');
+          
+          if (activePersoni?.capabilities?.vision) {
+            // Send to conversation orchestrator with vision data
+            // Collect all streaming chunks before continuing
+            const chunks: string[] = [];
+            await conversationOrchestrator.handleUserInput(
+              `I've uploaded an image (${uploadedFile.name}). Please analyze it.`,
+              {
+                visionData: {
+                  image: (uploadedFile.data as string).split(',')[1], // Remove data URL prefix
+                  mimeType: uploadedFile.type
+                },
+                enableTools: false
+              },
+              (chunk) => {
+                if (chunk.text) {
+                  chunks.push(chunk.text);
+                }
+                console.log('[VisualizerShell] Vision analysis chunk:', chunk.text);
+              }
+            );
+            // Wait for streaming to complete, then join all chunks
+            analysis = chunks.join('');
+            console.log('[VisualizerShell] Provider vision analysis complete:', analysis.substring(0, 100) + '...');
+          } else {
+            throw new Error('No vision capability available. Configure a vision model in Settings → Vision or use a PersonI with vision capability.');
+          }
+        }
+        
+        if (analysis) {
+          // Store analysis in RAG memory
+          if (this.ragEnabled && this.ragInitialized) {
+            const activePersoni = conversationOrchestrator.getActivePersona();
+            await ragMemoryManager.addMemory(
+              `Image Analysis of ${uploadedFile.name}: ${analysis}`,
+              'user',
+              'observation',
+              activePersoni?.name || 'unknown',
+              7, // High importance for image analysis
+              {
+                imageFile: uploadedFile.name,
+                imageType: uploadedFile.type,
+                analysisTimestamp: Date.now()
+              }
+            );
+          }
+          
+          // Speak the analysis
+          this.isAiSpeaking = true;
+          const provider = activePersoni
+            ? providerManager.getProviderInstance(activePersoni.thinkingModel)
+            : null;
+          
+          await speechOutputService.speak(analysis, provider, activePersoni);
+          this.isAiSpeaking = false;
+          
+          console.log('[VisualizerShell] ✓ Image analysis complete:', analysis.substring(0, 100) + '...');
+        }
+        
+        this.status = 'Ready';
+      } catch (error) {
+        console.error('[VisualizerShell] Image analysis failed:', error);
+        this.status = error instanceof Error ? error.message : 'Image analysis failed';
+        
+        // Auto-reset status after 3 seconds
+        setTimeout(() => {
+          if (this.status.includes('failed') || this.status.includes('unavailable')) {
+            this.status = 'Ready';
+          }
+        }, 3000);
+      }
+    } else {
+      // For non-image files, just log for now
+      console.log('[VisualizerShell] Non-image file uploaded:', uploadedFile.name, uploadedFile.type);
+    }
   };
 
   private handleToggleCameraControl = () => {
