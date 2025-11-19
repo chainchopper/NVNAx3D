@@ -26,12 +26,12 @@ export class PersonICarousel extends LitElement {
     :host {
       display: block;
       position: fixed;
-      bottom: 24px;
+      top: 24px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 180;
       width: 330px;
-      animation: slideInFromLeft 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: slideInFromTop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
       transition: opacity 0.5s ease-out;
       opacity: 1;
     }
@@ -41,13 +41,13 @@ export class PersonICarousel extends LitElement {
       pointer-events: none;
     }
 
-    @keyframes slideInFromLeft {
+    @keyframes slideInFromTop {
       from {
-        transform: translateX(-120px);
+        transform: translateX(-50%) translateY(-100px);
         opacity: 0;
       }
       to {
-        transform: translateX(0);
+        transform: translateX(-50%) translateY(0);
         opacity: 1;
       }
     }
