@@ -50,6 +50,7 @@ import './components/visualizer/help-panel';
 import './components/visualizer/comfyui-settings-panel';
 import { pluginRegistry } from './services/plugin-registry';
 import { dynamicComponentGenerator } from './services/dynamic-component-generator';
+import { turnDetectionService } from './services/turn-detection-service';
 import {
   AVAILABLE_CONNECTORS,
   Connector,
@@ -3699,30 +3700,42 @@ export class GdmLiveAudio extends LitElement {
       this.isSpeaking = true;
       this.status = 'Listening...';
       this.audioRecorder?.start();
+      
+      // Reset turn detection when starting new speech
+      turnDetectionService.reset();
     });
 
     this.vad.addEventListener('speech_end', async () => {
       // Only use VAD for blob-based STT (provider/Whisper)
       if (this.useBrowserStt) return;
       
-      this.isSpeaking = false;
-      const audioBlob = await this.audioRecorder?.stop();
+      // Use turn detection to determine if turn is actually complete
+      const turnResult = await turnDetectionService.detectTurnCompletion(false);
+      
+      if (turnResult && turnResult.turnComplete) {
+        console.log(`[TurnDetection] Turn complete (${turnResult.confidence.toFixed(2)}): ${turnResult.reason}`);
+        this.isSpeaking = false;
+        const audioBlob = await this.audioRecorder?.stop();
 
-      if (audioBlob && audioBlob.size > 1000) {
-        const transcript = await this.transcribeAudio(audioBlob);
-        if (transcript) {
-          this.currentTranscript = transcript;
-          await this.processTranscript(transcript);
+        if (audioBlob && audioBlob.size > 1000) {
+          const transcript = await this.transcribeAudio(audioBlob);
+          if (transcript) {
+            this.currentTranscript = transcript;
+            await this.processTranscript(transcript);
+          } else {
+            this.updateStatus('Idle');
+            this.resetIdlePromptTimer();
+          }
         } else {
-          this.updateStatus('Idle');
-          this.resetIdlePromptTimer();
+          this.updateStatus('No speech detected.');
+          setTimeout(() => {
+            this.updateStatus('Idle');
+            this.resetIdlePromptTimer();
+          }, 2000);
         }
       } else {
-        this.updateStatus('No speech detected.');
-        setTimeout(() => {
-          this.updateStatus('Idle');
-          this.resetIdlePromptTimer();
-        }, 2000);
+        // VAD detected silence but turn not complete yet - keep listening
+        console.log('[TurnDetection] Silence detected but turn not complete, continuing...');
       }
     });
   }
@@ -3761,7 +3774,14 @@ export class GdmLiveAudio extends LitElement {
       this.scriptProcessorNode.onaudioprocess = (audioProcessingEvent) => {
         if (this.isMuted || this.useBrowserStt) return;
         const pcmData = audioProcessingEvent.inputBuffer.getChannelData(0);
-        this.vad.process(new Float32Array(pcmData));
+        const audioData = new Float32Array(pcmData);
+        
+        // Process with VAD
+        this.vad.process(audioData);
+        
+        // Also feed to turn detection service for content analysis
+        const isSpeaking = this.isSpeaking;
+        turnDetectionService.processAudio(audioData, isSpeaking);
       };
 
       this.sourceNode.connect(this.scriptProcessorNode);
