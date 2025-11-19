@@ -18,6 +18,7 @@ import { userProfileManager } from './user-profile-manager';
 import { cameraVisionService } from './camera-vision-service';
 import { agenticReasoningEngine } from './agentic-reasoning-engine';
 import { systemContextService } from './system-context-service';
+import { capabilityGuard } from './capability-guard';
 import type { PersoniConfig } from '../personas';
 import { getPersoniModel } from '../personas';
 import type { BaseProvider } from '../providers/base-provider';
@@ -68,26 +69,38 @@ export class ConversationOrchestrator {
   ): Promise<void> {
     const { ragEnabled = true, visionData, enableTools = true, visionRequest } = options;
 
-    // Get active persona and provider
+    // Get active persona
     const activePersoni = activePersonasManager.getPrimaryPersona();
     if (!activePersoni) {
       throw new Error('No active PersonI configured');
     }
 
-    const modelId = getPersoniModel(activePersoni, 'conversation');
-    const provider = modelId ? providerManager.getProviderInstanceByModelId(modelId) : null;
-    
-    // GRACEFUL FALLBACK: If no provider configured, still allow conversation with browser-only mode
-    if (!provider) {
-      this.updateStatus('Provider not configured - using browser voice only');
-      console.warn(`[ConversationOrchestrator] No provider for model: ${modelId}. Using browser-only mode.`);
-      // Return a friendly message since we can't generate AI responses
-      const fallbackMessage = `I'm currently running in browser-only mode. Please configure an AI provider in Settings → Models to enable full conversation capabilities.`;
-      if (onChunk) {
-        onChunk({ text: fallbackMessage, isComplete: true });
+    // Check conversation capability using CapabilityGuard
+    const capabilityCheck = await capabilityGuard.checkCapability({
+      capability: 'conversation',
+      personaId: activePersoni.id,
+      context: 'user message'
+    });
+
+    // GRACEFUL FALLBACK: If no provider configured, announce via TTS and return
+    if (!capabilityCheck.available) {
+      this.updateStatus('No conversation model configured');
+      console.warn('[ConversationOrchestrator] Conversation capability not available:', capabilityCheck.error);
+      
+      // Announce error via TTS
+      if (capabilityCheck.error) {
+        await capabilityGuard.announceError(capabilityCheck.error);
+      }
+      
+      // Also show text response for UI
+      if (onChunk && capabilityCheck.error) {
+        onChunk({ text: capabilityCheck.error.userMessage, isComplete: true });
       }
       return;
     }
+
+    // Extract provider from capability check
+    const provider = capabilityCheck.provider!;
 
     this.updateStatus('Thinking...');
     
