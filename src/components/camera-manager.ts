@@ -61,7 +61,6 @@ export class CameraManager extends LitElement {
       top: 0;
       left: 0;
       z-index: 1;
-      transform: scaleX(-1); /* Mirror for front-facing camera */
       pointer-events: none;
     }
 
