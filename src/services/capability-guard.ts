@@ -41,6 +41,68 @@ export interface CapabilityError {
 
 class CapabilityGuard {
   /**
+   * Helper to extract modelId and providerId from various format types
+   * Validates and normalizes model references, returning null for malformed inputs
+   */
+  private parseModelReference(
+    model: string | { providerId?: string | null; modelId?: string | null } | undefined
+  ): { modelId: string; providerId: string | undefined } | null {
+    if (!model) return null;
+
+    let modelId: string;
+    let providerId: string | undefined;
+    
+    if (typeof model === 'string') {
+      // Normalize: trim whitespace
+      const trimmed = model.trim();
+      if (!trimmed) return null; // Empty string
+
+      // Legacy format or composite "providerId:::modelId"
+      if (trimmed.includes(':::')) {
+        const parts = trimmed.split(':::');
+        
+        // Validate: must have exactly 2 non-empty segments
+        if (parts.length !== 2) {
+          console.warn(`[CapabilityGuard] Malformed composite model reference: "${model}" (too many delimiters)`);
+          return null;
+        }
+
+        const [providerPart, modelPart] = parts;
+        const trimmedProvider = providerPart?.trim();
+        const trimmedModel = modelPart?.trim();
+
+        // Both parts must be non-empty
+        if (!trimmedProvider || !trimmedModel) {
+          console.warn(`[CapabilityGuard] Malformed composite model reference: "${model}" (empty segments)`);
+          return null;
+        }
+
+        providerId = trimmedProvider;
+        modelId = trimmedModel;
+      } else {
+        // Legacy format: plain model ID
+        modelId = trimmed;
+      }
+    } else {
+      // New object format {providerId?, modelId}
+      const trimmedModel = model.modelId?.trim();
+
+      // Validate: modelId is required
+      if (!trimmedModel) {
+        console.warn(`[CapabilityGuard] Malformed object model reference (missing modelId):`, model);
+        return null;
+      }
+
+      // providerId is optional (legacy objects may only have modelId)
+      const trimmedProvider = model.providerId?.trim();
+      providerId = trimmedProvider || undefined;
+      modelId = trimmedModel;
+    }
+
+    return { modelId, providerId };
+  }
+
+  /**
    * Check if a capability is available and get the provider instance
    */
   async checkCapability(request: CapabilityRequest): Promise<CapabilityResponse> {
@@ -61,8 +123,21 @@ class CapabilityGuard {
     // Check capability-specific requirements
     switch (capability) {
       case 'conversation': {
-        const model = personi?.models?.conversation;
-        if (!model) {
+        const parsed = this.parseModelReference(personi?.models?.conversation);
+        if (!parsed) {
+          // Check if model was set but malformed
+          const rawModel = personi?.models?.conversation;
+          if (rawModel) {
+            return this.createError(
+              'conversation',
+              `Malformed conversation model configuration: "${typeof rawModel === 'string' ? rawModel : JSON.stringify(rawModel)}"`,
+              'The conversation model configuration is invalid.',
+              'The conversation model configuration appears to be malformed or incomplete. Please open Settings, go to PersonI settings, and reconfigure your conversation model selection.',
+              'Models',
+              'Reconfigure conversation model in PersonI settings'
+            );
+          }
+
           return this.createError(
             'conversation',
             `No conversation model configured${contextStr}`,
@@ -73,32 +148,52 @@ class CapabilityGuard {
           );
         }
 
-        const modelId = typeof model === 'string' ? model : model.modelId;
-        const provider = providerManager.getProviderInstanceByModelId(modelId);
+        const { modelId, providerId } = parsed;
+
+        // Get provider instance - try by providerId first if available
+        let provider;
+        if (providerId) {
+          provider = providerManager.getProviderInstance(providerId);
+        } else {
+          // Fallback to model ID lookup (legacy)
+          provider = providerManager.getProviderInstanceByModelId(modelId);
+        }
         
         if (!provider) {
-          const providerIdHint = typeof model === 'object' ? model.providerId : 'unknown';
+          const providerHint = providerId || 'unknown';
           return this.createError(
             'conversation',
             `Provider for conversation model ${modelId} not available`,
             `The conversation model you selected isn't available.`,
-            `The conversation model you selected, ${modelId}, is not currently available. Please check that the ${providerIdHint} provider is properly configured in Settings under Models.`,
+            `The conversation model you selected, ${modelId}, is not currently available. Please check that the ${providerHint} provider is properly configured in Settings under Models.`,
             'Models',
-            `Verify ${providerIdHint} provider is configured and accessible`
+            `Verify ${providerHint} provider is configured and accessible`
           );
         }
 
         return {
           available: true,
           provider,
-          providerId: typeof model === 'object' ? model.providerId : undefined,
+          providerId,
           modelId
         };
       }
 
       case 'vision': {
-        const model = personi?.models?.vision;
-        if (!model) {
+        const parsed = this.parseModelReference(personi?.models?.vision);
+        if (!parsed) {
+          const rawModel = personi?.models?.vision;
+          if (rawModel) {
+            return this.createError(
+              'vision',
+              `Malformed vision model configuration: "${typeof rawModel === 'string' ? rawModel : JSON.stringify(rawModel)}"`,
+              'The vision model configuration is invalid.',
+              'The vision model configuration appears to be malformed or incomplete. Please open Settings, go to PersonI settings, and reconfigure your vision model selection.',
+              'Models',
+              'Reconfigure vision model in PersonI settings'
+            );
+          }
+
           return this.createError(
             'vision',
             `No vision model configured${contextStr}`,
@@ -109,32 +204,49 @@ class CapabilityGuard {
           );
         }
 
-        const modelId = typeof model === 'string' ? model : model.modelId;
-        const provider = providerManager.getProviderInstanceByModelId(modelId);
+        const { modelId, providerId } = parsed;
+        let provider;
+        if (providerId) {
+          provider = providerManager.getProviderInstance(providerId);
+        } else {
+          provider = providerManager.getProviderInstanceByModelId(modelId);
+        }
         
         if (!provider) {
-          const providerIdHint = typeof model === 'object' ? model.providerId : 'unknown';
+          const providerHint = providerId || 'unknown';
           return this.createError(
             'vision',
             `Provider for vision model ${modelId} not available`,
             `The vision model you selected isn't available.`,
-            `The vision model ${modelId} is not currently available. Please verify that the ${providerIdHint} provider is running and properly configured in Settings.`,
+            `The vision model ${modelId} is not currently available. Please verify that the ${providerHint} provider is running and properly configured in Settings.`,
             'Models',
-            `Verify ${providerIdHint} provider is running and configured`
+            `Verify ${providerHint} provider is running and configured`
           );
         }
 
         return {
           available: true,
           provider,
-          providerId: typeof model === 'object' ? model.providerId : undefined,
+          providerId,
           modelId
         };
       }
 
       case 'embedding': {
-        const model = personi?.models?.embedding;
-        if (!model) {
+        const parsed = this.parseModelReference(personi?.models?.embedding);
+        if (!parsed) {
+          const rawModel = personi?.models?.embedding;
+          if (rawModel) {
+            return this.createError(
+              'embedding',
+              `Malformed embedding model configuration: "${typeof rawModel === 'string' ? rawModel : JSON.stringify(rawModel)}"`,
+              'The embedding model configuration is invalid.',
+              'The embedding model configuration appears to be malformed or incomplete. Please open Settings, go to PersonI settings, and reconfigure your embedding model selection.',
+              'Models',
+              'Reconfigure embedding model in PersonI settings'
+            );
+          }
+
           return this.createError(
             'embedding',
             `No embedding model configured${contextStr}`,
@@ -145,32 +257,49 @@ class CapabilityGuard {
           );
         }
 
-        const modelId = typeof model === 'string' ? model : model.modelId;
-        const provider = providerManager.getProviderInstanceByModelId(modelId);
+        const { modelId, providerId } = parsed;
+        let provider;
+        if (providerId) {
+          provider = providerManager.getProviderInstance(providerId);
+        } else {
+          provider = providerManager.getProviderInstanceByModelId(modelId);
+        }
         
         if (!provider) {
-          const providerIdHint = typeof model === 'object' ? model.providerId : 'unknown';
+          const providerHint = providerId || 'unknown';
           return this.createError(
             'embedding',
             `Provider for embedding model ${modelId} not available`,
             `The embedding model isn't available.`,
-            `The embedding model ${modelId} is not available. Memory features require this to be running. Please check the ${providerIdHint} provider configuration in Settings.`,
+            `The embedding model ${modelId} is not available. Memory features require this to be running. Please check the ${providerHint} provider configuration in Settings.`,
             'Models',
-            `Verify ${providerIdHint} provider is configured`
+            `Verify ${providerHint} provider is configured`
           );
         }
 
         return {
           available: true,
           provider,
-          providerId: typeof model === 'object' ? model.providerId : undefined,
+          providerId,
           modelId
         };
       }
 
       case 'functionCalling': {
-        const model = personi?.models?.functionCalling || personi?.models?.conversation;
-        if (!model) {
+        const parsed = this.parseModelReference(personi?.models?.functionCalling || personi?.models?.conversation);
+        if (!parsed) {
+          const rawModel = personi?.models?.functionCalling || personi?.models?.conversation;
+          if (rawModel) {
+            return this.createError(
+              'functionCalling',
+              `Malformed function calling model configuration: "${typeof rawModel === 'string' ? rawModel : JSON.stringify(rawModel)}"`,
+              'The function calling model configuration is invalid.',
+              'The function calling model configuration appears to be malformed or incomplete. Please open Settings, go to PersonI settings, and reconfigure your function calling or conversation model selection.',
+              'Models',
+              'Reconfigure function calling model in PersonI settings'
+            );
+          }
+
           return this.createError(
             'functionCalling',
             `No function calling model configured${contextStr}`,
@@ -181,31 +310,49 @@ class CapabilityGuard {
           );
         }
 
-        const modelId = typeof model === 'string' ? model : model.modelId;
-        const provider = providerManager.getProviderInstanceByModelId(modelId);
+        const { modelId, providerId } = parsed;
+        let provider;
+        if (providerId) {
+          provider = providerManager.getProviderInstance(providerId);
+        } else {
+          provider = providerManager.getProviderInstanceByModelId(modelId);
+        }
         
         if (!provider) {
+          const providerHint = providerId || 'unknown';
           return this.createError(
             'functionCalling',
             `Provider for function calling model ${modelId} not available`,
             'Function calling model not available.',
             'The function calling model is not currently available. Please verify your provider configuration in Settings under Models.',
             'Models',
-            'Verify function calling model provider is configured'
+            `Verify ${providerHint} provider is configured`
           );
         }
 
         return {
           available: true,
           provider,
-          providerId: typeof model === 'object' ? model.providerId : undefined,
+          providerId,
           modelId
         };
       }
 
       case 'imageGeneration': {
-        const model = personi?.models?.imageGeneration;
-        if (!model) {
+        const parsed = this.parseModelReference(personi?.models?.imageGeneration);
+        if (!parsed) {
+          const rawModel = personi?.models?.imageGeneration;
+          if (rawModel) {
+            return this.createError(
+              'imageGeneration',
+              `Malformed image generation model configuration: "${typeof rawModel === 'string' ? rawModel : JSON.stringify(rawModel)}"`,
+              'The image generation model configuration is invalid.',
+              'The image generation model configuration appears to be malformed or incomplete. Please open Settings, go to PersonI settings, and reconfigure your image generation model selection.',
+              'Models',
+              'Reconfigure image generation model in PersonI settings'
+            );
+          }
+
           return this.createError(
             'imageGeneration',
             `No image generation model configured${contextStr}`,
@@ -216,24 +363,30 @@ class CapabilityGuard {
           );
         }
 
-        const modelId = typeof model === 'string' ? model : model.modelId;
-        const provider = providerManager.getProviderInstanceByModelId(modelId);
+        const { modelId, providerId } = parsed;
+        let provider;
+        if (providerId) {
+          provider = providerManager.getProviderInstance(providerId);
+        } else {
+          provider = providerManager.getProviderInstanceByModelId(modelId);
+        }
         
         if (!provider) {
+          const providerHint = providerId || 'unknown';
           return this.createError(
             'imageGeneration',
             `Provider for image generation model ${modelId} not available`,
             'Image generation service not available.',
             'The image generation service is not currently available. Please verify your configuration in Settings.',
             'Models',
-            'Verify image generation service is configured'
+            `Verify ${providerHint} provider is configured`
           );
         }
 
         return {
           available: true,
           provider,
-          providerId: typeof model === 'object' ? model.providerId : undefined,
+          providerId,
           modelId
         };
       }
