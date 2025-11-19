@@ -539,6 +539,13 @@ export class PersoniSettingsPanel extends LitElement {
   private handleSave() {
     if (!this.personi) return;
 
+    // Helper to find full provider+model selection from model ID
+    const findModelSelection = (modelId: string) => {
+      if (!modelId) return undefined;
+      const model = this.availableModels.find(m => m.id === modelId);
+      return model ? { providerId: model.providerId, modelId: model.id } : undefined;
+    };
+
     const updated: PersoniConfig = {
       ...this.personi,
       name: this.name,
@@ -547,11 +554,11 @@ export class PersoniSettingsPanel extends LitElement {
       avatarUrl: this.avatarUrl || undefined,
       voiceName: this.voiceName,
       models: {
-        conversation: this.conversationModel,
-        vision: this.visionModel,
-        embedding: this.embeddingModel,
-        functionCalling: this.functionCallingModel,
-        imageGeneration: this.imageGenerationModel,
+        conversation: findModelSelection(this.conversationModel),
+        vision: findModelSelection(this.visionModel),
+        embedding: findModelSelection(this.embeddingModel),
+        functionCalling: findModelSelection(this.functionCallingModel),
+        imageGeneration: findModelSelection(this.imageGenerationModel),
       },
       capabilities: { ...this.capabilities },
       enabledConnectors: [...this.enabledConnectors],
@@ -972,12 +979,10 @@ export class PersoniSettingsPanel extends LitElement {
         <div class="section">
           <h3 class="section-title">🤝 Dual PersonI Mode</h3>
           <div class="helper-text" style="margin-bottom: 16px;">
-            Collaborate with two PersonI simultaneously for richer conversations
+            Collaborate with two PersonI simultaneously for richer conversations. Use the carousel at the top of the screen to switch between PersonI.
           </div>
           
-          <personi-carousel></personi-carousel>
-          
-          <div class="field-group" style="margin-top: 24px;">
+          <div class="field-group">
             <label class="field-label">Collaboration Mode</label>
             <select
               @change=${(e: Event) => {

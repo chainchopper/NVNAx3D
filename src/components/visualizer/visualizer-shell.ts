@@ -1179,7 +1179,7 @@ export class VisualizerShell extends LitElement {
           .cameraActive=${this.cameraEnabled}
         ></visualizer-3d>
 
-        <!-- HUD Overlays -->
+        <!-- PersonI Carousel (top-center quick switcher, z-index: 180) -->
         <personi-carousel></personi-carousel>
 
         <!-- Circular Menu Wheel (always-visible icon wheel, z-index: 170) -->
