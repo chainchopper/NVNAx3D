@@ -11,6 +11,7 @@ import { getBackendUrl } from '../config/backend-url';
 const PROVIDERS_KEY = 'nirvana-providers';
 const STT_CONFIG_KEY = 'nirvana-stt-config';
 const TTS_CONFIG_KEY = 'nirvana-tts-config';
+const PERSONIS_KEY = 'nirvana-personis';
 
 export class ProviderManager {
   private providers: Map<string, ModelProvider> = new Map();
@@ -21,6 +22,24 @@ export class ProviderManager {
   constructor() {
     this.loadFromStorage();
     // Defer auto-configuration until async init is called
+  }
+
+  /**
+   * Check if an endpoint is a local/private network endpoint (doesn't require API key)
+   * Covers all RFC1918 private IPv4 ranges plus loopback
+   */
+  private isLocalEndpoint(endpoint: string | undefined): boolean {
+    if (!endpoint) return false;
+    
+    const lower = endpoint.toLowerCase();
+    return (
+      lower.includes('localhost') ||
+      lower.includes('127.0.0.1') ||
+      lower.includes('0.0.0.0') ||
+      lower.includes('192.168.') ||     // 192.168.0.0/16
+      lower.includes('10.') ||           // 10.0.0.0/8
+      /172\.(1[6-9]|2[0-9]|3[01])\./.test(lower)  // 172.16.0.0/12
+    );
   }
   
   async initialize() {
@@ -115,76 +134,13 @@ export class ProviderManager {
 
   /**
    * Auto-configure providers from environment variables (via backend API)
+   * NOTE: Gemini auto-config removed per user request - all providers must be 
+   * configured manually through Settings UI for portability
    */
   private async autoConfigureFromEnvironment() {
-    try {
-      // Use relative path for CORS compatibility
-      const backendUrl = getBackendUrl('/api/config/env');
-      
-      // Retry fetch with exponential backoff (backend might not be ready yet)
-      let response;
-      let lastError;
-      const maxRetries = 3;
-      
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-          
-          response = await fetch(backendUrl, {
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            break; // Success!
-          }
-        } catch (fetchError) {
-          lastError = fetchError;
-          if (attempt < maxRetries - 1) {
-            // Wait before retrying (exponential backoff: 500ms, 1s, 2s)
-            await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt)));
-            continue;
-          }
-        }
-      }
-      
-      if (!response || !response.ok) {
-        console.warn('[ProviderManager] Failed to fetch environment config from backend after', maxRetries, 'attempts');
-        return;
-      }
-      
-      const data = await response.json();
-      const envConfig = data.config;
-      
-      console.log('[ProviderManager] Environment config received:', envConfig);
-      
-      // Auto-configure Google Gemini if API key is present
-      if (envConfig.geminiApiKey) {
-        const googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
-        if (googleProvider) {
-          const wasVerified = googleProvider.verified;
-          googleProvider.apiKey = 'env:GEMINI_API_KEY'; // Placeholder - backend handles real key
-          googleProvider.enabled = true;
-          googleProvider.verified = true;
-          
-          // Sync models if not verified before OR if models list is empty
-          if (!wasVerified || googleProvider.models.length === 0) {
-            await this.syncProviderModels(googleProvider.id);
-            console.log('[ProviderManager] Auto-configured Google Gemini from environment');
-          }
-        }
-      }
-      
-      // Note: Other model configuration is handled through Settings UI
-      // Users can manually add any models they want via the Models panel
-    } catch (error) {
-      console.error('[ProviderManager] Error auto-configuring from environment:', {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        error
-      });
-    }
+    console.log('[ProviderManager] Environment auto-config disabled - use Settings UI to configure providers');
+    // All provider configuration is now handled exclusively through the Settings UI
+    // This ensures the system is fully portable and not locked to any specific provider
   }
 
   private initializeDefaults() {
@@ -364,6 +320,9 @@ export class ProviderManager {
       if (provider) {
         provider.models = models;
         this.saveToStorage();
+        
+        // Auto-assign models to PersonI
+        this.autoAssignModelsToPersonis(providerId, models);
       }
 
       console.log(`[ProviderManager] Added custom provider "${config.name}" with ${models.length} models`);
@@ -391,13 +350,14 @@ export class ProviderManager {
     }
     
     // Check if this is a local provider (doesn't need API key)
-    const isLocalProvider = provider.type === 'custom' || 
-                           provider.endpoint?.includes('localhost') ||
-                           provider.endpoint?.includes('127.0.0.1') ||
-                           provider.endpoint?.includes('0.0.0.0');
+    const isLocalProvider = provider.type === 'custom' || this.isLocalEndpoint(provider.endpoint);
+    
+    // For local providers, API key is optional - use dummy key if not provided
+    const apiKey = provider.apiKey || (isLocalProvider ? 'sk-dummy' : '');
     
     // Skip if no API key for non-local providers
-    if (!provider.apiKey && !isLocalProvider) {
+    if (!apiKey && !isLocalProvider) {
+      console.warn(`[ProviderManager] Skipping ${provider.name} - no API key configured`);
       return;
     }
 
@@ -406,7 +366,7 @@ export class ProviderManager {
       // to avoid infinite recursion
       const instance = ProviderFactory.createProvider(
         provider.type,
-        provider.apiKey,
+        apiKey,
         '', // Empty model for now
         provider.endpoint,
         id
@@ -419,9 +379,112 @@ export class ProviderManager {
         provider.models = models;
         this.saveToStorage();
         console.log(`[ProviderManager] Synced ${models.length} models for ${provider.name}`);
+        
+        // Auto-assign models to PersonI intelligently
+        this.autoAssignModelsToPersonis(provider.id, models);
       }
     } catch (error) {
       console.error(`[ProviderManager] Failed to sync models for ${provider.name}:`, error);
+    }
+  }
+
+  /**
+   * Intelligently auto-assign models to ALL PersonI configurations
+   * Similar to the user's example code - auto-select best models by capability
+   */
+  private autoAssignModelsToPersonis(providerId: string, models: ModelInfo[]) {
+    try {
+      const saved = localStorage.getItem(PERSONIS_KEY);
+      if (!saved) return;
+
+      const personis = JSON.parse(saved);
+      let updated = false;
+
+      // Find best models for each capability
+      const conversationModel = models.find(m => m.capabilities.conversation) || models[0];
+      const visionModel = models.find(m => 
+        m.capabilities.vision && m.id.toLowerCase().includes('vision')
+      ) || models.find(m => m.capabilities.vision) || conversationModel;
+      const embeddingModel = models.find(m => 
+        m.capabilities.embedding && (
+          m.id.toLowerCase().includes('embed') || 
+          m.id.toLowerCase().includes('embedding')
+        )
+      );
+      const functionCallingModel = models.find(m => m.capabilities.functionCalling) || conversationModel;
+      const imageGenModel = models.find(m => m.capabilities.imageGeneration);
+      const ttsModel = models.find(m => m.id.toLowerCase().includes('tts'));
+      const sttModel = models.find(m => m.id.toLowerCase().includes('whisper') || m.id.toLowerCase().includes('stt'));
+
+      // Update each PersonI
+      for (const personi of personis) {
+        // Initialize models object if it doesn't exist
+        if (!personi.models) {
+          personi.models = {};
+        }
+
+        // Auto-assign models if not already configured (or if user wants to update)
+        // Only assign if the model isn't already set OR if it's from this provider
+        const shouldUpdate = (existing: any) => {
+          if (!existing) return true;
+          // If existing is a composite string with this provider ID, update it
+          if (typeof existing === 'string' && existing.includes(`${providerId}:::`)) return true;
+          // If existing is an object with this provider ID, update it
+          if (typeof existing === 'object' && existing.providerId === providerId) return true;
+          // MIGRATION: If existing is a legacy string without provider prefix, migrate it
+          if (typeof existing === 'string' && !existing.includes(':::')) return true;
+          // MIGRATION: If existing is a legacy object without providerId, migrate it
+          if (typeof existing === 'object' && !existing.providerId) return true;
+          // Don't override models from other providers
+          return false;
+        };
+
+        if (conversationModel && shouldUpdate(personi.models.conversation)) {
+          personi.models.conversation = `${providerId}:::${conversationModel.id}`;
+          updated = true;
+        }
+
+        if (visionModel && personi.capabilities?.vision && shouldUpdate(personi.models.vision)) {
+          personi.models.vision = `${providerId}:::${visionModel.id}`;
+          updated = true;
+        }
+
+        if (embeddingModel && shouldUpdate(personi.models.embedding)) {
+          personi.models.embedding = `${providerId}:::${embeddingModel.id}`;
+          updated = true;
+        }
+
+        if (functionCallingModel && personi.capabilities?.tools && shouldUpdate(personi.models.functionCalling)) {
+          personi.models.functionCalling = `${providerId}:::${functionCallingModel.id}`;
+          updated = true;
+        }
+
+        if (imageGenModel && personi.capabilities?.imageGeneration && shouldUpdate(personi.models.imageGeneration)) {
+          personi.models.imageGeneration = `${providerId}:::${imageGenModel.id}`;
+          updated = true;
+        }
+
+        // TTS models if available
+        // Use composite format so provider can be resolved later
+        // Apply shouldUpdate logic to handle both new and existing TTS configs
+        if (ttsModel && shouldUpdate(personi.models.textToSpeech)) {
+          personi.models.textToSpeech = `${providerId}:::${ttsModel.id}`;
+          updated = true;
+        }
+
+        // Note: STT auto-config is handled separately in STT settings
+        // PersonI don't need per-instance STT models - it's a global setting
+      }
+
+      if (updated) {
+        localStorage.setItem(PERSONIS_KEY, JSON.stringify(personis));
+        console.log(`[ProviderManager] 🎯 Auto-assigned models to PersonI from ${providerId}`);
+        
+        // Dispatch event to notify UI components
+        window.dispatchEvent(new CustomEvent('personis-updated'));
+      }
+    } catch (error) {
+      console.error('[ProviderManager] Failed to auto-assign models to PersonI:', error);
     }
   }
 
@@ -571,7 +634,13 @@ export class ProviderManager {
       return null;
     }
     
-    if (!provider.apiKey) {
+    // Check if this is a local provider (doesn't need API key)
+    const isLocalProvider = provider.type === 'custom' || this.isLocalEndpoint(provider.endpoint);
+    
+    // For local providers, API key is optional - use dummy key if not provided
+    const apiKey = provider.apiKey || (isLocalProvider ? 'sk-dummy' : '');
+    
+    if (!apiKey && !isLocalProvider) {
       console.warn(`Provider "${provider.name}" has no API key configured`);
       return null;
     }
@@ -586,7 +655,7 @@ export class ProviderManager {
       const model = modelId || provider.models[0]?.id || '';
       const instance = ProviderFactory.createProvider(
         provider.type,
-        provider.apiKey,
+        apiKey,
         model,
         provider.endpoint,
         providerId

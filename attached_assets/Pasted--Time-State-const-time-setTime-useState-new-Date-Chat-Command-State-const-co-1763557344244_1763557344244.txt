@@ -1,0 +1,279 @@
+// Time State
+  const [time, setTime] = useState(new Date());
+
+  // Chat / Command State
+  const [command, setCommand] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [messages, setMessages] = useState<{role: 'user' | 'system' | 'error', text: string}[]>([
+    {role: 'system', text: 'System Initialized. AlphaQubit Core Online.'}
+  ]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // --- EFFECTS ---
+
+  // 1. Clock
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // 2. Live Vitals Simulation
+  useEffect(() => {
+    const vitalInterval = setInterval(() => {
+        setSystemState(prev => ({
+            ...prev,
+            vitals: {
+                ...prev.vitals,
+                cpu: Math.min(100, Math.max(10, prev.vitals.cpu + (Math.random() * 10 - 5))),
+                mem: Math.min(100, Math.max(20, prev.vitals.mem + (Math.random() * 5 - 2.5)))
+            }
+        }));
+    }, 2000);
+    return () => clearInterval(vitalInterval);
+  }, []);
+
+  // 3. Scroll to bottom of chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+
+  // --- LOGIC: AI INTEGRATION ---
+
+  const fetchModels = async () => {
+    setIsFetchingModels(true);
+    setFetchError('');
+    try {
+        // Remove trailing slash if present for consistent path building
+        const cleanUrl = apiConfig.baseUrl.replace(/\/$/, '');
+        const response = await fetch(`${cleanUrl}/models`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${apiConfig.apiKey || 'sk-dummy'}` // Some local LLMs need a dummy key
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to connect to endpoint');
+
+        const data = await response.json();
+        const modelList = data.data || data; // Handle standard OpenAI format or simple arrays
+        const modelIds = Array.isArray(modelList) ? modelList.map((m: any) => m.id || m) : [];
+
+        setApiConfig(prev => ({
+            ...prev,
+            availableModels: modelIds,
+            models: {
+                ...prev.models,
+                // Auto-select first available if not set
+                chat: prev.models.chat || modelIds[0] || '',
+                vision: prev.models.vision || modelIds.find((m:string) => m.includes('vision')) || modelIds[0] || '',
+                embedding: prev.models.embedding || modelIds.find((m:string) => m.includes('embed')) || '',
+                stt: prev.models.stt || 'whisper-1',
+                tts: prev.models.tts || 'tts-1'
+            }
+        }));
+    } catch (err: any) {
+        setFetchError(err.message || 'Unknown error fetching models');
+    } finally {
+        setIsFetchingModels(false);
+    }
+  };
+
+  const speak = (text: string) => {
+      // Fallback to browser TTS if no API configured for TTS or if request fails
+      // In a real implementation, we would POST to apiConfig.baseUrl/audio/speech here
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      // Try to find a "futuristic" or pleasant voice
+      const preferred = voices.find(v => v.name.includes('Google US English') || v.name.includes('Samantha'));
+      if (preferred) utterance.voice = preferred;
+      utterance.rate = 1.1;
+      window.speechSynthesis.speak(utterance);
+  };
+
+  const callAI = async (userInput: string): Promise<string> => {
+      if (!apiConfig.models.chat) return "Error: No Conversation Model selected in settings.";
+      
+      const cleanUrl = apiConfig.baseUrl.replace(/\/$/, '');
+      
+      try {
+          const response = await fetch(`${cleanUrl}/chat/completions`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiConfig.apiKey || 'sk-dummy'}`
+              },
+              body: JSON.stringify({
+                  model: apiConfig.models.chat,
+                  messages: [
+                      { role: "system", content: "You are AlphaQubit, a highly advanced AI system for vehicle and home automation. Be concise, professional, and futuristic." },
+                      ...messages.filter(m => m.role !== 'error').slice(-5), // Context window
+                      { role: "user", content: userInput }
+                  ],
+                  temperature: 0.7
+              })
+          });
+
+          const data = await response.json();
+          const reply = data.choices?.[0]?.message?.content || "No response from model.";
+          return reply;
+
+      } catch (error) {
+          console.error(error);
+          return "Error: Could not reach AI endpoint. Check your connection settings.";
+      }
+  };
+
+  // --- LOGIC: COMMAND PROCESSING ---
+
+  const processCommand = async (input: string) => {
+    const lower = input.toLowerCase().trim();
+    let response = "";
+
+    // A. LOCAL HARDWARE CONTROL (Priority Overrides)
+    // These run locally for speed/safety
+    if (lower.match(/unlock.*car|car.*unlock/)) {
+        setSystemState(prev => ({ ...prev, car: { ...prev.car, locked: false } }));
+        response = "Vehicle unlocked. Perimeter sensors active.";
+    }
+    else if (lower.match(/lock.*car|car.*lock/)) {
+        setSystemState(prev => ({ ...prev, car: { ...prev.car, locked: true } }));
+        response = "Vehicle locked. Sentry mode engaged.";
+    }
+    else if (lower.match(/guard|sentry|security/)) {
+        const newState = !systemState.home.guardMode;
+        setSystemState(prev => ({ ...prev, home: { ...prev.home, guardMode: newState } }));
+        response = `Guard Mode ${newState ? 'ENABLED' : 'DISABLED'}. Facial recognition systems ${newState ? 'active' : 'offline'}.`;
+    }
+    else if (lower.match(/temp|ac|climate/)) {
+        const num = parseInt(lower.replace(/[^0-9]/g, ''));
+        if (num) {
+            setSystemState(prev => ({ ...prev, car: { ...prev.car, temp: num } }));
+            response = `Climate control set to ${num}°F.`;
+        } else {
+            response = `Current cabin temperature is ${systemState.car.temp}°F.`;
+        }
+    }
+    else if (lower.match(/wifi|internet/)) {
+        response = "Scanning... SSID 'StarkNet' detected. Signal Strength: 98%. Connected.";
+    }
+    // B. REAL AI OR SIMULATION
+    else {
+        // Check if we have a valid model configuration to use
+        if (apiConfig.availableModels.length > 0 && apiConfig.models.chat) {
+            response = await callAI(input);
+        } else {
+            // Fallback Mock responses if no real AI is connected
+            if (lower.includes('joke')) {
+                response = "Why do programmers prefer dark mode? Because light attracts bugs.";
+            }
+            else if (lower.includes('github')) {
+                response = "Authenticating GitHub API... Found 24 repositories. Cloning 'alpha-qubit-v2' to local storage...";
+            }
+            else if (lower.includes('stock') || lower.includes('market')) {
+                response = "Market Watch: AAPL $175.43 (+1.2%), TSLA $240.12 (-0.5%). Portfolio up 0.8% today.";
+            }
+            else if (lower.includes('restart') || lower.includes('reboot')) {
+                response = "Initiating system reboot. Saving session state...";
+                setTimeout(() => window.location.reload(), 2000);
+            }
+            else if (lower.includes('weather')) {
+                response = "Scanning local sensors... 72°F, Clear Skies. Humidity 45%. Air Quality Index: Good.";
+            }
+            else {
+                response = `Command "${input}" recognized. Searching global databases (Simulation)... No result. Please configure AI Endpoint in Settings for Generative Intelligence.`;
+            }
+        }
+    }
+
+    speak(response);
+    return response;
+  };
+
+  const handleCommandSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!command.trim() || isProcessing) return;
+    
+    const userCmd = command;
+    setMessages(prev => [...prev, {role: 'user', text: userCmd}]);
+    setCommand('');
+    setIsProcessing(true);
+
+    try {
+        const res = await processCommand(userCmd);
+        setMessages(prev => [...prev, {role: 'system', text: res}]);
+    } catch (e) {
+        setMessages(prev => [...prev, {role: 'error', text: 'System Error Processing Command.'}]);
+    } finally {
+        setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="relative w-screen h-screen overflow-hidden font-sans text-white select-none">
+      {/* 3D Scene Layer */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <InteractiveScene showParticles={true} speed={speed} />
+      </div>
+
+      {/* HUD Overlay Layer */}
+      <div className="relative z-10 flex flex-col h-full p-6 pointer-events-none">
+        
+        {/* TOP BAR: Status & Vitals */}
+        <header className="flex justify-between items-start pointer-events-auto">
+            <div className="flex gap-6">
+                {/* Clock & Date */}
+                <div className="text-white/90 bg-black/20 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-lg group hover:bg-black/40 transition-colors">
+                    <div className="text-4xl font-light font-mono tracking-tighter flex items-baseline gap-2">
+                        {time.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <span className="text-xs font-bold text-white/30">{time.toLocaleTimeString([], {second: '2-digit'})}</span>
+                    </div>
+                    <div className="text-xs font-bold tracking-widest text-nobel-gold uppercase mt-1">
+                        {time.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'})}
+                    </div>
+                </div>
+
+                {/* Weather Widget */}
+                <div className="text-white/80 bg-black/20 backdrop-blur-md p-4 rounded-xl border border-white/10 flex flex-col justify-between w-36 hover:bg-black/40 transition-colors">
+                    <div className="flex items-center justify-between">
+                        <Globe size={16} className="text-blue-400 animate-pulse" />
+                        <span className="text-xs font-mono">SFO</span>
+                    </div>
+                    <div className="text-2xl font-medium mt-1">{systemState.weather.temp}°</div>
+                    <div className="text-[10px] uppercase tracking-wider opacity-60">{systemState.weather.cond}</div>
+                </div>
+            </div>
+
+            <div className="flex gap-4">
+                {/* System Vitals */}
+                <div className="flex gap-2 bg-black/20 backdrop-blur-md p-2 rounded-xl border border-white/10">
+                   <div className="flex flex-col items-center justify-center w-16 gap-1">
+                        <Cpu size={14} className="text-white/60" />
+                        <div className="h-1 w-12 bg-white/10 rounded-full overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-green-400" 
+                                animate={{ width: `${systemState.vitals.cpu}%` }}
+                                transition={{ type: "spring", stiffness: 50 }}
+                            />
+                        </div>
+                        <span className="text-[9px] font-mono text-white/60">{Math.round(systemState.vitals.cpu)}% CPU</span>
+                   </div>
+                   <div className="w-[1px] bg-white/10"></div>
+                   <div className="flex flex-col items-center justify-center w-16 gap-1">
+                        <Activity size={14} className="text-white/60" />
+                        <div className="h-1 w-12 bg-white/10 rounded-full overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-purple-400" 
+                                animate={{ width: `${systemState.vitals.mem}%` }}
+                                transition={{ type: "spring", stiffness: 50 }}
+                            />
+                        </div>
+                        <span className="text-[9px] font-mono text-white/60">{Math.round(systemState.vitals.mem)}% MEM</span>
+                   </div>
+                   <div className="w-[1px] bg-white/10"></div>
+                   <div className="flex flex-col items-center justify-center w-16 gap-1">
+                        <Battery size={14} className="text-white/60" />
+                        <span className="text-xs font-bold text-white">100%</span>
+                        <span className="text-[9px] font-mono text-white/60">PWR</span>
+                   </div>
+                </div>

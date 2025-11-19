@@ -51,7 +51,17 @@ export class SpeechOutputService {
     options: SpeechOptions = {}
   ): Promise<void> {
     try {
-      // Try provider-based TTS first
+      // Try TTS from PersonI's configured TTS model first (most specific)
+      if (persona?.models?.textToSpeech && provider) {
+        try {
+          await this.speakWithCustomTTS(text, persona.models.textToSpeech, provider, persona);
+          return;
+        } catch (error) {
+          console.warn('[SpeechOutputService] Custom TTS model failed, trying provider default:', error);
+        }
+      }
+
+      // Try provider-based TTS (OpenAI, Google)
       if (provider) {
         if (provider instanceof OpenAIProvider) {
           await this.speakWithOpenAI(text, provider, persona);
@@ -79,6 +89,72 @@ export class SpeechOutputService {
       console.error('[SpeechOutputService] All TTS methods failed:', error);
       // Last resort: browser TTS
       await this.speakWithBrowserTTS(text, options);
+    }
+  }
+
+  /**
+   * Use custom TTS model from OpenAI-compatible endpoints
+   * Supports models like tts-1, tts-1-hd from LM Studio, vLLM, etc.
+   */
+  private async speakWithCustomTTS(
+    text: string,
+    ttsModelId: string,
+    provider: BaseProvider,
+    persona: PersoniConfig | null
+  ): Promise<void> {
+    // Parse ttsModelId which may be in composite format: "providerId:::modelId"
+    // or legacy format: "tts-1"
+    let model = ttsModelId;
+    if (ttsModelId.includes(':::')) {
+      const parts = ttsModelId.split(':::');
+      model = parts[1] || ttsModelId; // Use model part after :::
+    }
+    
+    let voice = persona?.voiceName || 'alloy';
+
+    // Check if provider supports OpenAI-compatible TTS endpoint
+    if (provider instanceof OpenAIProvider) {
+      const audioBuffer = await provider.generateSpeech(text, voice, model);
+      const bytes = new Uint8Array(audioBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64Audio = btoa(binary);
+      await this.playAudio(base64Audio);
+    } else {
+      // Try generic OpenAI-compatible endpoint for custom providers
+      const config = (provider as any).config;
+      if (config && config.endpoint) {
+        const endpoint = config.endpoint.replace(/\/$/, '');
+        const response = await fetch(`${endpoint}/audio/speech`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.apiKey || 'sk-dummy'}`
+          },
+          body: JSON.stringify({
+            model,
+            input: text,
+            voice,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Custom TTS API error: ${response.statusText}`);
+        }
+
+        const audioBuffer = await response.arrayBuffer();
+        const bytes = new Uint8Array(audioBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64Audio = btoa(binary);
+        await this.playAudio(base64Audio);
+      } else {
+        throw new Error('Provider does not support TTS endpoint');
+      }
     }
   }
 
