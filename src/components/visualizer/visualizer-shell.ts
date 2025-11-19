@@ -733,7 +733,16 @@ export class VisualizerShell extends LitElement {
 
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
-    await this.initializeAudioContext();
+    console.log('[VisualizerShell] 🚀 connectedCallback started');
+    
+    try {
+      console.log('[VisualizerShell] About to call initializeAudioContext...');
+      await this.initializeAudioContext();
+      console.log('[VisualizerShell] initializeAudioContext completed');
+    } catch (error) {
+      console.error('[VisualizerShell] initializeAudioContext ERROR:', error);
+    }
+    
     await this.initializeDefaultPlugins();
     await this.initializeServices();
     this.loadPersonIs();
@@ -1021,8 +1030,11 @@ export class VisualizerShell extends LitElement {
   }
 
   private async initializeAudioContext(): Promise<void> {
+    console.log('[VisualizerShell] 🎵 Starting audio context initialization...');
     try {
       this.audioContext = new AudioContext();
+      console.log('[VisualizerShell] AudioContext created');
+      
       this.outputNode = this.audioContext.createGain();
       this.inputNode = this.audioContext.createGain();
 
@@ -1033,13 +1045,15 @@ export class VisualizerShell extends LitElement {
       this.outputAnalyser = new Analyser(this.outputNode);
       this.inputAnalyser = new Analyser(this.inputNode);
 
-      console.log('[VisualizerShell] Audio context initialized (microphone will connect async)');
+      console.log('[VisualizerShell] ✅ Audio context initialized (microphone will connect async)');
 
       // Request microphone ASYNC (fire-and-forget) so we don't block initialization
-      this.initializeMicrophoneAsync();
+      this.initializeMicrophoneAsync().catch((err) => {
+        console.error('[VisualizerShell] Microphone async init error:', err);
+      });
 
     } catch (error) {
-      console.error('[VisualizerShell] Audio context initialization failed:', error);
+      console.error('[VisualizerShell] ❌ Audio context initialization failed:', error);
     }
   }
 
@@ -1049,12 +1063,19 @@ export class VisualizerShell extends LitElement {
    */
   private async initializeMicrophoneAsync(): Promise<void> {
     try {
+      console.log('[VisualizerShell] Requesting microphone permission...');
+      
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
 
-      if (!this.audioContext || !this.inputNode) return;
+      console.log('[VisualizerShell] ✅ Microphone permission granted');
+
+      if (!this.audioContext || !this.inputNode) {
+        console.warn('[VisualizerShell] Audio context not ready, cannot connect microphone');
+        return;
+      }
 
       // Create source from microphone stream
       const sourceNode = this.audioContext.createMediaStreamSource(mediaStream);
@@ -1068,17 +1089,18 @@ export class VisualizerShell extends LitElement {
       this.inputNode.connect(mutedGain);
       mutedGain.connect(this.audioContext.destination);
 
-      console.log('[VisualizerShell] Microphone connected to audio analyser');
+      console.log('[VisualizerShell] ✅ Microphone connected to audio analyser');
 
       // Wire analysers to visualizer component after it's rendered
       await this.updateComplete;
       if (this.visualizer3d) {
         this.visualizer3d.outputAnalyser = this.outputAnalyser;
         this.visualizer3d.inputAnalyser = this.inputAnalyser;
-        console.log('[VisualizerShell] Analysers connected to visualizer-3d');
+        console.log('[VisualizerShell] ✅ Analysers connected to visualizer-3d');
       }
-    } catch (micError) {
-      console.warn('[VisualizerShell] Microphone access denied:', micError);
+    } catch (micError: any) {
+      console.error('[VisualizerShell] ❌ Microphone access failed:', micError.message || micError);
+      console.warn('[VisualizerShell] App will continue without microphone input - visualizer will use fallback animation');
       // Visualizer will use fallback animation without audio reactivity
     }
   }
