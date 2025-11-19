@@ -2057,6 +2057,154 @@ app.post('/api/connectors/codeprojectai/detect', async (req, res) => {
   }
 });
 
+app.post('/api/connectors/smtp/send', async (req, res) => {
+  try {
+    const { to, subject, body, html } = req.body;
+    
+    if (!to || !subject || !body) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, body',
+      });
+    }
+
+    const credentials = getConnectorCredentials('smtp');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'SMTP not configured. Please configure in Connector Settings.',
+      });
+    }
+
+    console.log('[SMTP] Sending email to:', to);
+    const result = await connectorHandlers.handleSMTP({ to, subject, body, html }, credentials);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[SMTP Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'SMTP integration required. Please configure SMTP settings.',
+    });
+  }
+});
+
+app.post('/api/connectors/telegram/sendMessage', async (req, res) => {
+  try {
+    const { chatId, message, parseMode } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: message',
+      });
+    }
+
+    const credentials = getConnectorCredentials('telegram');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Telegram not configured. Please configure in Connector Settings.',
+      });
+    }
+
+    console.log('[Telegram] Sending message:', message.substring(0, 50));
+    const result = await connectorHandlers.handleTelegram({ chatId, message, parseMode }, credentials);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[Telegram Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Telegram integration required. Please configure Bot Token and Chat ID.',
+    });
+  }
+});
+
+app.post('/api/connectors/discord/sendWebhook', async (req, res) => {
+  try {
+    const { content, username, avatarUrl } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: content',
+      });
+    }
+
+    const credentials = getConnectorCredentials('discord');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'Discord not configured. Please configure in Connector Settings.',
+      });
+    }
+
+    console.log('[Discord] Sending webhook message:', content.substring(0, 50));
+    const result = await connectorHandlers.handleDiscord({ content, username, avatarUrl }, credentials);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[Discord Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'Discord integration required. Please configure Webhook URL.',
+    });
+  }
+});
+
+app.post('/api/connectors/whatsapp/sendMessage', async (req, res) => {
+  try {
+    const { to, message } = req.body;
+    
+    if (!to || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, message',
+      });
+    }
+
+    const credentials = getConnectorCredentials('whatsapp');
+    if (!credentials) {
+      return res.status(401).json({
+        success: false,
+        requiresSetup: true,
+        setupInstructions: 'WhatsApp not configured. Please configure in Connector Settings.',
+      });
+    }
+
+    console.log('[WhatsApp] Sending message to:', to);
+    const result = await connectorHandlers.handleWhatsApp({ to, message }, credentials);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('[WhatsApp Error]', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      setupInstructions: 'WhatsApp integration required. Please configure WhatsApp Business API credentials.',
+    });
+  }
+});
+
 app.post('/api/connectors/yolo/detect', async (req, res) => {
   try {
     const { imageUrl, minConfidence = 0.5 } = req.body;
