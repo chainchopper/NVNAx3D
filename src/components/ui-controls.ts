@@ -77,9 +77,9 @@ export class UIControls extends LitElement {
 
     .control-button .tooltip {
       position: absolute;
-      right: calc(100% + 12px);
-      top: 50%;
-      transform: translateY(-50%);
+      bottom: calc(100% + 12px);
+      right: 50%;
+      transform: translateX(50%);
       background: rgba(0, 0, 0, 0.9);
       color: white;
       padding: 8px 12px;
