@@ -1,0 +1,83 @@
+
+    ❌ Speaker diarization system (pyannote-audio, NVIDIA NeMo, or SpeechBrain)
+    ❌ Voice profile database schema (voice_profiles, voice_encounters, voice_similarity tables)
+    ❌ Voice embedding generation (ECAPA-TDNN or similar)
+    ❌ Voice fingerprinting with MFCC features
+    ❌ Real-time speaker identification
+    ❌ Unknown voice detection and profiling
+    ❌ Voice profile enrichment from external services
+    ❌ "Sounds Like" voice matching feature
+    ❌ Per-persona voice characteristics (rate, pitch, modulation)
+    ❌ Audio source separation for multi-speaker scenarios
+    ❌ Emotional tone analysis from voice (valence & arousal)
+    ❌ Voice-driven memory queries ("What did Doug tell me yesterday?")
+
+Advanced MCP Enhancements (Priority: MEDIUM)
+
+    ❌ MCP server clustering for distributed execution
+    ❌ MCP tool versioning and dependency resolution
+    ❌ Cross-PersonI tool sharing and discovery
+    ❌ MCP tool marketplace integration
+    ❌ Advanced agent state persistence
+    ❌ Agent collaboration protocols expansion
+
+Missing External Connectors (Priority: MEDIUM)
+
+    ❌ SSH - Secure shell access
+    ❌ FTP/SFTP - File transfer protocol
+    ❌ SMTP - Email sending
+    ❌ Google Photos - Image and album access
+    ❌ Facebook - Social graph and posts
+    ❌ LinkedIn - Professional network integration
+    ❌ Twitter/X - Social media integration
+    ❌ Dropbox - Cloud storage
+    ❌ OneDrive - Microsoft cloud storage
+    ❌ Todoist - Task management
+    ❌ Trello - Kanban boards
+    ❌ Discord - Community messaging
+    ❌ Telegram - Messaging bot
+    ❌ WhatsApp - Messaging API
+
+Plugin Card System (Priority: MEDIUM)
+
+    ❌ Plugin export to shareable .nirvana-card format
+    ❌ Plugin import from .nirvana-card files
+    ❌ Plugin marketplace/gallery system
+    ❌ Plugin versioning and dependency management
+    ❌ Plugin sandboxing security improvements
+    ❌ Plugin API for third-party developers
+
+Advanced AI Capabilities
+
+    ❌ Context window expansion strategies
+    ❌ Memory summarization system (compress old memories)
+    ❌ Multi-model memory routing
+    ❌ "Thinking Mode" with extended reasoning
+    ❌ Podcast-style persona conversations (natural back-and-forth)
+    ❌ Persona collaboration protocol enhancements
+
+Visual Enhancements
+
+    ❌ WebGPU migration (currently WebGL)
+    ❌ Enhanced post-processing effects
+    ❌ Google Photos slideshow as avatar texture option
+    ❌ Camera feed as texture on avatar blob
+    ❌ Custom shader effects for PersonI avatars
+
+Platform Extensions
+
+    ❌ WebRTC swarm mode (distributed coordination)
+    ❌ Docker Compose setup for local services stack
+    ❌ Tauri native desktop app
+    ❌ Capacitor native mobile app
+    ❌ Production CSP with nonces/hashes
+    ❌ Chatterbox-TTS-API custom TTS provider integration
+
+Database & Storage
+
+    ❌ PostgreSQL integration for production
+    ❌ SQLite for local-first storage
+    ❌ Database migration tools
+    ❌ Export/import full system state
+    ❌ Backup and restore functionality
+    ❌ Voice profile database implementation
