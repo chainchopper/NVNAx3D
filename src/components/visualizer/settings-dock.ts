@@ -184,7 +184,7 @@ export class SettingsDock extends LitElement {
       const state = appStateService.getState();
       
       // Panel IDs managed by this dock (all panels now opened via radial menu)
-      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig', 'help', 'telephony', 'device'];
+      const dockManagedPanels = ['models', 'personis', 'tts', 'notes', 'tasks', 'memory', 'userProfile', 'routines', 'plugins', 'connectorConfig', 'help', 'telephony', 'device', 'vision', 'comfyui'];
       const isDockManaged = dockManagedPanels.includes(state.activeSidePanel);
       
       if (isDockManaged) {
@@ -350,6 +350,16 @@ export class SettingsDock extends LitElement {
         id: 'help',
         title: 'NIRVANA HELP AND DOCUMENTATION',
         content: html`<help-panel @close=${this.handlePanelCloseRequest}></help-panel>`,
+      },
+      'vision': {
+        id: 'vision',
+        title: 'Vision AI',
+        content: html`<vision-panel @close=${this.handlePanelCloseRequest}></vision-panel>`,
+      },
+      'comfyui': {
+        id: 'comfyui',
+        title: 'Image Generation',
+        content: html`<comfyui-settings-panel @close=${this.handlePanelCloseRequest}></comfyui-settings-panel>`,
       },
     };
 
