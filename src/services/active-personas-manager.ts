@@ -118,7 +118,22 @@ export class ActivePersonasManager {
       };
       localStorage.setItem(CONTEXT_HISTORY_KEY, JSON.stringify(historyData));
     } catch (error) {
-      console.error('[ActivePersonasManager] Failed to save to storage:', error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.error('[ActivePersonasManager] ⚠️ QUOTA EXCEEDED - Trimming conversation history');
+        // Emergency: Keep only last 30 messages per slot
+        const trimmedHistoryData = {
+          primary: (this.slots.get('primary')?.contextHistory || []).slice(-30),
+          secondary: (this.slots.get('secondary')?.contextHistory || []).slice(-30),
+        };
+        try {
+          localStorage.setItem(CONTEXT_HISTORY_KEY, JSON.stringify(trimmedHistoryData));
+          console.log('[ActivePersonasManager] ✓ Saved after trimming conversation history');
+        } catch (retryError) {
+          console.error('[ActivePersonasManager] ⚠️ Failed to save even after trimming:', retryError);
+        }
+      } else {
+        console.error('[ActivePersonasManager] Failed to save to storage:', error);
+      }
     }
   }
 

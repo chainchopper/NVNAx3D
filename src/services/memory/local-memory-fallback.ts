@@ -31,8 +31,36 @@ export class LocalMemoryFallback {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
     } catch (error) {
-      console.error('[LocalMemoryFallback] Failed to save memories:', error);
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        console.error('[LocalMemoryFallback] ⚠️ QUOTA EXCEEDED - Triggering emergency cleanup');
+        // Immediate pruning to oldest 500 memories
+        this.emergencyPrune(500);
+        // Retry save
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
+          console.log('[LocalMemoryFallback] ✓ Save succeeded after emergency cleanup');
+        } catch (retryError) {
+          console.error('[LocalMemoryFallback] ⚠️ Save failed even after cleanup:', retryError);
+        }
+      } else {
+        console.error('[LocalMemoryFallback] Failed to save memories:', error);
+      }
     }
+  }
+
+  private emergencyPrune(keepCount: number): void {
+    const originalCount = this.memories.length;
+    
+    // Sort by timestamp in metadata, keep most recent
+    this.memories.sort((a, b) => {
+      const aTime = a.metadata?.timestamp ? new Date(a.metadata.timestamp).getTime() : 0;
+      const bTime = b.metadata?.timestamp ? new Date(b.metadata.timestamp).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    this.memories = this.memories.slice(0, keepCount);
+    
+    console.log(`[LocalMemoryFallback] Emergency pruned ${originalCount - this.memories.length} old memories (${originalCount} → ${this.memories.length})`);
   }
 
   addMemory(memory: Memory): void {
