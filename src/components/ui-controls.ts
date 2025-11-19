@@ -30,6 +30,7 @@ export class UIControls extends LitElement {
       right: 20px;
       z-index: 90;
       transition: opacity 0.5s ease-out, visibility 0s 0.5s;
+      pointer-events: auto;
     }
 
     :host(.hidden) {
