@@ -1253,6 +1253,13 @@ export class VisualizerShell extends LitElement {
           .initialized=${this.ragInitialized}
           .lastRetrievedCount=${this.lastRetrievedMemories}
           @rag-toggle=${this.handleRAGToggle}
+          @rag-file-upload=${() => {
+            console.log('[VisualizerShell] RAG menu file upload clicked');
+            const fileUpload = this.shadowRoot?.querySelector('file-upload');
+            if (fileUpload) {
+              (fileUpload as any).openFilePicker();
+            }
+          }}
           @rag-open-context-settings=${() => {
             console.log('[VisualizerShell] Opening RAG context settings panel');
             this.activeSidePanel = 'memory';

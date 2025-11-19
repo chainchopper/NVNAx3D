@@ -349,7 +349,10 @@ export class FileUpload extends LitElement {
     this.uploadedFiles = this.uploadedFiles.filter((_, i) => i !== index);
   }
 
-  private openFilePicker() {
+  /**
+   * Public method to open file picker (callable from parent components)
+   */
+  public openFilePicker() {
     const input = this.shadowRoot?.querySelector('.file-input') as HTMLInputElement;
     input?.click();
   }
