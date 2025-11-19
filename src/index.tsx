@@ -95,14 +95,12 @@ import './components/object-detection-overlay';
 import './components/calendar-view';
 import { PERSONIS_KEY } from './constants/storage.js';
 
-const CONNECTORS_KEY = 'gdm-connectors';
 const STT_PREFERENCES_KEY = 'stt-preferences';
 const SETTINGS_FAB_POSITION_KEY = 'settings-fab-position';
 const DUAL_MODE_KEY = 'dual-mode-settings';
 const DETECTED_PATTERNS_KEY = 'detected-patterns';
 const DISMISSED_PATTERNS_KEY = 'dismissed-patterns';
 const AVAILABLE_VOICES = ['Zephyr', 'Kore', 'Puck', 'Charon', 'Fenrir'];
-const AVAILABLE_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro'];
 const AVAILABLE_SHAPES = ['Icosahedron', 'TorusKnot', 'Box'];
 const AVAILABLE_TEXTURES: TextureName[] = [
   'none',

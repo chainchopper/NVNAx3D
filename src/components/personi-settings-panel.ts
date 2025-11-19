@@ -459,11 +459,9 @@ export class PersoniSettingsPanel extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    // Load available models FIRST before loading personi data
-    this.loadAvailableModels();
-    this.loadPersoniData();
-    this.loadOAuthStatuses();
-    this.loadAvailablePlugins();
+    
+    // Initialize asynchronously - MUST sync provider models before loading PersonI data
+    this.initializeAsync();
     
     // Subscribe to OAuth status changes
     this.oauthUnsubscribe = oauthService.subscribe(() => {
@@ -476,6 +474,38 @@ export class PersoniSettingsPanel extends LitElement {
     if (this.oauthUnsubscribe) {
       this.oauthUnsubscribe();
     }
+  }
+
+  private async initializeAsync() {
+    // Step 1: Sync all provider models from their endpoints
+    await this.loadProviderModels();
+    
+    // Step 2: Load PersonI data AFTER models are available
+    this.loadPersoniData();
+    
+    // Step 3: Load supplemental data
+    this.loadOAuthStatuses();
+    this.loadAvailablePlugins();
+  }
+
+  private async loadProviderModels() {
+    const allProviders = providerManager.getAllProviders();
+    const enabledProviders = allProviders.filter(p => p.enabled);
+    
+    console.log('[PersonISettings] Syncing models from', enabledProviders.length, 'enabled providers');
+    
+    // Fetch models from all enabled providers in parallel
+    await Promise.all(
+      enabledProviders.map(provider => providerManager.syncProviderModels(provider.id))
+    );
+    
+    // Update availableModels state after sync
+    this.availableModels = providerManager.getAvailableModels();
+    
+    console.log('[PersonISettings] Loaded', this.availableModels.length, 'models total');
+    
+    // Force re-render to populate dropdowns
+    this.requestUpdate();
   }
 
   private loadPersoniData(personConfig?: PersoniConfig) {
