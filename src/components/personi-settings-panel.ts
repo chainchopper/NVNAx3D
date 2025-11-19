@@ -2,25 +2,25 @@
  * PersonI Settings Panel Component
  * 
  * Comprehensive configuration for PersonI instances including:
- * - Identity (name, tagline, system instructions)
- * - Model assignments from configured providers
+ * - Identity (name, tagline, system instructions, avatar)
+ * - AI Model assignments (conversation, vision, function calling, embedding, image generation)
  * - Voice configuration
- * - Visual identity (shape, color, texture, animation)
- * - Capabilities (vision, image gen, web search, tools, MCP, audio)
- * - Connector/tool assignments
+ * - Capabilities (vision, image gen, web search, tools, MCP, audio I/O)
+ * - Connectors & Tools (OAuth services, API endpoints)
+ * - UI Plugins (per-PersonI plugin enablement)
  */
 
-import { LitElement, css, html, PropertyValues } from 'lit';
+import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { PersoniConfig, PersoniCapabilities, TextureName, IdleAnimation, AVAILABLE_CONNECTORS, DEFAULT_CAPABILITIES } from '../personas';
+import { PersoniConfig, PersoniCapabilities, AVAILABLE_CONNECTORS, DEFAULT_CAPABILITIES } from '../personas';
 import { appStateService } from '../services/app-state-service';
 import { activePersonasManager } from '../services/active-personas-manager';
 import { providerManager } from '../services/provider-manager';
 import { ModelInfo } from '../types/providers';
 import { oauthService } from '../services/oauth-service';
-import { PERSONIS_KEY } from '../constants/storage.js';
 import { pluginRegistry } from '../services/plugin-registry';
 import type { Plugin } from '../types/plugin-types';
+import { PERSONIS_KEY } from '../constants/storage.js';
 
 const VOICE_OPTIONS = [
   { id: 'Puck', name: 'Puck (Mature Male, US)' },
@@ -47,10 +47,6 @@ export class PersoniSettingsPanel extends LitElement {
   @state() private embeddingModel = '';
   @state() private functionCallingModel = '';
   @state() private imageGenerationModel = '';
-  @state() private shape: 'Icosahedron' | 'TorusKnot' = 'Icosahedron';
-  @state() private accentColor = '#87ceeb';
-  @state() private textureName: TextureName = 'none';
-  @state() private idleAnimation: IdleAnimation = 'subtle_breath';
   @state() private capabilities: PersoniCapabilities = { ...DEFAULT_CAPABILITIES };
   @state() private enabledConnectors: string[] = [];
   @state() private enabledPlugins: string[] = [];
@@ -66,38 +62,57 @@ export class PersoniSettingsPanel extends LitElement {
       overflow-y: auto;
       color: white;
       font-family: system-ui, -apple-system, sans-serif;
+      background: rgba(10, 14, 26, 0.98);
     }
 
     .content {
       padding: 24px;
-      max-width: 600px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .panel-header {
+      margin-bottom: 32px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .panel-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2196f3;
+      margin: 0 0 8px 0;
+    }
+
+    .panel-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0;
     }
 
     .section {
       margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .section:last-child {
-      border-bottom: none;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
     }
 
     .section-title {
       font-size: 18px;
       font-weight: 600;
-      margin-bottom: 16px;
-      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 20px;
+      color: #2196f3;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
 
     .section-title::before {
       content: '';
       width: 4px;
-      height: 20px;
-      background: #2196f3;
+      height: 24px;
+      background: linear-gradient(180deg, #2196f3 0%, #64b5f6 100%);
       border-radius: 2px;
     }
 
@@ -105,21 +120,27 @@ export class PersoniSettingsPanel extends LitElement {
       margin-bottom: 20px;
     }
 
+    .field-group:last-child {
+      margin-bottom: 0;
+    }
+
     .field-label {
       display: block;
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 13px;
+      font-weight: 600;
       margin-bottom: 8px;
-      color: rgba(255, 255, 255, 0.8);
+      color: rgba(255, 255, 255, 0.85);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     input[type="text"],
     textarea,
     select {
       width: 100%;
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 8px;
       color: white;
       font-size: 14px;
@@ -133,7 +154,8 @@ export class PersoniSettingsPanel extends LitElement {
     select:focus {
       outline: none;
       border-color: #2196f3;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.10);
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.15);
     }
 
     select option {
@@ -142,42 +164,15 @@ export class PersoniSettingsPanel extends LitElement {
       padding: 10px;
     }
 
-    select option:hover {
-      background: #2a2a3e;
-    }
-
     textarea {
       min-height: 120px;
       resize: vertical;
-      line-height: 1.5;
-    }
-
-    .color-picker-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    input[type="color"] {
-      width: 60px;
-      height: 40px;
-      padding: 4px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .color-value {
-      flex: 1;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
     }
 
     .capabilities-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 12px;
     }
 
@@ -185,9 +180,9 @@ export class PersoniSettingsPanel extends LitElement {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
@@ -196,22 +191,24 @@ export class PersoniSettingsPanel extends LitElement {
     .capability-item:hover {
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
     }
 
     .capability-item.active {
-      background: rgba(33, 150, 243, 0.15);
-      border-color: rgba(33, 150, 243, 0.4);
+      background: rgba(33, 150, 243, 0.2);
+      border-color: rgba(33, 150, 243, 0.6);
     }
 
     .checkbox {
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 4px;
+      border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
       transition: all 0.2s;
+      flex-shrink: 0;
     }
 
     .capability-item.active .checkbox {
@@ -222,7 +219,7 @@ export class PersoniSettingsPanel extends LitElement {
     .checkbox::after {
       content: '✓';
       color: white;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: bold;
       opacity: 0;
       transition: opacity 0.2s;
@@ -238,69 +235,77 @@ export class PersoniSettingsPanel extends LitElement {
       font-weight: 500;
     }
 
-    .connectors-list {
+    .connectors-list,
+    .plugins-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
-    .connector-item {
+    .connector-item,
+    .plugin-item {
       display: flex;
       align-items: flex-start;
-      gap: 10px;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      gap: 12px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 2px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s;
     }
 
-    .connector-item:hover {
+    .connector-item:hover,
+    .plugin-item:hover {
       background: rgba(255, 255, 255, 0.08);
       border-color: rgba(255, 255, 255, 0.2);
     }
 
-    .connector-item.active {
+    .connector-item.active,
+    .plugin-item.active {
       background: rgba(76, 175, 80, 0.15);
-      border-color: rgba(76, 175, 80, 0.4);
+      border-color: rgba(76, 175, 80, 0.5);
     }
 
-    .connector-info {
+    .connector-info,
+    .plugin-info {
       flex: 1;
     }
 
-    .connector-name {
-      font-weight: 500;
+    .connector-name,
+    .plugin-name {
+      font-weight: 600;
       margin-bottom: 4px;
+      font-size: 14px;
     }
 
-    .connector-description {
+    .connector-description,
+    .plugin-description {
       font-size: 12px;
       color: rgba(255, 255, 255, 0.6);
-      line-height: 1.4;
+      line-height: 1.5;
     }
 
     .connector-badge {
       margin-left: auto;
-      padding: 4px 10px;
+      padding: 4px 12px;
       border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .connector-badge.connected {
-      background: rgba(76, 175, 80, 0.2);
+      background: rgba(76, 175, 80, 0.25);
       color: #4caf50;
-      border: 1px solid rgba(76, 175, 80, 0.4);
+      border: 1px solid rgba(76, 175, 80, 0.5);
     }
 
     .connector-badge.not-connected {
-      background: rgba(255, 152, 0, 0.2);
+      background: rgba(255, 152, 0, 0.25);
       color: #ff9800;
-      border: 1px solid rgba(255, 152, 0, 0.4);
+      border: 1px solid rgba(255, 152, 0, 0.5);
     }
 
     .actions {
@@ -308,7 +313,7 @@ export class PersoniSettingsPanel extends LitElement {
       bottom: 0;
       padding: 20px 24px;
       background: rgba(20, 20, 30, 0.98);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(20px);
       border-top: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       gap: 12px;
@@ -317,51 +322,49 @@ export class PersoniSettingsPanel extends LitElement {
 
     .btn {
       flex: 1;
-      padding: 12px 24px;
+      padding: 14px 28px;
       border-radius: 8px;
       border: none;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .btn-primary {
-      background: #2196f3;
+      background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
       color: white;
+      box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
     }
 
     .btn-primary:hover:not(:disabled) {
-      background: #1976d2;
+      background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+      box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+      transform: translateY(-2px);
     }
 
     .btn-primary:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+      transform: none;
     }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
       color: white;
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.12);
     }
 
     .helper-text {
       font-size: 12px;
       color: rgba(255, 255, 255, 0.5);
-      margin-top: 6px;
-      line-height: 1.4;
-    }
-
-    .model-select {
-      position: relative;
-    }
-
-    .model-select select {
-      padding-right: 32px;
+      margin-top: 8px;
+      line-height: 1.5;
     }
 
     .no-models {
@@ -370,23 +373,21 @@ export class PersoniSettingsPanel extends LitElement {
       border: 1px solid rgba(255, 152, 0, 0.3);
       border-radius: 8px;
       color: #ff9800;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
     }
 
     .avatar-preview {
       position: relative;
       width: 100%;
-      max-width: 300px;
+      max-width: 350px;
       margin-bottom: 16px;
-      border-radius: 16px;
+      border-radius: 12px;
       overflow: hidden;
-      border: 2px solid rgba(135, 206, 250, 0.3);
+      border: 2px solid rgba(33, 150, 243, 0.3);
       background: rgba(10, 14, 26, 0.6);
       backdrop-filter: blur(12px);
-      box-shadow: 
-        0 4px 16px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
 
     .avatar-preview img,
@@ -403,31 +404,29 @@ export class PersoniSettingsPanel extends LitElement {
 
     .remove-avatar-btn {
       position: absolute;
-      top: 8px;
-      right: 8px;
+      top: 10px;
+      right: 10px;
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      background: rgba(244, 67, 54, 0.25);
+      background: rgba(244, 67, 54, 0.3);
       backdrop-filter: blur(8px);
-      border: 2px solid rgba(244, 67, 54, 0.5);
-      color: #F44336;
+      border: 2px solid rgba(244, 67, 54, 0.6);
+      color: #f44336;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
+      transition: all 0.2s;
       padding: 0;
-      box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
     }
 
     .remove-avatar-btn:hover {
-      background: rgba(244, 67, 54, 0.4);
-      border-color: rgba(244, 67, 54, 0.7);
+      background: rgba(244, 67, 54, 0.5);
+      border-color: rgba(244, 67, 54, 0.8);
       transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
     }
 
     .avatar-upload-controls {
@@ -438,14 +437,14 @@ export class PersoniSettingsPanel extends LitElement {
 
     .upload-btn {
       padding: 12px 20px;
-      background: rgba(33, 150, 243, 0.2);
+      background: rgba(33, 150, 243, 0.15);
       border: 1px solid rgba(33, 150, 243, 0.4);
-      border-radius: 12px;
+      border-radius: 8px;
       color: #2196f3;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -453,24 +452,14 @@ export class PersoniSettingsPanel extends LitElement {
     }
 
     .upload-btn:hover {
-      background: rgba(33, 150, 243, 0.3);
+      background: rgba(33, 150, 243, 0.25);
       border-color: rgba(33, 150, 243, 0.6);
-      transform: translateY(-2px);
-    }
-
-    .url-input-group {
-      width: 100%;
-    }
-
-    .url-input-group input {
-      width: 100%;
     }
   `;
 
   connectedCallback() {
     super.connectedCallback();
     // Load available models FIRST before loading personi data
-    // so legacy string IDs can be converted to composite format
     this.loadAvailableModels();
     this.loadPersoniData();
     this.loadOAuthStatuses();
@@ -482,19 +471,6 @@ export class PersoniSettingsPanel extends LitElement {
     });
   }
 
-  private loadAvailablePlugins() {
-    this.availablePlugins = pluginRegistry.getAllPlugins().filter(p => p.enabled);
-  }
-
-  private togglePlugin(pluginId: string) {
-    if (this.enabledPlugins.includes(pluginId)) {
-      this.enabledPlugins = this.enabledPlugins.filter(id => id !== pluginId);
-    } else {
-      this.enabledPlugins = [...this.enabledPlugins, pluginId];
-    }
-    this.markChanged();
-  }
-
   disconnectedCallback() {
     super.disconnectedCallback();
     if (this.oauthUnsubscribe) {
@@ -502,8 +478,8 @@ export class PersoniSettingsPanel extends LitElement {
     }
   }
 
-  private loadPersoniData() {
-    const activePersoni = appStateService.getActivePersoni();
+  private loadPersoniData(personConfig?: PersoniConfig) {
+    const activePersoni = personConfig || appStateService.getActivePersoni();
     if (activePersoni) {
       this.personi = activePersoni;
       this.name = activePersoni.name;
@@ -512,11 +488,10 @@ export class PersoniSettingsPanel extends LitElement {
       this.avatarUrl = activePersoni.avatarUrl || '';
       this.voiceName = activePersoni.voiceName || 'Puck';
       
-      // Extract composite "providerId:::modelId" for dropdown binding (handles both formats)
+      // Extract composite "providerId:::modelId" for dropdown binding
       const extractCompositeValue = (value: string | { providerId: string; modelId: string } | undefined): string => {
         if (!value) return '';
         if (typeof value === 'string') {
-          // Legacy format: try to find matching model in available models
           const model = this.availableModels.find(m => m.id === value);
           return model ? `${model.providerId}:::${model.id}` : value;
         }
@@ -529,10 +504,6 @@ export class PersoniSettingsPanel extends LitElement {
       this.functionCallingModel = extractCompositeValue(activePersoni.models?.functionCalling);
       this.imageGenerationModel = extractCompositeValue(activePersoni.models?.imageGeneration);
       
-      this.shape = activePersoni.visuals.shape;
-      this.accentColor = activePersoni.visuals.accentColor;
-      this.textureName = activePersoni.visuals.textureName || 'none';
-      this.idleAnimation = activePersoni.visuals.idleAnimation || 'subtle_breath';
       this.capabilities = activePersoni.capabilities || { ...DEFAULT_CAPABILITIES };
       this.enabledConnectors = [...(activePersoni.enabledConnectors || [])];
       this.enabledPlugins = [...((activePersoni as any).enabledPlugins || [])];
@@ -542,6 +513,10 @@ export class PersoniSettingsPanel extends LitElement {
 
   private loadAvailableModels() {
     this.availableModels = providerManager.getAvailableModels();
+  }
+
+  private loadAvailablePlugins() {
+    this.availablePlugins = pluginRegistry.getAllPlugins().filter(p => p.enabled);
   }
 
   private async loadOAuthStatuses() {
@@ -555,6 +530,7 @@ export class PersoniSettingsPanel extends LitElement {
     }
     
     this.oauthStatuses = statuses;
+    this.requestUpdate(); // Force re-render after async load
   }
 
   private markChanged() {
@@ -564,14 +540,13 @@ export class PersoniSettingsPanel extends LitElement {
   private handleSave() {
     if (!this.personi) return;
 
-    // Helper to parse composite "providerId:::modelId" value
+    // Parse composite "providerId:::modelId" value
     const parseModelSelection = (compositeValue: string) => {
       if (!compositeValue) return undefined;
       const parts = compositeValue.split(':::');
       if (parts.length === 2) {
         return { providerId: parts[0], modelId: parts[1] };
       }
-      // Legacy: plain model ID without provider - try to find it
       const model = this.availableModels.find(m => m.id === compositeValue);
       return model ? { providerId: model.providerId, modelId: model.id } : undefined;
     };
@@ -593,24 +568,76 @@ export class PersoniSettingsPanel extends LitElement {
       capabilities: { ...this.capabilities },
       enabledConnectors: [...this.enabledConnectors],
       visuals: {
-        shape: this.shape,
-        accentColor: this.accentColor,
-        textureName: this.textureName,
-        idleAnimation: this.idleAnimation,
+        ...this.personi.visuals, // Preserve existing visuals (not editable in this UI)
       },
     } as PersoniConfig & { enabledPlugins: string[] };
 
-    // Add enabledPlugins (type-extended field)
+    // Add enabledPlugins (extended field)
     (updated as any).enabledPlugins = [...this.enabledPlugins];
 
-    // Update personi in app state (updates array + saves to localStorage)
+    console.log('[PersonISettings] Saving PersonI config:', updated);
+
+    // Persist to localStorage via appStateService (calls savePersonis internally)
     appStateService.updatePersoni(updated);
     
     // Update active personi reference
     appStateService.setActivePersoni(updated);
     
-    // Update active personas manager (primary slot)
+    // Update runtime active personas manager
     activePersonasManager.setPersona('primary', updated);
+
+    // Verify round-trip persistence by reloading from localStorage
+    setTimeout(() => {
+      try {
+        const personsisJSON = localStorage.getItem(PERSONIS_KEY);
+        if (personsisJSON) {
+          const personis: PersoniConfig[] = JSON.parse(personsisJSON);
+          const reloaded = personis.find(p => p.id === updated.id);
+          
+          if (reloaded) {
+            console.log('[PersonISettings] ✓ Verified round-trip persistence from localStorage:', reloaded);
+            
+            // Validate critical fields
+            const validationErrors: string[] = [];
+            const pluginsFromStorage = (reloaded as any).enabledPlugins || [];
+            const connectorsFromStorage = reloaded.enabledConnectors || [];
+            
+            if (this.enabledPlugins.length > 0 && pluginsFromStorage.length === 0) {
+              validationErrors.push('enabledPlugins lost');
+            }
+            if (this.enabledConnectors.length > 0 && connectorsFromStorage.length === 0) {
+              validationErrors.push('enabledConnectors lost');
+            }
+            if (!reloaded.capabilities) {
+              validationErrors.push('capabilities lost');
+            }
+            if (!reloaded.models) {
+              validationErrors.push('models lost');
+            }
+            
+            if (validationErrors.length > 0) {
+              console.error('[PersonISettings] ⚠️ PERSISTENCE ERRORS:', validationErrors, {
+                saved: updated,
+                reloaded: reloaded
+              });
+            }
+            
+            // Rehydrate component state from localStorage data (not memory)
+            this.loadPersoniData(reloaded);
+            
+            // Also update appStateService with reloaded data to ensure consistency
+            appStateService.setActivePersoni(reloaded);
+            activePersonasManager.setPersona('primary', reloaded);
+            
+            console.log('[PersonISettings] ✓ Rehydrated component and services from localStorage');
+          } else {
+            console.error('[PersonISettings] ⚠️ PersonI not found in localStorage after save');
+          }
+        }
+      } catch (error) {
+        console.error('[PersonISettings] ⚠️ Failed to verify persistence:', error);
+      }
+    }, 100);
 
     this.hasChanges = false;
     this.dispatchEvent(new CustomEvent('close'));
@@ -638,6 +665,15 @@ export class PersoniSettingsPanel extends LitElement {
     this.markChanged();
   }
 
+  private togglePlugin(pluginId: string) {
+    if (this.enabledPlugins.includes(pluginId)) {
+      this.enabledPlugins = this.enabledPlugins.filter(id => id !== pluginId);
+    } else {
+      this.enabledPlugins = [...this.enabledPlugins, pluginId];
+    }
+    this.markChanged();
+  }
+
   private isYouTubeUrl(url: string): boolean {
     return url.includes('youtube.com') || url.includes('youtu.be');
   }
@@ -647,20 +683,16 @@ export class PersoniSettingsPanel extends LitElement {
       const urlObj = new URL(url);
       let videoId = '';
 
-      // Handle youtube.com/watch?v=ABC
       if (urlObj.hostname.includes('youtube.com') && urlObj.pathname === '/watch') {
         videoId = urlObj.searchParams.get('v') || '';
-      }
-      // Handle youtu.be/ABC
-      else if (urlObj.hostname.includes('youtu.be')) {
-        videoId = urlObj.pathname.substring(1); // Remove leading /
+      } else if (urlObj.hostname.includes('youtu.be')) {
+        videoId = urlObj.pathname.substring(1);
       }
 
       if (videoId) {
-        // Preserve other query parameters
         const params = new URLSearchParams();
         urlObj.searchParams.forEach((value, key) => {
-          if (key !== 'v') { // Don't include 'v' param in embed URL
+          if (key !== 'v') {
             params.set(key, value);
           }
         });
@@ -674,16 +706,13 @@ export class PersoniSettingsPanel extends LitElement {
   }
 
   private isVideoUrl(url: string): boolean {
-    // Check for data URL videos
     if (url.startsWith('data:video/')) {
       return true;
     }
-    // Check for video file extensions (before query/hash)
     try {
       const urlObj = new URL(url);
       return /\.(mp4|webm|ogg)$/i.test(urlObj.pathname);
     } catch (e) {
-      // Fallback to simple regex for relative paths
       return /\.(mp4|webm|ogg)(?:[?#]|$)/i.test(url);
     }
   }
@@ -695,7 +724,6 @@ export class PersoniSettingsPanel extends LitElement {
     capability: 'conversation' | 'vision' | 'embedding' | 'functionCalling' | 'imageGeneration',
     helpText?: string
   ) {
-    // Filter models by capability
     const filteredModels = providerManager.getModelsByCapability(capability);
     
     if (filteredModels.length === 0) {
@@ -703,7 +731,7 @@ export class PersoniSettingsPanel extends LitElement {
         <div class="field-group">
           <label class="field-label">${label}</label>
           <div class="no-models">
-            No models with ${capability} capability found. Configure providers in the Models menu.
+            No models with ${capability} capability found. Configure providers in the Models panel.
           </div>
         </div>
       `;
@@ -712,30 +740,23 @@ export class PersoniSettingsPanel extends LitElement {
     return html`
       <div class="field-group">
         <label class="field-label">${label}</label>
-        <div class="model-select">
-          <select
-            .value=${value}
-            @change=${(e: Event) => {
-              const target = e.target as HTMLSelectElement;
-              onChange(target.value);
-              this.markChanged();
-            }}
-          >
-            <option value="">None</option>
-            ${filteredModels.map(model => {
-              const compositeValue = `${model.providerId}:::${model.id}`;
-              return html`
-                <option value="${compositeValue}">${model.name} (${model.providerId})</option>
-              `;
-            })}
-          </select>
-        </div>
+        <select
+          .value=${value}
+          @change=${(e: Event) => {
+            const target = e.target as HTMLSelectElement;
+            onChange(target.value);
+            this.markChanged();
+          }}
+        >
+          <option value="">None</option>
+          ${filteredModels.map(model => {
+            const compositeValue = `${model.providerId}:::${model.id}`;
+            return html`
+              <option value="${compositeValue}">${model.name} (${model.providerId})</option>
+            `;
+          })}
+        </select>
         ${helpText ? html`<div class="helper-text">${helpText}</div>` : ''}
-        ${value ? html`
-          <div class="helper-text" style="color: rgba(135, 206, 250, 0.9); margin-top: 4px;">
-            💡 All model assignments are fully customizable. Change anytime via the dropdown above.
-          </div>
-        ` : ''}
       </div>
     `;
   }
@@ -751,9 +772,14 @@ export class PersoniSettingsPanel extends LitElement {
 
     return html`
       <div class="content">
+        <div class="panel-header">
+          <h2 class="panel-title">⚙️ ${this.personi.name} Settings</h2>
+          <p class="panel-subtitle">Configure your PersonI's identity, AI models, capabilities, and integrations</p>
+        </div>
+
         <!-- Identity Section -->
         <div class="section">
-          <h3 class="section-title">Identity</h3>
+          <h3 class="section-title">👤 Identity</h3>
           
           <div class="field-group">
             <label class="field-label">Name</label>
@@ -792,7 +818,7 @@ export class PersoniSettingsPanel extends LitElement {
               placeholder="Define the PersonI's personality, behavior, and response style..."
             ></textarea>
             <div class="helper-text">
-              This is the core prompt that defines how the AI behaves and responds
+              Core prompt that defines how this AI behaves and responds to user input
             </div>
           </div>
 
@@ -853,35 +879,33 @@ export class PersoniSettingsPanel extends LitElement {
                 📁 Upload Image/Video
               </button>
               
-              <div class="url-input-group">
-                <input
-                  type="text"
-                  .value=${this.avatarUrl && !this.avatarUrl.startsWith('data:') ? this.avatarUrl : ''}
-                  @input=${(e: Event) => {
-                    this.avatarUrl = (e.target as HTMLInputElement).value;
-                    this.markChanged();
-                  }}
-                  placeholder="Or paste image/video/YouTube URL"
-                />
-              </div>
+              <input
+                type="text"
+                .value=${this.avatarUrl && !this.avatarUrl.startsWith('data:') ? this.avatarUrl : ''}
+                @input=${(e: Event) => {
+                  this.avatarUrl = (e.target as HTMLInputElement).value;
+                  this.markChanged();
+                }}
+                placeholder="Or paste image/video/YouTube URL"
+              />
             </div>
             
             <div class="helper-text">
-              Upload an image or video file, or provide a URL (supports images, videos, and YouTube)
+              Upload a file or provide a URL (supports images, videos, and YouTube embeds)
             </div>
           </div>
         </div>
 
-        <!-- Model Assignments Section -->
+        <!-- AI Model Assignments Section -->
         <div class="section">
-          <h3 class="section-title">Model Assignments</h3>
+          <h3 class="section-title">🤖 AI Model Assignments</h3>
           
           ${this.renderModelDropdown(
             'Conversation Model',
             this.conversationModel,
             (value) => { this.conversationModel = value; },
             'conversation',
-            'Primary model for text conversations'
+            'Primary model for text conversations and reasoning'
           )}
           
           ${this.renderModelDropdown(
@@ -889,7 +913,7 @@ export class PersoniSettingsPanel extends LitElement {
             this.visionModel,
             (value) => { this.visionModel = value; },
             'vision',
-            'Model for processing images and visual input'
+            'Model for processing images and visual inputs'
           )}
           
           ${this.renderModelDropdown(
@@ -897,7 +921,7 @@ export class PersoniSettingsPanel extends LitElement {
             this.functionCallingModel,
             (value) => { this.functionCallingModel = value; },
             'functionCalling',
-            'Model for tool/function execution'
+            'Model for tool/function execution and structured outputs'
           )}
           
           ${this.renderModelDropdown(
@@ -905,7 +929,7 @@ export class PersoniSettingsPanel extends LitElement {
             this.embeddingModel,
             (value) => { this.embeddingModel = value; },
             'embedding',
-            'Model for RAG memory embeddings'
+            'Model for RAG memory and semantic search'
           )}
           
           ${this.renderModelDropdown(
@@ -913,16 +937,16 @@ export class PersoniSettingsPanel extends LitElement {
             this.imageGenerationModel,
             (value) => { this.imageGenerationModel = value; },
             'imageGeneration',
-            'Model for generating images'
+            'Model for generating images from text prompts'
           )}
         </div>
 
         <!-- Voice Section -->
         <div class="section">
-          <h3 class="section-title">Voice</h3>
+          <h3 class="section-title">🎤 Voice</h3>
           
           <div class="field-group">
-            <label class="field-label">Voice Name</label>
+            <label class="field-label">Voice Selection</label>
             <select
               .value=${this.voiceName}
               @change=${(e: Event) => {
@@ -935,118 +959,14 @@ export class PersoniSettingsPanel extends LitElement {
               `)}
             </select>
             <div class="helper-text">
-              Voice used for text-to-speech output
+              Voice used for text-to-speech audio output
             </div>
-          </div>
-        </div>
-
-        <!-- Visual Identity Section -->
-        <div class="section">
-          <h3 class="section-title">Visual Identity</h3>
-          
-          <div class="field-group">
-            <label class="field-label">Shape</label>
-            <select
-              .value=${this.shape}
-              @change=${(e: Event) => {
-                this.shape = (e.target as HTMLSelectElement).value as 'Icosahedron' | 'TorusKnot';
-                this.markChanged();
-              }}
-            >
-              <option value="Icosahedron">Icosahedron</option>
-              <option value="TorusKnot">Torus Knot</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Accent Color</label>
-            <div class="color-picker-group">
-              <input
-                type="color"
-                .value=${this.accentColor}
-                @input=${(e: Event) => {
-                  this.accentColor = (e.target as HTMLInputElement).value;
-                  this.markChanged();
-                }}
-              />
-              <span class="color-value">${this.accentColor}</span>
-            </div>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Texture</label>
-            <select
-              .value=${this.textureName}
-              @change=${(e: Event) => {
-                this.textureName = (e.target as HTMLSelectElement).value as TextureName;
-                this.markChanged();
-              }}
-            >
-              <option value="none">None</option>
-              <option value="lava">Lava</option>
-              <option value="water">Water</option>
-              <option value="slime">Slime</option>
-              <option value="stone_orchid">Stone Orchid</option>
-              <option value="bio_green">Bio Green</option>
-              <option value="rock_gray">Rock Gray</option>
-              <option value="metallic_brushed">Metallic Brushed</option>
-              <option value="crystal_blue">Crystal Blue</option>
-              <option value="organic_glow">Organic Glow</option>
-            </select>
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Idle Animation</label>
-            <select
-              .value=${this.idleAnimation}
-              @change=${(e: Event) => {
-                this.idleAnimation = (e.target as HTMLSelectElement).value as IdleAnimation;
-                this.markChanged();
-              }}
-            >
-              <option value="none">None</option>
-              <option value="glow">Glow</option>
-              <option value="particles">Particles</option>
-              <option value="code">Code</option>
-              <option value="subtle_breath">Subtle Breath</option>
-              <option value="contemplative">Contemplative</option>
-              <option value="energetic">Energetic</option>
-              <option value="meditative">Meditative</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Dual Mode Section -->
-        <div class="section">
-          <h3 class="section-title">🤝 Dual PersonI Mode</h3>
-          <div class="helper-text" style="margin-bottom: 16px;">
-            Collaborate with two PersonI simultaneously for richer conversations. Use the carousel at the top of the screen to switch between PersonI.
-          </div>
-          
-          <div class="field-group">
-            <label class="field-label">Collaboration Mode</label>
-            <select
-              @change=${(e: Event) => {
-                const mode = (e.target as HTMLSelectElement).value;
-                const event = new CustomEvent('dual-mode-changed', {
-                  detail: { mode },
-                  bubbles: true,
-                  composed: true
-                });
-                this.dispatchEvent(event);
-              }}
-            >
-              <option value="single">Single PersonI (Default)</option>
-              <option value="collaborative">Collaborative Discussion</option>
-              <option value="debate">Debate & Contrast</option>
-              <option value="teaching">Teaching & Examples</option>
-            </select>
           </div>
         </div>
 
         <!-- Capabilities Section -->
         <div class="section">
-          <h3 class="section-title">Capabilities</h3>
+          <h3 class="section-title">✨ Capabilities</h3>
           
           <div class="capabilities-grid">
             <div
@@ -1106,25 +1026,24 @@ export class PersoniSettingsPanel extends LitElement {
             </div>
           </div>
           
-          <div class="helper-text" style="margin-top: 12px;">
-            Toggle capabilities to enable/disable features for this PersonI
+          <div class="helper-text" style="margin-top: 16px;">
+            Enable or disable specific AI capabilities for this PersonI
           </div>
         </div>
 
-        <!-- OAuth Connectors Section -->
+        <!-- Connectors & Tools Section -->
         <div class="section">
-          <h3 class="section-title">OAuth Connectors</h3>
-          <div class="helper-text" style="margin-bottom: 12px;">
-            External services requiring OAuth authentication
-          </div>
+          <h3 class="section-title">🔌 Connectors & Tools</h3>
           
           <div class="connectors-list">
-            ${AVAILABLE_CONNECTORS.filter(c => c.type === 'oauth').map(connector => {
-              const isConnected = this.oauthStatuses.get(connector.id) || false;
+            ${AVAILABLE_CONNECTORS.map(connector => {
+              const isEnabled = this.enabledConnectors.includes(connector.id);
+              const isOAuth = oauthService.isOAuthConnector(connector.id);
+              const isConnected = isOAuth ? (this.oauthStatuses.get(connector.id) || false) : true;
               
               return html`
-                <div
-                  class="connector-item ${this.enabledConnectors.includes(connector.id) ? 'active' : ''}"
+                <div 
+                  class="connector-item ${isEnabled ? 'active' : ''}"
                   @click=${() => this.toggleConnector(connector.id)}
                 >
                   <div class="checkbox"></div>
@@ -1132,94 +1051,66 @@ export class PersoniSettingsPanel extends LitElement {
                     <div class="connector-name">${connector.name}</div>
                     <div class="connector-description">${connector.description}</div>
                   </div>
-                  <div class="connector-badge ${isConnected ? 'connected' : 'not-connected'}">
-                    ${isConnected ? '✓ Connected' : 'OAuth Required'}
-                  </div>
+                  ${isOAuth ? html`
+                    <span class="connector-badge ${isConnected ? 'connected' : 'not-connected'}">
+                      ${isConnected ? 'Connected' : 'Not Connected'}
+                    </span>
+                  ` : ''}
                 </div>
               `;
             })}
-          </div>
-        </div>
-
-        <!-- API Tools Section -->
-        <div class="section">
-          <h3 class="section-title">API Tools & Commands</h3>
-          <div class="helper-text" style="margin-bottom: 12px;">
-            Built-in tools and external APIs (configure API keys in Settings)
           </div>
           
-          <div class="connectors-list">
-            ${AVAILABLE_CONNECTORS.filter(c => c.type === 'api_tool').map(connector => {
-              return html`
-                <div
-                  class="connector-item ${this.enabledConnectors.includes(connector.id) ? 'active' : ''}"
-                  @click=${() => this.toggleConnector(connector.id)}
-                >
-                  <div class="checkbox"></div>
-                  <div class="connector-info">
-                    <div class="connector-name">${connector.name}</div>
-                    <div class="connector-description">${connector.description}</div>
-                  </div>
-                </div>
-              `;
-            })}
+          <div class="helper-text" style="margin-top: 16px;">
+            Enable OAuth connectors and API tools for this PersonI. OAuth connectors require setup in the Connectors panel.
           </div>
         </div>
 
         <!-- UI Plugins Section -->
         <div class="section">
-          <h3 class="section-title">UI Plugins</h3>
-          <div class="helper-text" style="margin-bottom: 12px;">
-            Custom UI components available for this PersonI
+          <h3 class="section-title">🧩 UI Plugins</h3>
+          
+          <div class="plugins-list">
+            ${this.availablePlugins.length > 0 ? this.availablePlugins.map(plugin => {
+              const isEnabled = this.enabledPlugins.includes(plugin.metadata.id);
+              
+              return html`
+                <div 
+                  class="plugin-item ${isEnabled ? 'active' : ''}"
+                  @click=${() => this.togglePlugin(plugin.metadata.id)}
+                >
+                  <div class="checkbox"></div>
+                  <div class="plugin-info">
+                    <div class="plugin-name">${plugin.metadata.name}</div>
+                    <div class="plugin-description">${plugin.metadata.description}</div>
+                  </div>
+                </div>
+              `;
+            }) : html`
+              <div class="helper-text">
+                No UI plugins available. Import plugins via the Plugin Manager panel.
+              </div>
+            `}
           </div>
           
-          ${this.availablePlugins.length === 0 ? html`
-            <div class="helper-text" style="opacity: 0.6;">
-              No plugins available. Create plugins in the Plugin Manager panel.
-            </div>
-          ` : html`
-            <div class="connectors-list">
-              ${this.availablePlugins.map(plugin => {
-                return html`
-                  <div
-                    class="connector-item ${this.enabledPlugins.includes(plugin.metadata.id) ? 'active' : ''}"
-                    @click=${() => this.togglePlugin(plugin.metadata.id)}
-                  >
-                    <div class="checkbox"></div>
-                    <div class="connector-info">
-                      <div class="connector-name">${plugin.metadata.name}</div>
-                      <div class="connector-description">${plugin.metadata.description}</div>
-                    </div>
-                    <div class="connector-badge" style="background: rgba(33, 150, 243, 0.2); border: 1px solid rgba(33, 150, 243, 0.4);">
-                      v${plugin.metadata.version}
-                    </div>
-                  </div>
-                `;
-              })}
-            </div>
-          `}
+          <div class="helper-text" style="margin-top: 16px;">
+            Enable UI plugins for this PersonI. Plugins add custom interface elements and functionality.
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-secondary" @click=${this.handleCancel}>
+            Cancel
+          </button>
+          <button 
+            class="btn btn-primary" 
+            @click=${this.handleSave}
+            ?disabled=${!this.hasChanges}
+          >
+            Save Changes
+          </button>
         </div>
       </div>
-
-      <!-- Sticky Actions -->
-      <div class="actions">
-        <button class="btn btn-secondary" @click=${this.handleCancel}>
-          Cancel
-        </button>
-        <button
-          class="btn btn-primary"
-          ?disabled=${!this.hasChanges}
-          @click=${this.handleSave}
-        >
-          Save Changes
-        </button>
-      </div>
     `;
-  }
-}
-
-declare global {
-  interface HTMLElementTagNameMap {
-    'personi-settings-panel': PersoniSettingsPanel;
   }
 }
