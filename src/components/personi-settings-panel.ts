@@ -107,28 +107,6 @@ export class PersoniSettingsPanel extends LitElement {
       font-weight: 500;
       margin-bottom: 8px;
       color: rgba(255, 255, 255, 0.8);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .auto-assigned-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      padding: 2px 8px;
-      background: rgba(135, 206, 250, 0.2);
-      border: 1px solid rgba(135, 206, 250, 0.4);
-      border-radius: 12px;
-      color: rgba(135, 206, 250, 1);
-      font-weight: 600;
-      cursor: help;
-    }
-
-    .auto-assigned-badge:hover {
-      background: rgba(135, 206, 250, 0.3);
-      border-color: rgba(135, 206, 250, 0.6);
     }
 
     input[type="text"],
@@ -698,10 +676,6 @@ export class PersoniSettingsPanel extends LitElement {
     // Filter models by capability
     const filteredModels = providerManager.getModelsByCapability(capability);
     
-    // Check if the current value was auto-assigned (has value but wasn't manually set)
-    // Models are auto-assigned during provider sync, but always fully editable
-    const isAutoAssigned = value && value.includes(':::');
-    
     if (filteredModels.length === 0) {
       return html`
         <div class="field-group">
@@ -715,14 +689,7 @@ export class PersoniSettingsPanel extends LitElement {
 
     return html`
       <div class="field-group">
-        <label class="field-label">
-          ${label}
-          ${isAutoAssigned ? html`
-            <span class="auto-assigned-badge" title="This model was auto-assigned by the system but is fully customizable. Click the dropdown to change it anytime.">
-              🤖 Auto-assigned
-            </span>
-          ` : ''}
-        </label>
+        <label class="field-label">${label}</label>
         <div class="model-select">
           <select
             .value=${value}
@@ -742,9 +709,9 @@ export class PersoniSettingsPanel extends LitElement {
           </select>
         </div>
         ${helpText ? html`<div class="helper-text">${helpText}</div>` : ''}
-        ${isAutoAssigned ? html`
+        ${value ? html`
           <div class="helper-text" style="color: rgba(135, 206, 250, 0.9); margin-top: 4px;">
-            ✨ This model was automatically assigned based on your provider configuration, but you can change it anytime. Full customization is always available.
+            💡 All model assignments are fully customizable. Change anytime via the dropdown above.
           </div>
         ` : ''}
       </div>
