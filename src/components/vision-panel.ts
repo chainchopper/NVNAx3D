@@ -13,6 +13,8 @@ export class VisionPanel extends LitElement {
   @state() private editingConfig: Partial<VisionModelConfig> | null = null;
   @state() private testingConfigId: string | null = null;
   @state() private testResult: { success: boolean; error?: string } | null = null;
+  @state() private availableModels: string[] = [];
+  @state() private fetchingModels = false;
 
   static styles = css`
     :host {
