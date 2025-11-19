@@ -46,7 +46,9 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Memory & RAG System**: Vector-based memory using ChromaDB (with localStorage fallback) and Gemini embedding model, supporting 17 memory types with semantic search and temporal queries. Optimized with metadata-only queries to avoid expensive document/embedding fetches.
 - **Local Speech-to-Text (STT)**: Browser-based Whisper models (@xenova/transformers) with IndexedDB caching.
 - **Enhanced Audio System**: SharedMicrophoneManager, audio recording, real-time music detection, and OpenAI TTS integration.
-- **Environmental Awareness Suite**: Real-time camera-based contextual observation, Vision-Enhanced Idle Speech, Environmental Observer Service, and multi-format file upload with RAG.
+- **Turn Detection Service**: Intelligent conversation turn completion using VAD + Whisper content analysis. Analyzes partial transcriptions for punctuation, questions, and sentence completion patterns for more natural conversation flow compared to silence-only detection.
+- **Vision AI System**: Local vision model support via VisionModelService for privacy-first visual analysis. Supports Moondream, LLaVA, Qwen-VL through user-configured endpoints (LM Studio, vLLM, Windows AI Dev Gallery). Persistent model selection, vision-panel UI for configuration, and LLM function calling integration via `analyze_camera_view` command with 5-second retry logic for camera initialization.
+- **Environmental Awareness Suite**: Real-time camera-based contextual observation with Vision-Enhanced Idle Speech. IdleSpeechManager integrates camera vision via captureFrame callbacks, enabling PersonI to describe visual context during idle moments. Environmental Observer Service and multi-format file upload with RAG.
 - **Object Recognition System**: Real-time object detection using TensorFlow.js and COCO-SSD model.
 - **Voice Command System**: Hands-free control with natural language commands routed through the agentic pipeline.
 - **Routine Automation System**: IF-THEN-THAT automation supporting various triggers.
