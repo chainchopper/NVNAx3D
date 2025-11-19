@@ -30,6 +30,7 @@ export class ObjectDetectionOverlay extends LitElement {
       height: 100%;
       z-index: 150;
       transition: opacity 0.5s ease-out;
+      pointer-events: none;
     }
 
     :host(.hidden) {

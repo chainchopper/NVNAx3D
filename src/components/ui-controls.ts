@@ -243,14 +243,17 @@ export class UIControls extends LitElement {
   `;
 
   private handleMicClick() {
+    console.log('[UIControls] Microphone button clicked!');
     this.dispatchEvent(new CustomEvent('mic-toggle'));
   }
 
   private handleInterruptClick() {
+    console.log('[UIControls] Interrupt button clicked!');
     this.dispatchEvent(new CustomEvent('interrupt'));
   }
 
   private handleModeToggle() {
+    console.log('[UIControls] Mode toggle button clicked! Current mode:', this.inputMode);
     // Toggle prompt visibility (ChatGPT style)
     if (this.inputMode === 'voice') {
       // Open prompt
