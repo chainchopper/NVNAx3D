@@ -47,6 +47,17 @@ export class RAGSettingsMenu extends LitElement {
 
   private readonly MENU_ACTIONS: RAGAction[] = [
     {
+      id: 'upload',
+      label: 'Upload File',
+      icon: () => svg`
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      `
+    },
+    {
       id: 'context',
       label: 'Retrieval Context',
       icon: () => svg`
@@ -294,9 +305,16 @@ export class RAGSettingsMenu extends LitElement {
   }
 
   private handleActionClick(actionId: string): void {
-    if (!this.enabled) return;
+    if (!this.enabled && actionId !== 'upload') return;
     
     switch (actionId) {
+      case 'upload':
+        // Trigger file upload - always available
+        this.dispatchEvent(new CustomEvent('rag-file-upload', {
+          bubbles: true,
+          composed: true
+        }));
+        break;
       case 'context':
         // Open retrieval context settings
         this.dispatchEvent(new CustomEvent('rag-open-context-settings', {
@@ -403,11 +421,13 @@ export class RAGSettingsMenu extends LitElement {
             case 'events': isActive = this.includeEvents; break;
             case 'system': isActive = this.includeSystemContext; break;
           }
-          const visible = this.expanded && this.enabled;
+          // Upload is always available, other actions only when expanded & enabled
+          const visible = action.id === 'upload' ? this.expanded : (this.expanded && this.enabled);
+          const isDisabled = action.id === 'upload' ? false : actionsDisabled;
           
           return html`
             <button
-              class="action-button ${visible ? 'visible' : ''} ${isActive ? 'active' : ''} ${actionsDisabled ? 'disabled' : ''}"
+              class="action-button ${visible ? 'visible' : ''} ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}"
               style="left: calc(50% + ${pos.x}px - 24px); top: calc(50% + ${pos.y}px - 24px);"
               @click=${() => this.handleActionClick(action.id)}
               aria-label="${action.label}"
