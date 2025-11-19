@@ -3811,21 +3811,28 @@ export class GdmLiveAudio extends LitElement {
   }
 
   private async startListening() {
-    if (this.mediaStream) return;
+    console.log('[App] 🎤 startListening() called, useBrowserStt:', this.useBrowserStt);
+    
+    if (this.mediaStream) {
+      console.log('[App] Media stream already exists, skipping');
+      return;
+    }
 
     try {
       // If using browser STT, just start the recognition
       if (this.useBrowserStt) {
-        console.log('Starting browser STT recognition mode');
+        console.log('[App] Starting browser STT recognition mode (permission handled by browser)');
         this.startBrowserSttRecognition();
         return;
       }
       
       // Otherwise, use blob-based recording with VAD
+      console.log('[App] 🎙️ Requesting microphone permission via getUserMedia...');
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
+      console.log('[App] ✅ Microphone permission GRANTED!');
       this.inputAudioContext.resume();
 
       this.sourceNode = this.inputAudioContext.createMediaStreamSource(
