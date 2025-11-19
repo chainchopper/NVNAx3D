@@ -324,9 +324,9 @@ export class ComfyUISettingsPanel extends LitElement {
   override render() {
     return html`
       <div class="header">
-        <div class="title">ComfyUI Integration</div>
+        <div class="title">Image Generation</div>
         <div class="subtitle">
-          Configure ComfyUI endpoint for advanced image, video, and audio generation workflows.
+          Configure image and video generation providers. Currently: ComfyUI (Future: Gemini Imagen, Stable Diffusion, DALL-E, Google Veo)
         </div>
       </div>
 
