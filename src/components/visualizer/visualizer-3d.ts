@@ -25,6 +25,9 @@ export class Visualizer3D extends LitElement {
   // Audio analysers (will be set from parent)
   @property({ type: Object }) outputAnalyser: any = null;
   @property({ type: Object }) inputAnalyser: any = null;
+  
+  // Camera state (affects visualization scale/transparency)
+  @property({ type: Boolean }) cameraActive = false;
 
   // Three.js core
   private scene!: THREE.Scene;
@@ -90,6 +93,14 @@ export class Visualizer3D extends LitElement {
     this.setupMouseParallax();
     this.playEntranceAnimation();
     this.animateFrame();
+  }
+
+  override updated(changedProperties: Map<string, any>) {
+    super.updated(changedProperties);
+    
+    if (changedProperties.has('cameraActive')) {
+      this.handleCameraStateChange();
+    }
   }
 
   override disconnectedCallback() {
@@ -267,6 +278,81 @@ export class Visualizer3D extends LitElement {
     this.scene.add(this.glowSphere);
 
     console.log('[Visualizer3D] Dual-mesh audio sphere created');
+  }
+
+  /**
+   * Handle camera state changes - reduce size and increase transparency when camera is active
+   */
+  private handleCameraStateChange(): void {
+    if (!this.wireframeSphere || !this.glowSphere) return;
+
+    if (this.cameraActive) {
+      // Camera is active - make visualization smaller and more transparent
+      console.log('[Visualizer3D] Camera active - reducing size and transparency');
+      
+      // Smoothly scale down to 60% of original size
+      gsap.to(this.wireframeSphere.scale, {
+        x: 0.6,
+        y: 0.6,
+        z: 0.6,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      gsap.to(this.glowSphere.scale, {
+        x: 0.6,
+        y: 0.6,
+        z: 0.6,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      // Increase transparency (reduce opacity to 30%)
+      gsap.to(this.wireframeMaterial.uniforms.uOpacity, {
+        value: 0.3,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      gsap.to(this.glowMaterial.uniforms.uOpacity, {
+        value: 0.3,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+    } else {
+      // Camera is off - restore to normal size and opacity
+      console.log('[Visualizer3D] Camera inactive - restoring size and opacity');
+      
+      // Restore to 100% scale
+      gsap.to(this.wireframeSphere.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      gsap.to(this.glowSphere.scale, {
+        x: 1,
+        y: 1,
+        z: 1,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      // Restore full opacity
+      gsap.to(this.wireframeMaterial.uniforms.uOpacity, {
+        value: 1.0,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+      
+      gsap.to(this.glowMaterial.uniforms.uOpacity, {
+        value: 1.0,
+        duration: 0.8,
+        ease: 'power2.out'
+      });
+    }
   }
 
   private animateFrame = (): void => {

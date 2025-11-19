@@ -4,9 +4,9 @@ import './file-upload';
 
 @customElement('simple-input-controls')
 export class SimpleInputControls extends LitElement {
-  @property({ type: String }) mode: 'voice' | 'text' = 'voice';
   @property({ type: Boolean }) isRecording = false;
   @property({ type: String }) textInput = '';
+  @property({ type: Boolean }) textInputVisible = false;
 
   static styles = css`
     :host {
@@ -24,6 +24,7 @@ export class SimpleInputControls extends LitElement {
       align-items: center;
       gap: 20px;
       pointer-events: auto;
+      flex-direction: row;
     }
 
     .icon-button {
@@ -79,6 +80,16 @@ export class SimpleInputControls extends LitElement {
       padding: 12px 24px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
       min-width: 400px;
+      opacity: 0;
+      transform: translateX(-20px);
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .text-input-box.visible {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
     }
 
     .text-input-box input {
@@ -164,17 +175,8 @@ export class SimpleInputControls extends LitElement {
   }
 
   private handleKeyboardClick() {
-    console.log('[SimpleInputControls] ⌨️ KEYBOARD BUTTON CLICKED');
-    const newMode = this.mode === 'voice' ? 'text' : 'voice';
-    this.mode = newMode;
-    
-    // Notify parent to keep state in sync
-    this.dispatchEvent(new CustomEvent('mode-change', {
-      detail: { mode: newMode },
-      bubbles: true,
-      composed: true
-    }));
-    
+    console.log('[SimpleInputControls] ⌨️ KEYBOARD BUTTON CLICKED - Toggling text input visibility');
+    this.textInputVisible = !this.textInputVisible;
     this.requestUpdate();
   }
 
@@ -206,52 +208,53 @@ export class SimpleInputControls extends LitElement {
   render() {
     return html`
       <div class="container">
-        ${this.mode === 'voice' ? html`
-          <div 
-            class="icon-button ${this.isRecording ? 'recording' : ''}"
-            @click=${this.handleMicClick}
-            title="Click to speak"
-          >
-            🎤
-            <div class="label">${this.isRecording ? 'Recording...' : 'Voice Input'}</div>
-          </div>
-        ` : html`
-          <div class="text-input-box">
-            <file-upload
-              @file-uploaded=${(e: CustomEvent) => {
-                this.dispatchEvent(new CustomEvent('file-uploaded', {
-                  detail: e.detail,
-                  bubbles: true,
-                  composed: true
-                }));
-              }}
-              style="flex-shrink: 0;"
-            ></file-upload>
-            <input
-              type="text"
-              .value=${this.textInput}
-              @input=${this.handleTextInput}
-              @keypress=${this.handleKeyPress}
-              placeholder="Type your message..."
-              autofocus
-            />
-            <button
-              class="send-btn"
-              @click=${this.handleSendClick}
-              ?disabled=${!this.textInput.trim()}
-            >
-              ➤
-            </button>
-          </div>
-        `}
-        
+        <!-- Mic button - always visible -->
         <div 
-          class="icon-button ${this.mode === 'text' ? 'active' : ''}"
-          @click=${this.handleKeyboardClick}
-          title="Toggle input mode"
+          class="icon-button ${this.isRecording ? 'recording' : ''}"
+          @click=${this.handleMicClick}
+          title="Click to speak"
         >
-          ${this.mode === 'voice' ? '⌨️' : '🎤'}
-          <div class="label">${this.mode === 'voice' ? 'Switch to Text' : 'Switch to Voice'}</div>
+          🎤
+          <div class="label">${this.isRecording ? 'Recording...' : 'Voice Input'}</div>
+        </div>
+
+        <!-- Text input box - slides in/out -->
+        <div class="text-input-box ${this.textInputVisible ? 'visible' : ''}">
+          <file-upload
+            @file-uploaded=${(e: CustomEvent) => {
+              this.dispatchEvent(new CustomEvent('file-uploaded', {
+                detail: e.detail,
+                bubbles: true,
+                composed: true
+              }));
+            }}
+            style="flex-shrink: 0;"
+          ></file-upload>
+          <input
+            type="text"
+            .value=${this.textInput}
+            @input=${this.handleTextInput}
+            @keypress=${this.handleKeyPress}
+            placeholder="Type your message..."
+            ?autofocus=${this.textInputVisible}
+          />
+          <button
+            class="send-btn"
+            @click=${this.handleSendClick}
+            ?disabled=${!this.textInput.trim()}
+          >
+            ➤
+          </button>
+        </div>
+        
+        <!-- Keyboard toggle - always visible -->
+        <div 
+          class="icon-button ${this.textInputVisible ? 'active' : ''}"
+          @click=${this.handleKeyboardClick}
+          title="Toggle text input"
+        >
+          ⌨️
+          <div class="label">${this.textInputVisible ? 'Hide Text Input' : 'Show Text Input'}</div>
         </div>
       </div>
     `;
