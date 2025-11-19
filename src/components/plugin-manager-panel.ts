@@ -8,6 +8,7 @@ import { customElement, state } from 'lit/decorators.js';
 import type { Plugin } from '../types/plugin-types';
 import { pluginRegistry } from '../services/plugin-registry';
 import { dynamicComponentGenerator } from '../services/dynamic-component-generator';
+import { pluginCardManager } from '../services/plugin-card-manager';
 
 @customElement('plugin-manager-panel')
 export class PluginManagerPanel extends LitElement {
@@ -17,6 +18,7 @@ export class PluginManagerPanel extends LitElement {
   @state() private filterEnabled: boolean | null = null;
   @state() private showConfirmDelete = false;
   @state() private deleteTarget: string | null = null;
+  @state() private importStatus: { type: 'success' | 'error'; message: string } | null = null;
 
   static styles = css`
     :host {
@@ -321,16 +323,44 @@ export class PluginManagerPanel extends LitElement {
   }
 
   private async exportPlugin(plugin: Plugin) {
-    const json = await pluginRegistry.exportPlugin(plugin.metadata.id);
-    if (json) {
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${plugin.metadata.name.replace(/\s+/g, '-').toLowerCase()}.plugin.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    await pluginCardManager.downloadCard(plugin.metadata.id);
+  }
+
+  private async handleImportClick() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.nirvana-card,.json';
+    
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      const result = await pluginCardManager.importFromFile(file);
+      
+      if (result.success) {
+        this.importStatus = {
+          type: 'success',
+          message: `Plugin imported successfully!`,
+        };
+        await this.loadPlugins();
+      } else {
+        this.importStatus = {
+          type: 'error',
+          message: `Import failed: ${result.error}`,
+        };
+      }
+      
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        this.importStatus = null;
+      }, 5000);
+    };
+    
+    input.click();
+  }
+
+  private async handleExportAll() {
+    await pluginCardManager.downloadAllPlugins();
   }
 
   render() {
@@ -339,12 +369,39 @@ export class PluginManagerPanel extends LitElement {
 
     return html`
       <div class="panel-header">
-        <h2 class="panel-title">
-          🔌 Plugin Manager
-        </h2>
-        <p class="panel-subtitle">
-          Manage PersonI-generated UI components
-        </p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <h2 class="panel-title">
+              🔌 Plugin Manager
+            </h2>
+            <p class="panel-subtitle">
+              Manage PersonI-generated UI components
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button
+              class="action-btn"
+              @click=${this.handleImportClick}
+              title="Import .nirvana-card plugin"
+            >
+              📥 Import Card
+            </button>
+            <button
+              class="action-btn"
+              @click=${this.handleExportAll}
+              title="Export all plugins as bundle"
+            >
+              📦 Export All
+            </button>
+          </div>
+        </div>
+        ${this.importStatus
+          ? html`
+              <div class="import-status ${this.importStatus.type}" style="margin-top: 10px; padding: 10px; border-radius: 6px; background: ${this.importStatus.type === 'success' ? 'rgba(50, 200, 100, 0.2)' : 'rgba(255, 50, 50, 0.2)'}; border: 1px solid ${this.importStatus.type === 'success' ? 'rgba(50, 200, 100, 0.5)' : 'rgba(255, 50, 50, 0.5)'};">
+                ${this.importStatus.type === 'success' ? '✓' : '✗'} ${this.importStatus.message}
+              </div>
+            `
+          : nothing}
       </div>
 
       <div class="search-bar">
