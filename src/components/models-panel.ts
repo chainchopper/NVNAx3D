@@ -686,11 +686,14 @@ export class ModelsPanel extends LitElement {
           <div class="input-group">
             <label>API Endpoint</label>
             <input 
-              type="url" 
+              type="text" 
               name="endpoint" 
               .value=${this.editingProvider.endpoint || ''}
-              placeholder="https://api.example.com/v1"
+              placeholder="http://localhost:11434 or https://api.example.com"
             />
+            <small style="color: #888; font-size: 12px; margin-top: 4px; display: block;">
+              Any URL, IP address, http or https accepted
+            </small>
           </div>
         ` : ''}
 
@@ -719,12 +722,12 @@ export class ModelsPanel extends LitElement {
         <div class="input-group">
           <label>API Endpoint</label>
           <input 
-            type="url" 
+            type="text" 
             name="endpoint" 
             placeholder="http://localhost:11434 or http://172.24.160.1:8189"
           />
           <small style="color: #888; font-size: 12px; margin-top: 4px; display: block;">
-            For LMStudio, Ollama, or OpenAI-compatible APIs. Include or omit /v1 - both work.
+            Any URL, IP address, http or https accepted. For LM Studio, Ollama, or OpenAI-compatible APIs.
           </small>
         </div>
 

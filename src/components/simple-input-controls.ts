@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import './file-upload';
 
 @customElement('simple-input-controls')
 export class SimpleInputControls extends LitElement {
@@ -119,6 +120,28 @@ export class SimpleInputControls extends LitElement {
       cursor: not-allowed;
     }
 
+    .upload-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(135, 206, 250, 0.2);
+      border: 2px solid rgba(135, 206, 250, 0.5);
+      color: #87CEFA;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .upload-btn:hover {
+      background: rgba(135, 206, 250, 0.3);
+      border-color: rgba(135, 206, 250, 0.8);
+      transform: scale(1.1);
+    }
+
     .label {
       position: absolute;
       bottom: -30px;
@@ -142,7 +165,16 @@ export class SimpleInputControls extends LitElement {
 
   private handleKeyboardClick() {
     console.log('[SimpleInputControls] ⌨️ KEYBOARD BUTTON CLICKED');
-    this.mode = this.mode === 'voice' ? 'text' : 'voice';
+    const newMode = this.mode === 'voice' ? 'text' : 'voice';
+    this.mode = newMode;
+    
+    // Notify parent to keep state in sync
+    this.dispatchEvent(new CustomEvent('mode-change', {
+      detail: { mode: newMode },
+      bubbles: true,
+      composed: true
+    }));
+    
     this.requestUpdate();
   }
 
@@ -185,6 +217,16 @@ export class SimpleInputControls extends LitElement {
           </div>
         ` : html`
           <div class="text-input-box">
+            <file-upload
+              @file-uploaded=${(e: CustomEvent) => {
+                this.dispatchEvent(new CustomEvent('file-uploaded', {
+                  detail: e.detail,
+                  bubbles: true,
+                  composed: true
+                }));
+              }}
+              style="flex-shrink: 0;"
+            ></file-upload>
             <input
               type="text"
               .value=${this.textInput}
