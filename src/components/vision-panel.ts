@@ -414,22 +414,58 @@ export class VisionPanel extends LitElement {
     }
   }
 
+  private async handleFetchModels() {
+    if (!this.editingConfig?.endpoint) {
+      alert('Please enter an endpoint first');
+      return;
+    }
+
+    this.fetchingModels = true;
+    this.availableModels = [];
+
+    try {
+      const endpoint = this.editingConfig.endpoint.replace(/\/$/, '');
+      const url = endpoint.includes('/v1') ? `${endpoint}/models` : `${endpoint}/v1/models`;
+      
+      const response = await fetch(url, {
+        headers: this.editingConfig.apiKey ? { 'Authorization': `Bearer ${this.editingConfig.apiKey}` } : {}
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const models = data.data || [];
+      this.availableModels = models.map((m: any) => m.id).filter((id: string) => id);
+      
+      if (this.availableModels.length === 0) {
+        alert('No models found at this endpoint');
+      }
+    } catch (error) {
+      console.error('[VisionPanel] Failed to fetch models:', error);
+      alert(`Failed to fetch models: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      this.fetchingModels = false;
+    }
+  }
+
   private applyPreset(preset: 'lm-studio' | 'vllm' | 'windows-ai') {
     const presets = {
       'lm-studio': {
-        name: 'LM Studio (Moondream)',
+        name: 'LM Studio (Vision)',
         endpoint: 'http://localhost:1234',
-        modelName: 'moondream'
+        modelName: ''
       },
       'vllm': {
-        name: 'vLLM (Moondream)',
+        name: 'vLLM (Vision)',
         endpoint: 'http://localhost:8000',
-        modelName: 'vikhyatk/moondream2'
+        modelName: ''
       },
       'windows-ai': {
         name: 'Windows AI Dev Gallery',
         endpoint: 'http://localhost:5272',
-        modelName: 'moondream'
+        modelName: ''
       }
     };
 
@@ -440,6 +476,7 @@ export class VisionPanel extends LitElement {
       endpoint: selected.endpoint,
       modelName: selected.modelName
     };
+    this.availableModels = [];
   }
 
   render() {
@@ -530,34 +567,65 @@ export class VisionPanel extends LitElement {
 
         <div class="form-group">
           <label class="form-label">Endpoint URL *</label>
-          <input
-            type="text"
-            class="form-input"
-            .value=${this.editingConfig?.endpoint || ''}
-            @input=${(e: Event) => {
-              if (this.editingConfig) {
-                this.editingConfig = { ...this.editingConfig, endpoint: (e.target as HTMLInputElement).value };
-              }
-            }}
-            placeholder="http://localhost:1234"
-          />
+          <div style="display: flex; gap: 8px;">
+            <input
+              type="text"
+              class="form-input"
+              style="flex: 1;"
+              .value=${this.editingConfig?.endpoint || ''}
+              @input=${(e: Event) => {
+                if (this.editingConfig) {
+                  this.editingConfig = { ...this.editingConfig, endpoint: (e.target as HTMLInputElement).value };
+                }
+              }}
+              placeholder="http://localhost:1234"
+            />
+            <button 
+              class="btn" 
+              @click=${this.handleFetchModels}
+              ?disabled=${this.fetchingModels || !this.editingConfig?.endpoint}
+              style="white-space: nowrap;"
+            >
+              ${this.fetchingModels ? 'Fetching...' : 'Fetch Models'}
+            </button>
+          </div>
           <div class="helper-text">OpenAI-compatible endpoint (e.g., LM Studio, vLLM)</div>
         </div>
 
         <div class="form-group">
           <label class="form-label">Model Name *</label>
-          <input
-            type="text"
-            class="form-input"
-            .value=${this.editingConfig?.modelName || ''}
-            @input=${(e: Event) => {
-              if (this.editingConfig) {
-                this.editingConfig = { ...this.editingConfig, modelName: (e.target as HTMLInputElement).value };
-              }
-            }}
-            placeholder="moondream"
-          />
-          <div class="helper-text">Model identifier (e.g., moondream, vikhyatk/moondream2)</div>
+          ${this.availableModels.length > 0 ? html`
+            <select
+              class="form-input"
+              .value=${this.editingConfig?.modelName || ''}
+              @change=${(e: Event) => {
+                if (this.editingConfig) {
+                  this.editingConfig = { ...this.editingConfig, modelName: (e.target as HTMLSelectElement).value };
+                }
+              }}
+            >
+              <option value="">Select a model...</option>
+              ${this.availableModels.map(model => html`
+                <option value=${model} ?selected=${model === this.editingConfig?.modelName}>
+                  ${model}
+                </option>
+              `)}
+            </select>
+            <div class="helper-text">✅ ${this.availableModels.length} models fetched from endpoint</div>
+          ` : html`
+            <input
+              type="text"
+              class="form-input"
+              .value=${this.editingConfig?.modelName || ''}
+              @input=${(e: Event) => {
+                if (this.editingConfig) {
+                  this.editingConfig = { ...this.editingConfig, modelName: (e.target as HTMLInputElement).value };
+                }
+              }}
+              placeholder="Click 'Fetch Models' or enter manually"
+            />
+            <div class="helper-text">Use 'Fetch Models' button to load from endpoint, or enter manually</div>
+          `}
         </div>
 
         <div class="form-group">
