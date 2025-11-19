@@ -18,14 +18,14 @@ export class SimpleInputControls extends LitElement {
       left: 50%;
       transform: translateX(-50%);
       z-index: 200;
-      pointer-events: none;
+      pointer-events: auto;
+      width: fit-content;
     }
 
     .container {
       display: flex;
       align-items: center;
       gap: 20px;
-      pointer-events: auto;
       flex-direction: row;
     }
 
