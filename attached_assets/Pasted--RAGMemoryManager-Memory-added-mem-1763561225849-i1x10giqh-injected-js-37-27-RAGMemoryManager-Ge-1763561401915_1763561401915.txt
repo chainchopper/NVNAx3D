@@ -1,0 +1,432 @@
+[RAGMemoryManager] Memory added: mem_1763561225849_i1x10giqh injected.js:37:27
+[RAGMemoryManager] Generating embedding for memory: "Hey SIR, what’s on your mind today? Financial ques..." injected.js:37:27
+[LocalMemoryFallback] Failed to save memories: DOMException: The quota has been exceeded.
+    save local-memory-fallback.ts:32
+    addMemory local-memory-fallback.ts:40
+    addMemory rag-memory-manager.ts:123
+    handleUserInput conversation-orchestrator.ts:270
+    handleTextInputSubmit visualizer-shell.ts:207
+    handleEvent lit-html.ts:2109
+    handleSendClick simple-input-controls.ts:260
+    handleKeyPress simple-input-controls.ts:273
+    handleEvent lit-html.ts:2109
+    _$setValue lit-html.ts:2098
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    SimpleInputControls simple-input-controls.ts:6
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    VisualizerShell visualizer-shell.ts:60
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    AppRoot app-root.ts:15
+    customElement custom-element.ts:60
+    __decorateClass app-root.ts:7
+    <anonymous> app-root.ts:15
+injected.js:37:27
+[LocalMemoryFallback] Added memory mem_1763561225871_4d0kwskm8, total: 1896 injected.js:37:27
+[RAGMemoryManager] Memory added: mem_1763561225871_4d0kwskm8 injected.js:37:27
+[ConversationOrchestrator] 💾 Stored conversation in memory injected.js:37:27
+[ActivePersonasManager] Failed to save to storage: DOMException: The quota has been exceeded.
+    saveToStorage active-personas-manager.ts:119
+    addToContext active-personas-manager.ts:211
+    handleUserInput conversation-orchestrator.ts:285
+    handleTextInputSubmit visualizer-shell.ts:207
+    handleEvent lit-html.ts:2109
+    handleSendClick simple-input-controls.ts:260
+    handleKeyPress simple-input-controls.ts:273
+    handleEvent lit-html.ts:2109
+    _$setValue lit-html.ts:2098
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    SimpleInputControls simple-input-controls.ts:6
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    VisualizerShell visualizer-shell.ts:60
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    AppRoot app-root.ts:15
+    customElement custom-element.ts:60
+    __decorateClass app-root.ts:7
+    <anonymous> app-root.ts:15
+injected.js:37:27
+[ActivePersonasManager] Failed to save to storage: DOMException: The quota has been exceeded.
+    saveToStorage active-personas-manager.ts:119
+    addToContext active-personas-manager.ts:211
+    handleUserInput conversation-orchestrator.ts:286
+    handleTextInputSubmit visualizer-shell.ts:207
+    handleEvent lit-html.ts:2109
+    handleSendClick simple-input-controls.ts:260
+    handleKeyPress simple-input-controls.ts:273
+    handleEvent lit-html.ts:2109
+    _$setValue lit-html.ts:2098
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    SimpleInputControls simple-input-controls.ts:6
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    VisualizerShell visualizer-shell.ts:60
+    _clone lit-html.ts:1218
+    _commitTemplateResult lit-html.ts:1639
+    _$setValue lit-html.ts:1475
+    _update lit-html.ts:1282
+    _commitTemplateResult lit-html.ts:1650
+    _$setValue lit-html.ts:1475
+    render lit-html.ts:2278
+    update lit-element.ts:171
+    performUpdate reactive-element.ts:1504
+    scheduleUpdate reactive-element.ts:1400
+    __enqueueUpdate reactive-element.ts:1372
+    requestUpdate reactive-element.ts:1311
+    __initialize reactive-element.ts:1055
+    ReactiveElement reactive-element.ts:1038
+    LitElement lit.js:40
+    AppRoot app-root.ts:15
+    customElement custom-element.ts:60
+    __decorateClass app-root.ts:7
+    <anonymous> app-root.ts:15
+injected.js:37:27
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/672b6c19ae44d081.js
+Source Map URL: 5c73d6da83140aa5.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/96d3197781786346.js
+Source Map URL: 66485d81ae6f2f19.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/804bb338d7928976.js
+Source Map URL: 9d5f03f19d20e318.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/de079056f6420f7f.js
+Source Map URL: 6eb11bb1f4152ec8.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/88d0f16a452cf8eb.js
+Source Map URL: 8083d9d5727d8e9a.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/75c7b43d8c21bded.js
+Source Map URL: 88bfbb96830af257.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/2498246a2cb4ed1d.js
+Source Map URL: cc45787b186557f2.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/2047b299633436e6.js
+Source Map URL: 2c3af4c189c25604.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/01f1fe23ce97cd15.js
+Source Map URL: d888426e9191de49.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/21f4ffa7ba8da680.js
+Source Map URL: 447cc30c3b075c0b.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/48b013aa84289f7d.js
+Source Map URL: 4295d1588b25ae4f.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/8281db0d44bd2f57.js
+Source Map URL: 2502c575c82b120b.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/f3b41a2b93e03150.js
+Source Map URL: 1d4ecf2b6bd561ca.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7cac2eba73f04d00.js
+Source Map URL: 283258bfdc774446.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7424c63c39d4f059.js
+Source Map URL: 1f2a3b17d604fe7f.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/2fbf716ae3c453cc.js
+Source Map URL: 3a05eae6ae5b9a1e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/e2b8523c62ba47bc.js
+Source Map URL: 2b3e848f0e797ece.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/c77620df4c036b5b.js
+Source Map URL: 27bc9be5e4c2c364.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/3d96c62474e863e5.js
+Source Map URL: 28a2dbcbec46ef48.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/a8f94912f8677e83.js
+Source Map URL: 908c1adf7d8502ad.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/da5471cf1e3be120.js
+Source Map URL: e0b42610d7e403ef.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/252f8f026f800383.js
+Source Map URL: 78c1c8e54bc5945c.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/2078fbb81091102b.js
+Source Map URL: c84761ae86a393a7.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/a3fd79a638606f69.js
+Source Map URL: eee47a6d55f27cc0.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/64f98a9f70183536.js
+Source Map URL: ef336d1c1027947b.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/5e56091411f67be0.js
+Source Map URL: 391e95e40ba0fc8e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/2396e74145e86ffd.js
+Source Map URL: 31790808d3b407e3.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/27927fd714c3475e.js
+Source Map URL: c4c658546517fd05.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/cda27f867add9746.js
+Source Map URL: d3c4e481b7cfd461.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/84ce1978330cdbe5.js
+Source Map URL: c003fd808ca0a966.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/fc65ec85f4f7b441.js
+Source Map URL: b9471224979e8da8.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/589ba90e4ac5d52e.js
+Source Map URL: c052fbf30f895f4d.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7d54b1f9dac2336c.js
+Source Map URL: 4c05ba5f1f16404e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/1351ac91c95baf23.js
+Source Map URL: 5d77d38a4ec8a41d.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/a015d8178e3edc34.js
+Source Map URL: 0e132a8ac01c30f8.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/turbopack-7d878ff2c4e1c454.js
+Source Map URL: d0b7a4eb094feee2.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/163eb7359f977c96.js
+Source Map URL: 67278e33d570cd1e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/5798c299b2db5e01.js
+Source Map URL: 0064db05f01ec771.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7f8bd1a980ef4e2f.js
+Source Map URL: 057b5c1065318229.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7231c9c44bf7edc1.js
+Source Map URL: 37bc4060bea33ded.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/39dc90eb55f6f325.js
+Source Map URL: 5cbb4d740f72c15e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/4f2e42c1c83f65a7.js
+Source Map URL: 68ecf7273b2aab0e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/6a53ce4ecb4c5898.js
+Source Map URL: c00e7a862437ab42.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/bc62c4969a40cb12.js
+Source Map URL: 705f2d4c09f76f8d.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/578fe3ba1bace86c.js
+Source Map URL: ce1bbaee200000c1.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/f83030d7e771c32f.js
+Source Map URL: b8e69ffd1647895a.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/7f266e8141e34d80.js
+Source Map URL: 2b4b888303632ec6.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/3803c2d65f799f45.js
+Source Map URL: b67cc68db83d7acb.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/27298bf2636f89ad.js
+Source Map URL: 3e4c4adf76463b49.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/d14579e0f89f2ac6.js
+Source Map URL: d3d629c1fd00c688.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/d502a4ecb4911df5.js
+Source Map URL: 5cdee88cd70517a8.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/27b2c01156492338.js
+Source Map URL: 41b754fde7e40148.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/12f28f469e0da3f7.js
+Source Map URL: 20138cf941b88b0b.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/3ede399380dadde4.js
+Source Map URL: a0fcdcfc0d84250e.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/1b224bbc8db79db2.js
+Source Map URL: aefc359204f5ca03.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/dc08c9ba3d0148e8.js
+Source Map URL: 05b5ee579540f6a1.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/11a6a9bdbe2efa7c.js
+Source Map URL: 347010bed85d01c6.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/c95f6cb69957300a.js
+Source Map URL: 3779d6ca364222cb.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/ce72b2d4d249e254.js
+Source Map URL: 69f3587d5837258c.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/b684a70be4739700.js
+Source Map URL: c0c561d0d2961ace.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/6dc7a950438d7a9e.js
+Source Map URL: b866a387428389a4.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/b963e6a0f5c3f342.js
+Source Map URL: d84ab8ba49634ac5.js.map
+
+Source map error: No sources are declared in this source map.
+Resource URL: https://cdn.replit.com/_next/static/chunks/816c166b03c16186.js
+Source Map URL: 49f6d41e593e1497.js.map
+
+Source map error: can't access property "sources", map is undefined
+Resource URL: https://replit.com/@iamentincllc/%3Canonymous%20code%3E
+Source Map URL: react_devtools_backend_compact.js.map
+
+​
+
