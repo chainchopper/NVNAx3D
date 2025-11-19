@@ -33,7 +33,6 @@ import '../plugin-manager-panel';
 import '../connector-config-panel';
 import '../chatterbox-settings';
 import '../personi-settings-panel';
-import '../ui-controls';
 import '../camera-controls';
 import '../camera-manager';
 import './camera-circular-menu';
@@ -1245,31 +1244,17 @@ export class VisualizerShell extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
-        <!-- Simple Input Controls (new, bottom-center, z-index: 200) -->
+        <!-- Simple Input Controls (unified input system, bottom-center, z-index: 200) -->
         <simple-input-controls
           .mode=${this.inputMode}
           .isRecording=${this.isSpeaking}
           @voice-input-toggle=${this.handleVoiceInputToggle}
           @text-input-submit=${this.handleTextInputSubmit}
-        ></simple-input-controls>
-        
-        <!-- UI Controls (mic/keyboard/file-upload, z-index: 90) -->
-        <ui-controls
-          class="${this.activeSidePanel !== 'none' || this.settingsMenuVisible ? 'menu-open' : ''}"
-          .isMuted=${this.isMuted}
-          .isSpeaking=${this.isSpeaking}
-          .isAiSpeaking=${this.isAiSpeaking}
-          .inputMode=${this.inputMode}
-          .currentTextInput=${this.textInput}
-          .status=${this.status}
-          @mic-toggle=${this.toggleMute}
-          @interrupt=${this.handleInterrupt}
+          @file-uploaded=${this.handleFileUploaded}
           @mode-change=${(e: CustomEvent) => {
             this.inputMode = e.detail.mode;
           }}
-          @text-submit=${this.handleTextSubmit}
-          @file-uploaded=${this.handleFileUploaded}
-        ></ui-controls>
+        ></simple-input-controls>
 
         <!-- Active Side Panel (conditional render) -->
         ${this.activeSidePanel !== 'none'

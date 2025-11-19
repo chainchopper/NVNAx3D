@@ -40,7 +40,7 @@ export class LocalWhisperService extends EventTarget {
     return this.currentModel;
   }
 
-  async loadModel(modelSize: WhisperModelSize): Promise<void> {
+  async loadModel(modelSize: WhisperModelSize, retryCount: number = 0): Promise<void> {
     if (this.currentModel === modelSize && this.pipeline && this.loadingState === 'ready') {
       return;
     }
@@ -60,19 +60,23 @@ export class LocalWhisperService extends EventTarget {
           quantized: false,
           revision: 'main',
           progress_callback: (progress) => {
-            if (progress.status === 'progress') {
-              console.log(`[Whisper] Downloading ${progress.file}: ${Math.round(progress.progress || 0)}%`);
-              this.dispatchEvent(new CustomEvent('progress', {
-                detail: {
-                  file: progress.file,
-                  progress: progress.progress,
-                  loaded: progress.loaded,
-                  total: progress.total,
-                },
-              }));
-            }
-            if (progress.status === 'done') {
-              console.log(`[Whisper] Downloaded ${progress.file}`);
+            try {
+              if (progress.status === 'progress') {
+                console.log(`[Whisper] Downloading ${progress.file}: ${Math.round(progress.progress || 0)}%`);
+                this.dispatchEvent(new CustomEvent('progress', {
+                  detail: {
+                    file: progress.file,
+                    progress: progress.progress,
+                    loaded: progress.loaded,
+                    total: progress.total,
+                  },
+                }));
+              }
+              if (progress.status === 'done') {
+                console.log(`[Whisper] Downloaded ${progress.file}`);
+              }
+            } catch (progressError) {
+              console.warn('[Whisper] Progress callback error:', progressError);
             }
           },
         }
@@ -83,10 +87,24 @@ export class LocalWhisperService extends EventTarget {
       console.log(`[Whisper] Model ${modelPath} loaded successfully`);
       this.dispatchEvent(new CustomEvent('ready', { detail: { model: modelSize } }));
     } catch (error) {
+      const errorMessage = error?.message || String(error);
+      
+      // Check if this is a JSON parse error (corrupted cache)
+      if (errorMessage.includes('JSON.parse') && retryCount === 0) {
+        console.warn('[Whisper] JSON parse error detected, clearing cache and retrying...');
+        try {
+          await this.clearCache();
+          console.log('[Whisper] Cache cleared, retrying model load...');
+          return await this.loadModel(modelSize, retryCount + 1);
+        } catch (cacheError) {
+          console.error('[Whisper] Failed to clear cache:', cacheError);
+        }
+      }
+      
       this.loadingState = 'error';
-      console.error(`[Whisper] Failed to load model: ${error?.message || error}`);
+      console.error(`[Whisper] Failed to load model: ${errorMessage}`);
       this.dispatchEvent(new CustomEvent('error', { detail: { error } }));
-      throw error;
+      throw new Error(`Failed to load Whisper model: ${errorMessage}`);
     }
   }
 
