@@ -27,6 +27,7 @@ export interface VisionAnalysisResponse {
 }
 
 const VISION_CONFIG_KEY = 'nirvana_vision_models';
+const ACTIVE_VISION_MODEL_KEY = 'nirvana_vision_active_model';
 
 class VisionModelService extends EventTarget {
   private configs: Map<string, VisionModelConfig> = new Map();
@@ -48,6 +49,43 @@ class VisionModelService extends EventTarget {
         console.error('[VisionModelService] Failed to load configs:', error);
       }
     }
+    
+    // Restore active model ID
+    const savedActiveId = localStorage.getItem(ACTIVE_VISION_MODEL_KEY);
+    if (savedActiveId && this.configs.has(savedActiveId)) {
+      const config = this.configs.get(savedActiveId)!;
+      if (config.enabled) {
+        this.activeConfigId = savedActiveId;
+        console.log('[VisionModelService] Restored active model:', savedActiveId);
+      } else {
+        console.log('[VisionModelService] Saved active model is disabled, auto-selecting');
+        this.autoSelectDefaultModel();
+      }
+    } else {
+      // Auto-select first enabled model if no saved active ID
+      this.autoSelectDefaultModel();
+    }
+  }
+  
+  private autoSelectDefaultModel(): void {
+    // Auto-select first enabled model
+    for (const [id, config] of this.configs) {
+      if (config.enabled) {
+        this.activeConfigId = id;
+        this.saveActiveModel();
+        console.log('[VisionModelService] Auto-selected active model:', id);
+        return;
+      }
+    }
+    console.log('[VisionModelService] No enabled models found');
+  }
+  
+  private saveActiveModel(): void {
+    if (this.activeConfigId) {
+      localStorage.setItem(ACTIVE_VISION_MODEL_KEY, this.activeConfigId);
+    } else {
+      localStorage.removeItem(ACTIVE_VISION_MODEL_KEY);
+    }
   }
 
   private saveConfigs(): void {
@@ -63,6 +101,7 @@ class VisionModelService extends EventTarget {
     // Set as active if it's the first enabled config
     if (config.enabled && !this.activeConfigId) {
       this.activeConfigId = config.id;
+      this.saveActiveModel();
     }
   }
 
@@ -78,6 +117,9 @@ class VisionModelService extends EventTarget {
     this.configs.delete(id);
     if (this.activeConfigId === id) {
       this.activeConfigId = null;
+      this.saveActiveModel();
+      // Try to auto-select another enabled model
+      this.autoSelectDefaultModel();
     }
     this.saveConfigs();
   }
@@ -97,7 +139,10 @@ class VisionModelService extends EventTarget {
   setActiveConfig(id: string): void {
     if (this.configs.has(id)) {
       this.activeConfigId = id;
-      this.saveConfigs();
+      this.saveActiveModel();
+      // Dispatch both events to maintain backward compatibility
+      this.dispatchEvent(new CustomEvent('active-model-changed'));
+      this.dispatchEvent(new CustomEvent('configs-changed'));
     }
   }
 
