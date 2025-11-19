@@ -1255,9 +1255,13 @@ export class VisualizerShell extends LitElement {
           @rag-toggle=${this.handleRAGToggle}
           @rag-file-upload=${() => {
             console.log('[VisualizerShell] RAG menu file upload clicked');
-            const fileUpload = this.shadowRoot?.querySelector('file-upload');
-            if (fileUpload) {
-              (fileUpload as any).openFilePicker();
+            const simpleInput = this.shadowRoot?.querySelector('simple-input-controls');
+            if (simpleInput) {
+              // Access the file input from renderRoot (shadow DOM or light DOM)
+              const fileInput = (simpleInput.renderRoot || simpleInput).querySelector('.file-input') as HTMLInputElement;
+              if (fileInput) {
+                fileInput.click();
+              }
             }
           }}
           @rag-open-context-settings=${() => {
