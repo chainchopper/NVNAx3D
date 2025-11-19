@@ -23,7 +23,7 @@ export class RAGToggle extends LitElement {
       right: 20px;
       z-index: 150;
       transition: opacity 0.5s ease-out;
-      pointer-events: auto;
+      pointer-events: none;
     }
 
     :host(.hidden) {
@@ -44,6 +44,7 @@ export class RAGToggle extends LitElement {
       transition: all 0.2s ease;
       user-select: none;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      pointer-events: auto;
     }
 
     .rag-toggle-container:hover {
