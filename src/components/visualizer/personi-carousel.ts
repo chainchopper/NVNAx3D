@@ -364,9 +364,7 @@ export class PersonICarousel extends LitElement {
     }
 
     this.visible = true;
-    if (!this.visible) {
-      this.removeAttribute('hidden');
-    }
+    this.removeAttribute('hidden');
 
     this.idleTimer = window.setTimeout(() => {
       this.visible = false;
