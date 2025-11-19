@@ -35,7 +35,9 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Device Settings**: Dedicated panel for accelerometer, gyroscope, microphone/camera permissions, and background service configuration.
 - **Music Detection**: Lightweight background service (MusicDetectionService) using SharedMicrophoneManager consumer registration. Pattern-based frequency analysis (1Hz) detects music vs. speech, stores events in RAG for context-aware suggestions.
 - **Camera Multi-Device Support**: Full enumeration via `navigator.mediaDevices.enumerateDevices()`, sequential cycling through all video inputs with device ID selection and progress indicators (e.g., "camera 1/3").
-- **UI Element Positioning**: RAG toggle (top-left, z-index 150), UI controls (top-right at 80px with 16px gap, z-index 90). All controls non-overlapping with proper spacing hierarchy.
+- **UI Element Positioning**: RAG toggle (top-right at 20px, z-index 150), UI controls (top-right at 80px with 16px gap, z-index 90). All controls non-overlapping with proper spacing hierarchy. Pointer-events architecture: overlay hosts use `pointer-events: none` with selective `pointer-events: auto` on interactive children to prevent click blocking.
+- **Camera Feed Display**: Native HTML5 video element without horizontal mirroring (no scaleX transform) for natural user-facing camera view.
+- **Tooltip Display**: Control button tooltips appear vertically above buttons (bottom: calc(100% + 12px)) with z-index 10001 for clear visibility without horizontal overlap.
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
