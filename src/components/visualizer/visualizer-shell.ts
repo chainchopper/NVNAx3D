@@ -733,6 +733,7 @@ export class VisualizerShell extends LitElement {
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
     await this.initializeAudioContext();
+    await this.initializeDefaultPlugins();
     await this.initializeServices();
     this.loadPersonIs();
     this.playIntroAnimation();
@@ -740,6 +741,18 @@ export class VisualizerShell extends LitElement {
     this.registerCommandHandlers();
     
     console.log('[VisualizerShell] Initialized');
+  }
+
+  /**
+   * Load default plugins on first app launch
+   */
+  private async initializeDefaultPlugins(): Promise<void> {
+    try {
+      const { defaultPluginsLoader } = await import('../../services/default-plugins-loader');
+      await defaultPluginsLoader.loadDefaultPlugins();
+    } catch (error) {
+      console.error('[VisualizerShell] Failed to load default plugins:', error);
+    }
   }
 
   async firstUpdated(changedProperties: Map<string, any>) {
