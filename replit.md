@@ -35,9 +35,12 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **Device Settings**: Dedicated panel for accelerometer, gyroscope, microphone/camera permissions, and background service configuration.
 - **Music Detection**: Lightweight background service (MusicDetectionService) using SharedMicrophoneManager consumer registration. Pattern-based frequency analysis (1Hz) detects music vs. speech, stores events in RAG for context-aware suggestions.
 - **Camera Multi-Device Support**: Full enumeration via `navigator.mediaDevices.enumerateDevices()`, sequential cycling through all video inputs with device ID selection and progress indicators (e.g., "camera 1/3").
-- **UI Element Positioning**: RAG toggle (top-right at 20px, z-index 150), UI controls (top-right at 80px with 16px gap, z-index 90). All controls non-overlapping with proper spacing hierarchy. Pointer-events architecture: overlay hosts use `pointer-events: none` with selective `pointer-events: auto` on interactive children to prevent click blocking.
+- **UI Element Positioning**: RAG settings circular menu (top-right at 20px, z-index 150), UI controls (top-right at 80px with 16px gap, z-index 90). All controls non-overlapping with proper spacing hierarchy. Pointer-events architecture: overlay hosts use `pointer-events: none` with selective `pointer-events: auto` on interactive children to prevent click blocking.
 - **Camera Feed Display**: Native HTML5 video element without horizontal mirroring (no scaleX transform) for natural user-facing camera view.
 - **Tooltip Display**: Control button tooltips appear vertically above buttons (bottom: calc(100% + 12px)) with z-index 10001 for clear visibility without horizontal overlap.
+- **RAG Settings Menu**: Top-right circular radial menu (replacing old brain icon) with double-click to toggle RAG on/off, single-click to expand/collapse. Four radial controls: Retrieval Context, Include History, Include Events, System Context. Uses button elements with glowing hover effects (no borders), auto-hides after 5s inactivity.
+- **Tandem Input System**: Voice and text inputs work simultaneously without mode switching. Mic button always visible, keyboard button toggles text input box with smooth slide-in/out animation. File upload embedded in text input.
+- **Camera-Aware 3D Visualization**: 3D brain visualization automatically scales to 60% and reduces opacity to 30% when camera is active, restoring to full size/opacity when camera is off. Smooth GSAP transitions.
 
 ### System Design Choices
 - **PersonI System**: Manages AI personas with unique attributes, capabilities (vision, image generation, web search, tools, Multi-modal Conversational Pipeline), and a template system.
@@ -63,6 +66,9 @@ Nirvana is an advanced AI companion system providing customizable, engaging AI e
 - **CommandRouter Service**: Handles 13 app control functions exposed via LLM function calling.
 - **Background Manager**: Centralized full-viewport background content management for device camera feeds and external video sources.
 - **ComfyUI Integration**: User-configurable endpoint for advanced image/video/audio generation workflows with REST API proxy, workflow registry, job submission, status polling, and asset retrieval.
+- **Sensor Ingestion Service**: Continuous background data collection from camera, microphone, GPS, accelerometer, and gyroscope sensors. Configurable sampling intervals and policies. Feeds data to PerceptionOrchestrator and RAG backends with selective storage flags. GPS tracking via watchPosition API with high-accuracy positioning.
+- **Capability-Aware Routing**: CapabilityResolver service routes requests to best-fit models based on capabilities (thinking, tools, vision, audio). Model registry with metadata for context windows, cost tiers, latency tiers. Preference-based scoring system favoring local models (Ollama, LM Studio, vLLM) with cloud fallback. Supports dynamic model registration and capability updates.
+- **Input Orchestrator**: Intelligent coordination of concurrent mic/text/camera/upload inputs with priority queues (high/medium/low). Prevents system overload through adaptive cooldowns, max concurrent request limits, and queue capacity management. Stats tracking for throughput and performance monitoring. Automatic dropping of lowest-priority requests when at capacity.
 
 ## External Dependencies
 - **Google Gemini API**: Conversational AI and embeddings.
