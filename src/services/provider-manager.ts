@@ -390,8 +390,14 @@ export class ProviderManager {
       return;
     }
     
+    // Check if this is a local provider (doesn't need API key)
+    const isLocalProvider = provider.type === 'custom' || 
+                           provider.endpoint?.includes('localhost') ||
+                           provider.endpoint?.includes('127.0.0.1') ||
+                           provider.endpoint?.includes('0.0.0.0');
+    
     // Skip if no API key for non-local providers
-    if (!provider.apiKey && provider.type !== 'custom') {
+    if (!provider.apiKey && !isLocalProvider) {
       return;
     }
 
