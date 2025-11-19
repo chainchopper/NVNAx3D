@@ -104,6 +104,7 @@ export class ObjectDetectionOverlay extends LitElement {
     this.detections = result.objects;
     this.fps = result.fps;
     this.isActive = true;
+    this.resetInactivityTimer();
   }
 
   clearDetections() {
