@@ -8,11 +8,11 @@ import { BaseProvider } from '../providers/base-provider';
 import { ProviderFactory } from '../providers/provider-factory';
 import { getBackendUrl } from '../config/backend-url';
 import { ModelAutoAssignmentService, ModelAssignment } from './model-auto-assignment.js';
+import { PERSONIS_KEY } from '../constants/storage.js';
 
 const PROVIDERS_KEY = 'nirvana-providers';
 const STT_CONFIG_KEY = 'nirvana-stt-config';
 const TTS_CONFIG_KEY = 'nirvana-tts-config';
-const PERSONIS_KEY = 'nirvana-personis';
 
 export class ProviderManager {
   private providers: Map<string, ModelProvider> = new Map();
@@ -395,6 +395,15 @@ export class ProviderManager {
    */
   private autoAssignModelsToPersonis(providerId: string, models: ModelInfo[]) {
     try {
+      // One-time migration: Move data from old 'nirvana-personis' key to official 'gdm-personis'
+      const oldKey = 'nirvana-personis';
+      const oldData = localStorage.getItem(oldKey);
+      if (oldData && !localStorage.getItem(PERSONIS_KEY)) {
+        console.log('[ProviderManager] 🔄 Migrating PersonI data from nirvana-personis to gdm-personis');
+        localStorage.setItem(PERSONIS_KEY, oldData);
+        localStorage.removeItem(oldKey);
+      }
+      
       const saved = localStorage.getItem(PERSONIS_KEY);
       if (!saved) return;
 

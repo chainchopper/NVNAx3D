@@ -1,0 +1,77 @@
+[ConversationOrchestrator] 🎯 Intent detected: conversation, Sentiment: neutral injected.js:37:27
+[ProviderManager] Found model "gpt-4.1" in provider "OpenAI" injected.js:37:27
+[ConversationOrchestrator] 📋 Goal: Engage the user in a friendly and meaningful conversation., Confidence: 1 injected.js:37:27
+[ConversationOrchestrator] ⚡ Planned 1 actions injected.js:37:27
+[ConversationOrchestrator] ✅ Executed 0/1 actions successfully injected.js:37:27
+[VisualizerShell] Response chunk: Action failures:
+⚠️ store_memory failed: Missing memory content
+
+Please configure the required connectors in Settings or try rephrasing your request.
+
+injected.js:37:27
+[ConversationOrchestrator] 📊 Building complete system context... injected.js:37:27
+[ConversationOrchestrator] ✅ System context ready injected.js:37:27
+[ConversationOrchestrator] 🔍 Retrieving relevant memories... injected.js:37:27
+[RAGMemoryManager] Searching for memories matching: "talk to me..." (limit: 10, threshold: 0.6) injected.js:37:27
+[LocalMemoryFallback] Found 0 memories matching criteria injected.js:37:27
+[RAGMemoryManager] Found 0 relevant memories injected.js:37:27
+stallwart: failed ping 1 stallwart.build.js:1:886
+[VisualizerShell] Response chunk: Hey injected.js:37:27
+[VisualizerShell] Response chunk:  S injected.js:37:27
+[VisualizerShell] Response chunk: IR injected.js:37:27
+[VisualizerShell] Response chunk:  — injected.js:37:27
+[VisualizerShell] Response chunk:  good injected.js:37:27
+[VisualizerShell] Response chunk:  to injected.js:37:27
+[VisualizerShell] Response chunk:  hear injected.js:37:27
+[VisualizerShell] Response chunk:  from injected.js:37:27
+[VisualizerShell] Response chunk:  you injected.js:37:27
+[VisualizerShell] Response chunk: . injected.js:37:27
+[VisualizerShell] Response chunk:  What injected.js:37:27
+[VisualizerShell] Response chunk: ’s injected.js:37:27
+[VisualizerShell] Response chunk:  on injected.js:37:27
+[VisualizerShell] Response chunk:  your injected.js:37:27
+[VisualizerShell] Response chunk:  mind injected.js:37:27
+[VisualizerShell] Response chunk:  today injected.js:37:27
+[VisualizerShell] Response chunk: ? injected.js:37:27
+[VisualizerShell] Response chunk:  We injected.js:37:27
+[VisualizerShell] Response chunk:  can injected.js:37:27
+[VisualizerShell] Response chunk:  dig injected.js:37:27
+[VisualizerShell] Response chunk:  into injected.js:37:27
+[VisualizerShell] Response chunk:  your injected.js:37:27
+[VisualizerShell] Response chunk:  portfolio injected.js:37:27
+[VisualizerShell] Response chunk: , injected.js:37:27
+[VisualizerShell] Response chunk:  run injected.js:37:27
+[VisualizerShell] Response chunk:  through injected.js:37:27
+[VisualizerShell] Response chunk:  current injected.js:37:27
+[VisualizerShell] Response chunk:  market injected.js:37:27
+[VisualizerShell] Response chunk:  trends injected.js:37:27
+[VisualizerShell] Response chunk: , injected.js:37:27
+[VisualizerShell] Response chunk:  plan injected.js:37:27
+[VisualizerShell] Response chunk:  for injected.js:37:27
+[VisualizerShell] Response chunk:  financial injected.js:37:27
+[VisualizerShell] Response chunk:  goals injected.js:37:27
+[VisualizerShell] Response chunk: , injected.js:37:27
+[VisualizerShell] Response chunk:  or injected.js:37:27
+[VisualizerShell] Response chunk:  just injected.js:37:27
+[VisualizerShell] Response chunk:  chat injected.js:37:27
+[VisualizerShell] Response chunk:  strategy injected.js:37:27
+[VisualizerShell] Response chunk: . injected.js:37:27
+[VisualizerShell] Response chunk:  Whatever injected.js:37:27
+[VisualizerShell] Response chunk:  you injected.js:37:27
+[VisualizerShell] Response chunk:  need injected.js:37:27
+[VisualizerShell] Response chunk: , injected.js:37:27
+[VisualizerShell] Response chunk:  I injected.js:37:27
+[VisualizerShell] Response chunk: ’ve injected.js:37:27
+[VisualizerShell] Response chunk:  got injected.js:37:27
+[VisualizerShell] Response chunk:  you injected.js:37:27
+[VisualizerShell] Response chunk: . injected.js:37:27
+[RAGMemoryManager] Generating embedding for memory: "talk to me..." injected.js:37:27
+[LocalMemoryFallback] Added memory mem_1763567392602_lrth1trh2, total: 510 injected.js:37:27
+[RAGMemoryManager] Memory added: mem_1763567392602_lrth1trh2 injected.js:37:27
+[RAGMemoryManager] Generating embedding for memory: "Hey SIR — good to hear from you. What’s on your mi..." injected.js:37:27
+[LocalMemoryFallback] Added memory mem_1763567392608_uczkjfht6, total: 511 injected.js:37:27
+[RAGMemoryManager] Memory added: mem_1763567392608_uczkjfht6 injected.js:37:27
+[ConversationOrchestrator] 💾 Stored conversation in memory injected.js:37:27
+
+​
+
