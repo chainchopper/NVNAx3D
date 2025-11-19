@@ -386,7 +386,12 @@ export class ProviderManager {
    */
   async syncProviderModels(id: string): Promise<void> {
     const provider = this.providers.get(id);
-    if (!provider || !provider.apiKey || !provider.enabled) {
+    if (!provider || !provider.enabled) {
+      return;
+    }
+    
+    // Skip if no API key for non-local providers
+    if (!provider.apiKey && provider.type !== 'custom') {
       return;
     }
 
@@ -418,8 +423,14 @@ export class ProviderManager {
     const provider = this.providers.get(id);
     if (!provider) return false;
 
-    // Check if API key is present
-    const verified = !!provider.apiKey;
+    // For custom providers (Ollama, LM Studio, etc.), API key is optional
+    // They only need a valid endpoint
+    const isLocalProvider = provider.type === 'custom' || 
+                           provider.endpoint?.includes('localhost') ||
+                           provider.endpoint?.includes('127.0.0.1') ||
+                           provider.endpoint?.includes('0.0.0.0');
+    
+    const verified = isLocalProvider ? !!provider.endpoint : !!provider.apiKey;
     
     // If verified, sync models from the provider instance
     if (verified && provider.enabled) {

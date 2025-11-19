@@ -44,6 +44,7 @@ import '../background-manager';
 import '../rag-toggle';
 import '../object-detection-overlay';
 import '../file-upload';
+import '../simple-input-controls';
 import { ragMemoryManager } from '../../services/memory/rag-memory-manager';
 import { conversationOrchestrator } from '../../services/conversation-orchestrator';
 import { speechOutputService } from '../../services/speech-output-service';
@@ -178,6 +179,51 @@ export class VisualizerShell extends LitElement {
   private handleInterrupt = () => {
     this.isAiSpeaking = false;
     speechOutputService.stopAll();
+  };
+
+  private handleVoiceInputToggle = async () => {
+    console.log('[VisualizerShell] 🎤 Voice input toggle triggered');
+    try {
+      await voiceInputService.toggleRecording();
+    } catch (error) {
+      console.error('[VisualizerShell] Voice recording error:', error);
+      this.status = error instanceof Error ? error.message : 'Voice input error';
+      setTimeout(() => this.status = 'Ready', 3000);
+    }
+  };
+
+  private handleTextInputSubmit = async (e: CustomEvent) => {
+    const text = e.detail.text;
+    console.log('[VisualizerShell] 📤 Text input submitted:', text);
+    
+    if (!text || !text.trim()) {
+      return;
+    }
+
+    try {
+      this.status = 'Thinking...';
+      this.isAiSpeaking = true;
+
+      const activePersona = conversationOrchestrator.getActivePersona();
+      
+      await conversationOrchestrator.handleUserInput(
+        text,
+        {},
+        async (chunk) => {
+          if (chunk.text) {
+            console.log('[VisualizerShell] Response chunk:', chunk.text);
+          }
+        }
+      );
+
+      this.isAiSpeaking = false;
+      this.status = 'Ready';
+    } catch (error) {
+      console.error('[VisualizerShell] Text input error:', error);
+      this.status = error instanceof Error ? error.message : 'Error processing input';
+      this.isAiSpeaking = false;
+      setTimeout(() => this.status = 'Ready', 3000);
+    }
   };
 
   private handleTextSubmit = async (e: CustomEvent) => {
@@ -1199,6 +1245,14 @@ export class VisualizerShell extends LitElement {
           @toggle-detection=${this.handleToggleObjectDetection}
         ></object-detection-overlay>
 
+        <!-- Simple Input Controls (new, bottom-center, z-index: 200) -->
+        <simple-input-controls
+          .mode=${this.inputMode}
+          .isRecording=${this.isSpeaking}
+          @voice-input-toggle=${this.handleVoiceInputToggle}
+          @text-input-submit=${this.handleTextInputSubmit}
+        ></simple-input-controls>
+        
         <!-- UI Controls (mic/keyboard/file-upload, z-index: 90) -->
         <ui-controls
           class="${this.activeSidePanel !== 'none' || this.settingsMenuVisible ? 'menu-open' : ''}"
