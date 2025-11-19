@@ -182,9 +182,10 @@ export class CircularMenuWheel extends LitElement {
       position: fixed;
       bottom: 32px;
       right: 32px;
-      z-index: 170;
+      z-index: 250;
       transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out;
       opacity: 1;
+      pointer-events: all;
     }
 
     :host(.dock-open) {
@@ -251,7 +252,7 @@ export class CircularMenuWheel extends LitElement {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       pointer-events: all;
       opacity: 1;
-      z-index: 200;
+      z-index: 1;
     }
 
     .menu-item.collapsed {
