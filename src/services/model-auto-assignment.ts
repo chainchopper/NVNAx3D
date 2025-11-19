@@ -72,9 +72,11 @@ export class ModelAutoAssignmentService {
 
   /**
    * Patterns to exclude from general chat models
+   * NOTE: 'vision' NOT included - multimodal models like gpt-4-vision support both chat AND vision
    */
   private static readonly EXCLUDE_FROM_CHAT = [
-    'whisper', 'tts', 'embed', 'vector', 'flux', 'sd', 'stable-diffusion'
+    'whisper', 'tts', 'embed', 'embedding', 'vector', 'flux', 'sd', 'stable-diffusion',
+    'dall-e', 'imagen', 'text-embedding', 'bge-', 'gte-', 'e5-'
   ];
 
   /**
@@ -133,13 +135,16 @@ export class ModelAutoAssignmentService {
 
   /**
    * Infer capabilities for a single model based on naming conventions
+   * NOTE: Capabilities are ADDITIVE - a model can support multiple capabilities
+   * (e.g., gpt-4-vision supports both conversation AND vision)
    */
   static inferCapabilities(modelId: string): {
     conversation: boolean;
     vision: boolean;
     embedding: boolean;
     imageGeneration: boolean;
-    audio: boolean;
+    stt: boolean;
+    tts: boolean;
   } {
     const lower = modelId.toLowerCase();
 
@@ -148,7 +153,8 @@ export class ModelAutoAssignmentService {
       vision: this.matches(lower, this.HEURISTICS.vision),
       embedding: this.matches(lower, this.HEURISTICS.embedding),
       imageGeneration: this.matches(lower, this.HEURISTICS.imageGeneration),
-      audio: this.matches(lower, [...this.HEURISTICS.stt, ...this.HEURISTICS.tts])
+      stt: this.matches(lower, this.HEURISTICS.stt),
+      tts: this.matches(lower, this.HEURISTICS.tts)
     };
   }
 
@@ -221,7 +227,8 @@ export class ModelAutoAssignmentService {
     if (caps.vision) summary.push('Vision');
     if (caps.embedding) summary.push('Embeddings');
     if (caps.imageGeneration) summary.push('Image Gen');
-    if (caps.audio) summary.push('Audio');
+    if (caps.stt) summary.push('STT');
+    if (caps.tts) summary.push('TTS');
 
     return summary.length > 0 ? summary : ['Unknown'];
   }

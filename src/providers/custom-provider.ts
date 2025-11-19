@@ -1,6 +1,7 @@
 import { BaseProvider, ProviderMessage, StreamingResponse, ProviderConfig } from './base-provider';
 import { ModelInfo } from '../types/providers';
 import { CustomProviderConfig } from '../types/custom-provider';
+import { ModelAutoAssignmentService } from '../services/model-auto-assignment.js';
 
 export class CustomProvider extends BaseProvider {
   public readonly id: string;
@@ -72,10 +73,18 @@ export class CustomProvider extends BaseProvider {
   }
 
   private inferCapabilities(model: any) {
+    const modelId = model.id || '';
+    const inferredCaps = ModelAutoAssignmentService.inferCapabilities(modelId);
+    
     return {
       streaming: this.capabilities.streaming,
       functionCalling: this.capabilities.functionCalling,
-      vision: this.capabilities.vision,
+      vision: this.capabilities.vision || inferredCaps.vision,
+      conversation: inferredCaps.conversation,
+      embedding: inferredCaps.embedding,
+      imageGeneration: inferredCaps.imageGeneration,
+      stt: inferredCaps.stt,
+      tts: inferredCaps.tts,
     };
   }
 
