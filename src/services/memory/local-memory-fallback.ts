@@ -32,15 +32,35 @@ export class LocalMemoryFallback {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        console.error('[LocalMemoryFallback] ⚠️ QUOTA EXCEEDED - Triggering emergency cleanup');
-        // Immediate pruning to oldest 500 memories
-        this.emergencyPrune(500);
-        // Retry save
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
-          console.log('[LocalMemoryFallback] ✓ Save succeeded after emergency cleanup');
-        } catch (retryError) {
-          console.error('[LocalMemoryFallback] ⚠️ Save failed even after cleanup:', retryError);
+        console.error('[LocalMemoryFallback] ⚠️ QUOTA EXCEEDED - Triggering progressive emergency cleanup');
+        
+        // Try progressively smaller counts until success or minimal
+        const attempts = [500, 250, 100, 50, 25];
+        let saved = false;
+        
+        for (const keepCount of attempts) {
+          this.emergencyPrune(keepCount);
+          
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
+            console.log(`[LocalMemoryFallback] ✓ Save succeeded after pruning to ${keepCount} memories`);
+            saved = true;
+            break;
+          } catch (retryError) {
+            console.warn(`[LocalMemoryFallback] Still failing with ${keepCount} memories, trying smaller...`);
+          }
+        }
+        
+        if (!saved) {
+          console.error('[LocalMemoryFallback] ⚠️ CRITICAL: Could not save even with minimal memories');
+          // Last resort: clear everything and try once more
+          this.memories = [];
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.memories));
+            console.error('[LocalMemoryFallback] ⚠️ Cleared all memories to recover from quota error');
+          } catch (finalError) {
+            console.error('[LocalMemoryFallback] ⚠️ FATAL: Cannot save even empty array - localStorage may be corrupted');
+          }
         }
       } else {
         console.error('[LocalMemoryFallback] Failed to save memories:', error);
