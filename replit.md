@@ -4,6 +4,7 @@
 Nirvana is an advanced AI companion system offering customizable, engaging AI experiences through multiple AI personas (PersonI). It integrates Google's Gemini AI for real-time audio interaction and immersive 3D visualizations. The project aims to be a local-first, multi-provider platform, extensible with various external services, providing a rich, interactive, and personalized AI experience with autonomous, always-aware PersonI agents that reason, plan, learn, and suggest.
 
 ## Recent Changes (Nov 19, 2025)
+- **localStorage Quota Management**: Implemented comprehensive storage quota monitoring system that tracks usage (currently 50%), automatically prunes old memories when reaching 85% capacity, with emergency cleanup handlers preventing quota exceeded errors - fixes conversation blocking issues
 - **PersonI Settings Panel Rewritten**: Complete panel overhaul with 6 clean sections (Identity, AI Models, Voice, Capabilities, Connectors, Plugins), removed irrelevant Visual Identity settings (shape/texture/animation), improved UI/UX, and fixed persistence with true localStorage round-trip verification
 - **Persistence Fixed**: Implemented post-save verification that reads from localStorage, validates all fields (plugins, connectors, capabilities, models), rehydrates UI from storage data, and logs any data loss - ensuring reliable persistence across sessions
 - **Vision AI Panel Fixed**: Added missing panel registration in settings-dock; now properly accessible from circular menu

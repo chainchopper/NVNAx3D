@@ -249,20 +249,41 @@ export class StorageQuotaManager {
     totalDeleted += historyResult.deletedKeys;
     totalFreed += historyResult.bytesFreed;
 
-    // Step 3: If still not enough space, delete low-priority keys
-    const stats = this.getStorageStats();
+    // Step 3: Delete low-priority keys
+    const lowPriorityResult = this.deleteLowPriorityKeys(30);
+    totalDeleted += lowPriorityResult.deletedKeys;
+    totalFreed += lowPriorityResult.bytesFreed;
+
+    // Step 4: If still above threshold, more aggressive pruning
+    let stats = this.getStorageStats();
     if (stats.percentage >= QUOTA_CLEANUP_THRESHOLD * 100) {
-      const lowPriorityResult = this.deleteLowPriorityKeys(30);
-      totalDeleted += lowPriorityResult.deletedKeys;
-      totalFreed += lowPriorityResult.bytesFreed;
+      console.warn('[StorageQuotaManager] Still above threshold after cleanup, pruning more aggressively');
+      
+      // More aggressive memory pruning
+      const aggressiveMemory = this.pruneMemories(250);
+      totalDeleted += aggressiveMemory.deletedKeys;
+      totalFreed += aggressiveMemory.bytesFreed;
+
+      // More aggressive history trimming
+      const aggressiveHistory = this.trimConversationHistory(25);
+      totalDeleted += aggressiveHistory.deletedKeys;
+      totalFreed += aggressiveHistory.bytesFreed;
+
+      stats = this.getStorageStats();
     }
 
-    console.log(`[StorageQuotaManager] Cleanup complete: ${totalDeleted} items removed, ${(totalFreed / 1024).toFixed(1)}KB freed`);
+    const success = stats.percentage < QUOTA_CLEANUP_THRESHOLD * 100;
+
+    if (!success) {
+      console.error(`[StorageQuotaManager] ⚠️ Cleanup failed to bring storage below threshold: ${stats.percentage.toFixed(1)}% used`);
+    }
+
+    console.log(`[StorageQuotaManager] Cleanup ${success ? 'succeeded' : 'FAILED'}: ${totalDeleted} items removed, ${(totalFreed / 1024).toFixed(1)}KB freed (now at ${stats.percentage.toFixed(1)}%)`);
 
     return {
       deletedKeys: totalDeleted,
       bytesFreed: totalFreed,
-      success: true,
+      success,
     };
   }
 
