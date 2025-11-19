@@ -20,7 +20,7 @@ export class RAGToggle extends LitElement {
       display: block;
       position: fixed;
       top: 20px;
-      left: 20px;
+      right: 20px;
       z-index: 150;
       transition: opacity 0.5s ease-out;
       pointer-events: auto;
