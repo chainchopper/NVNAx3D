@@ -276,7 +276,7 @@ export class VisualizerShell extends LitElement {
   private handleFileUploaded = async (e: CustomEvent) => {
     console.log('[VisualizerShell] File uploaded:', e.detail);
     
-    const uploadedFile = e.detail.file;
+    const uploadedFile = e.detail;
     
     // Check if it's an image file
     if (uploadedFile.type.startsWith('image/')) {
