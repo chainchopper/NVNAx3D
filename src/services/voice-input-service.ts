@@ -89,8 +89,19 @@ export class VoiceInputService extends EventTarget {
     }
 
     try {
+      // Check microphone permission status first
+      const permissionStatus = await this.checkMicrophonePermission();
+      
+      if (permissionStatus === 'denied') {
+        throw new Error('Microphone access denied. Please enable microphone permissions in your browser settings.');
+      } else if (permissionStatus === 'prompt') {
+        // Permission will be requested when getUserMedia is called
+        console.log('[VoiceInput] Requesting microphone permission...');
+      }
+      
       // Get microphone stream
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[VoiceInput] ✅ Microphone access granted');
       
       // Initialize MediaRecorder
       this.audioChunks = [];
@@ -113,16 +124,47 @@ export class VoiceInputService extends EventTarget {
       console.log('[VoiceInput] Recording started');
     } catch (error: any) {
       console.error('[VoiceInput] Failed to start recording:', error);
-      this.updateState('error', undefined, error.message);
       
-      // Auto-reset to idle after 3 seconds to allow retry
+      // Provide user-friendly error messages
+      let errorMessage = error.message;
+      if (error.name === 'NotAllowedError') {
+        errorMessage = '🎤 Microphone access denied. Click the microphone icon in your browser\'s address bar to enable permissions.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = '🎤 No microphone found. Please connect a microphone and try again.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = '🎤 Microphone is already in use by another application.';
+      }
+      
+      this.updateState('error', undefined, errorMessage);
+      
+      // Auto-reset to idle after 5 seconds to allow retry
       setTimeout(() => {
         if (this.state === 'error') {
           this.updateState('idle');
         }
-      }, 3000);
+      }, 5000);
       
-      throw error;
+      throw new Error(errorMessage);
+    }
+  }
+
+  /**
+   * Check microphone permission status
+   */
+  private async checkMicrophonePermission(): Promise<PermissionState | 'unsupported'> {
+    try {
+      // Check if Permissions API is supported
+      if (!navigator.permissions || !navigator.permissions.query) {
+        return 'unsupported';
+      }
+      
+      // @ts-ignore - microphone permission is not in all TypeScript definitions
+      const permissionStatus = await navigator.permissions.query({ name: 'microphone' });
+      return permissionStatus.state;
+    } catch (error) {
+      // If permission check fails, assume we need to request permission
+      console.warn('[VoiceInput] Permission check failed, will attempt getUserMedia');
+      return 'prompt';
     }
   }
 

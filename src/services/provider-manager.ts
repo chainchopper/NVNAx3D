@@ -159,7 +159,24 @@ export class ProviderManager {
       
       console.log('[ProviderManager] Environment config received:', envConfig);
       
-      // Note: Model configuration is handled through Settings UI
+      // Auto-configure Google Gemini if API key is present
+      if (envConfig.geminiApiKey) {
+        const googleProvider = Array.from(this.providers.values()).find(p => p.type === 'google');
+        if (googleProvider) {
+          const wasVerified = googleProvider.verified;
+          googleProvider.apiKey = 'env:GEMINI_API_KEY'; // Placeholder - backend handles real key
+          googleProvider.enabled = true;
+          googleProvider.verified = true;
+          
+          // Sync models if not verified before OR if models list is empty
+          if (!wasVerified || googleProvider.models.length === 0) {
+            await this.syncProviderModels(googleProvider.id);
+            console.log('[ProviderManager] Auto-configured Google Gemini from environment');
+          }
+        }
+      }
+      
+      // Note: Other model configuration is handled through Settings UI
       // Users can manually add any models they want via the Models panel
     } catch (error) {
       console.error('[ProviderManager] Error auto-configuring from environment:', {
@@ -363,13 +380,52 @@ export class ProviderManager {
     this.saveToStorage();
   }
 
+  /**
+   * Sync models from a provider instance to the provider configuration
+   * This fetches the actual available models from the provider (e.g., GoogleProvider, OpenAIProvider)
+   */
+  async syncProviderModels(id: string): Promise<void> {
+    const provider = this.providers.get(id);
+    if (!provider || !provider.apiKey || !provider.enabled) {
+      return;
+    }
+
+    try {
+      // Create a fresh provider instance directly without using getProviderInstance
+      // to avoid infinite recursion
+      const instance = ProviderFactory.createProvider(
+        provider.type,
+        provider.apiKey,
+        '', // Empty model for now
+        provider.endpoint,
+        id
+      );
+
+      // Fetch available models from the provider
+      const models = await instance.getAvailableModels();
+      
+      if (models && models.length > 0) {
+        provider.models = models;
+        this.saveToStorage();
+        console.log(`[ProviderManager] Synced ${models.length} models for ${provider.name}`);
+      }
+    } catch (error) {
+      console.error(`[ProviderManager] Failed to sync models for ${provider.name}:`, error);
+    }
+  }
+
   async verifyProvider(id: string): Promise<boolean> {
     const provider = this.providers.get(id);
     if (!provider) return false;
 
-    // TODO: Implement actual verification logic per provider type
-    // For now, just check if API key is present
+    // Check if API key is present
     const verified = !!provider.apiKey;
+    
+    // If verified, sync models from the provider instance
+    if (verified && provider.enabled) {
+      await this.syncProviderModels(id);
+    }
+    
     this.updateProvider(id, { verified });
     return verified;
   }
